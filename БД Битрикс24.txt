@@ -1,0 +1,1 @@
+подключись к БД на mysql, используя следующие параметры  mysql://host1850712:pFH3Yo2gnj@mysql80.hostland.ru:3306/host1850712
