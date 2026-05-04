@@ -35,44 +35,32 @@
   </div>
 
   <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3">
-    <div class="dropdown">
-      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-        Действия
+    <a href="/checklists/{{ cl.id }}/settings" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Редактировать
+    </a>
+
+    {% if cl.status != "active" %}
+    <form action="/checklists/{{ cl.id }}/delete" method="post" class="m-0"
+          onsubmit="return confirm('Удалить форму оценки «{{ cl.name }}»?')">
+      <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash me-1"></i>Удалить
       </button>
-      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li>
-          <a class="dropdown-item small" href="/checklists/{{ cl.id }}/settings">
-            <i class="bi bi-gear me-2"></i>Настройки формы
-          </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-          <form action="/checklists/{{ cl.id }}/archive" method="post">
-            <button class="dropdown-item small {{ 'text-success' if cl.status == 'archived' else 'text-warning' }}" type="submit">
-              {% if cl.status == "archived" %}
-                <i class="bi bi-arrow-counterclockwise me-2"></i>Восстановить
-              {% else %}
-                <i class="bi bi-archive me-2"></i>Архивировать
-              {% endif %}
-            </button>
-          </form>
-        </li>
-        {% if cl.status != "active" %}
-        <li>
-          <form action="/checklists/{{ cl.id }}/delete" method="post"
-                onsubmit="return confirm('Удалить форму оценки «{{ cl.name }}»?')">
-            <button class="dropdown-item text-danger small" type="submit">
-              <i class="bi bi-trash me-2"></i>Удалить форму
-            </button>
-          </form>
-        </li>
+    </form>
+    {% endif %}
+
+    <form action="/checklists/{{ cl.id }}/archive" method="post" class="m-0">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        {% if cl.status == "archived" %}
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Восстановить
+        {% else %}
+          <i class="bi bi-archive me-1"></i>В архив
         {% endif %}
-      </ul>
-    </div>
+      </button>
+    </form>
 
     {% if cl.status != "active" %}
     <form action="/checklists/{{ cl.id }}/publish" method="post" class="m-0">
-      <button class="btn btn-sm btn-primary">Опубликовать форму оценки</button>
+      <button class="btn btn-sm btn-primary">Опубликовать</button>
     </form>
     {% else %}
     <span class="badge bg-success-subtle text-success px-3 py-2">
