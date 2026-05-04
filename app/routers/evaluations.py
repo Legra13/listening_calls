@@ -21,6 +21,8 @@ def evaluations_index(
     checklist_id: str = "",
     stage: str = "",
     department: str = "",
+    date_from: str = "",
+    date_to: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -37,11 +39,20 @@ def evaluations_index(
         q = q.filter(Evaluation.stage == stage)
     if department:
         q = q.filter(Evaluation.department == department)
+    if date_from:
+        try:
+            q = q.filter(Evaluation.eval_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            q = q.filter(Evaluation.eval_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
+        except ValueError:
+            pass
 
     evaluations = q.limit(200).all()
-    checklists = db.query(Checklist).filter(Checklist.status == "active").all()
+    checklists = db.query(Checklist).all()
 
-    # Список отделов из существующих оценок для фильтра
     dept_rows = (
         db.query(Evaluation.department)
         .filter(Evaluation.department.isnot(None), Evaluation.department != "")
@@ -57,7 +68,14 @@ def evaluations_index(
         "evaluations": evaluations,
         "checklists": checklists,
         "departments": departments,
-        "filters": {"operator": operator, "checklist_id": checklist_id, "stage": stage, "department": department},
+        "filters": {
+            "operator": operator,
+            "checklist_id": checklist_id,
+            "stage": stage,
+            "department": department,
+            "date_from": date_from,
+            "date_to": date_to,
+        },
         "score_color": score_color,
         "flash": pop_flash(request),
     })

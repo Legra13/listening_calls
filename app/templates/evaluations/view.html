@@ -32,6 +32,17 @@
           {{ ev.checklist.name if ev.checklist else '—' }}
           {% if ev.evaluator %} · Оценил: {{ ev.evaluator.username }}{% endif %}
         </div>
+        <div class="d-flex gap-2 mt-2">
+          <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Редактировать
+          </a>
+          <form action="/evaluations/{{ ev.id }}/delete" method="post"
+                onsubmit="return confirm('Удалить оценку #{{ ev.id }}?')" class="m-0">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash me-1"></i>Удалить
+            </button>
+          </form>
+        </div>
       </div>
       <div class="col-auto text-center">
         <div class="display-6 fw-bold text-{{ score_color(ev.total_score) }}">
@@ -119,17 +130,4 @@
 </div>
 {% endif %}
 
-<!-- Actions -->
-<div class="d-flex gap-2 mb-4">
-  <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-pencil me-1"></i>Редактировать
-  </a>
-  <form action="/evaluations/{{ ev.id }}/delete" method="post"
-        onsubmit="return confirm('Удалить оценку #{{ ev.id }}?')">
-    <button type="submit" class="btn btn-outline-danger btn-sm">
-      <i class="bi bi-trash me-1"></i>Удалить
-    </button>
-  </form>
-  <a href="/evaluations" class="btn btn-link btn-sm text-muted">← К списку</a>
-</div>
 {% endblock %}
