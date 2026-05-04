@@ -111,11 +111,8 @@
 {% endif %}
 
 {% for block in cl.blocks %}
-  {% set crit_total_weight = namespace(n=0) %}
-  {% for c in block.criteria %}{% set crit_total_weight.n = crit_total_weight.n + c.weight %}{% endfor %}
   {% set form_total_weight = namespace(n=0) %}
   {% for b in cl.blocks %}{% set form_total_weight.n = form_total_weight.n + b.weight %}{% endfor %}
-  {% set block_pct = (block.weight / form_total_weight.n * 100) | round(0) | int if form_total_weight.n > 0 else 0 %}
 
   <div class="border rounded mb-2" id="block-{{ block.id }}">
 
@@ -128,8 +125,10 @@
       </button>
       <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
       <div class="ms-auto d-flex align-items-center gap-3 small text-muted">
-        <span>Балл по группе <strong class="text-dark">{{ block.weight }}</strong></span>
-        <span>Вес группы <strong class="text-dark">{{ block_pct }}%</strong></span>
+        <span>Макс. баллов по группе <strong class="text-dark">{{ block.weight }}</strong></span>
+        {% if form_total_weight.n > 0 %}
+        <span class="text-muted">{{ (block.weight / form_total_weight.n * 100) | round(0) | int }}% от формы</span>
+        {% endif %}
         <div class="dropdown">
           <button class="btn btn-sm btn-link text-muted p-0 lh-1" type="button"
                   data-bs-toggle="dropdown">
@@ -161,7 +160,6 @@
     <!-- Criteria body -->
     <div id="group-body-{{ block.id }}">
       {% for crit in block.criteria %}
-        {% set crit_pct = ((crit.weight / crit_total_weight.n * block.weight) | round(1)) if crit_total_weight.n > 0 else 0 %}
         <div class="border-top px-3 py-2 d-flex align-items-start">
           <div class="flex-grow-1">
             <div class="small fw-semibold mb-1">{{ crit.text }}</div>
@@ -181,7 +179,7 @@
                         style="width:26px;height:26px;font-size:0.6rem;flex-shrink:0">Да</span>
                 {% endif %}
               </div>
-              <span class="text-muted small">Вес критерия <strong>{{ crit_pct }}%</strong></span>
+              <span class="text-muted small"><strong>{{ crit.weight }}</strong> {{ "балл" if crit.weight == 1 else ("балла" if crit.weight in (2,3,4) else "баллов") }}</span>
               {% if crit.is_autofail %}
                 <span class="badge bg-danger-subtle text-danger small">
                   <i class="bi bi-x-circle me-1"></i>Автофейл
@@ -261,11 +259,6 @@
             <input type="text" name="display_name" id="addGroupName"
                    class="form-control" required placeholder="Введите название группы">
           </div>
-          <div class="mb-2">
-            <label class="form-label small fw-semibold">Вес группы (%)</label>
-            <input type="number" name="weight" id="addGroupWeight"
-                   class="form-control" value="0" min="0" max="100">
-          </div>
         </form>
       </div>
       <div class="modal-footer border-0 pt-1">
@@ -291,11 +284,6 @@
             <label class="form-label small fw-semibold">Название <span class="text-danger">*</span></label>
             <input type="text" name="display_name" id="editGroupName"
                    class="form-control" required>
-          </div>
-          <div class="mb-2">
-            <label class="form-label small fw-semibold">Вес группы (%)</label>
-            <input type="number" name="weight" id="editGroupWeight"
-                   class="form-control" min="0" max="100">
           </div>
         </form>
       </div>
@@ -579,7 +567,6 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function(e) {
       e.preventDefault();
       document.getElementById('editGroupName').value = this.dataset.name;
-      document.getElementById('editGroupWeight').value = this.dataset.weight;
       document.getElementById('formEditGroup').action =
         BASE + '/checklists/' + CL_ID + '/blocks/' + this.dataset.blockId;
       M['modalEditGroup'].show();
@@ -721,7 +708,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function openAddGroupModal() {
   document.getElementById('addGroupName').value = '';
-  document.getElementById('addGroupWeight').value = '0';
   M['modalAddGroup'].show();
   setTimeout(() => document.getElementById('addGroupName').focus(), 300);
 }

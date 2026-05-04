@@ -14,6 +14,14 @@ templates = Jinja2Templates(directory="app/templates")
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _sync_block_weight(db: Session, block_id: int) -> None:
+    """Пересчитывает вес блока как сумму весов его критериев."""
+    from sqlalchemy import func
+    total = db.query(func.sum(Criterion.weight)).filter(Criterion.block_id == block_id).scalar() or 0
+    db.query(Block).filter(Block.id == block_id).update({"weight": total})
+    db.commit()
+
+
 def _get_checklist_or_404(db: Session, checklist_id: int) -> Checklist:
     from fastapi import HTTPException
     cl = db.query(Checklist).filter(Checklist.id == checklist_id).first()
@@ -307,6 +315,7 @@ def criteria_create(
         crit.score_max = max(1, min(10, score_max))
         db.add(crit)
         db.commit()
+        _sync_block_weight(db, block_id)
     return _redirect_edit(checklist_id, anchor=f"block-{block_id}")
 
 
@@ -335,6 +344,7 @@ def criteria_from_library(
                 db.add(crit)
                 db.flush()
         db.commit()
+        _sync_block_weight(db, block_id)
     return _redirect_edit(checklist_id, anchor=f"block-{block_id}")
 
 
@@ -362,6 +372,7 @@ def criteria_update(
         crit.score_type = score_type if score_type in ("binary", "range") else "binary"
         crit.score_max = max(1, min(10, score_max))
         db.commit()
+        _sync_block_weight(db, block_id)
     return _redirect_edit(checklist_id, anchor=f"block-{block_id}")
 
 
@@ -378,4 +389,5 @@ def criteria_delete(
     if crit:
         db.delete(crit)
         db.commit()
+        _sync_block_weight(db, block_id)
     return _redirect_edit(checklist_id, anchor=f"block-{block_id}")
