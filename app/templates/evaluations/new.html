@@ -3,17 +3,24 @@
 
 {% block styles %}
 <style>
-.score-circle {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1.5px solid #dee2e6;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; cursor: pointer; user-select: none;
-  transition: border-color 0.1s, background 0.1s, color 0.1s;
-  white-space: nowrap;
+.score-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 14px; border-radius: 20px; border: 1.5px solid;
+  font-size: 0.78rem; font-weight: 500; cursor: pointer; user-select: none;
+  min-width: 52px; transition: background 0.12s, color 0.12s;
 }
-label:has(input:checked) .score-circle { border-color: #0d6efd; background:#0d6efd; color:#fff; }
-label:has(input.score-yes:checked) .score-circle { border-color: #198754; background:#198754; color:#fff; }
-label:has(input.score-no:checked) .score-circle { border-color: #dc3545; background:#dc3545; color:#fff; }
+.score-btn-yes  { border-color: #198754; color: #198754; background: #fff; }
+.score-btn-yes:hover { background: rgba(25,135,84,.1); }
+label:has(input.score-yes:checked) .score-btn-yes { background: #198754; color: #fff; }
+.score-btn-no   { border-color: #dc3545; color: #dc3545; background: #fff; }
+.score-btn-no:hover { background: rgba(220,53,69,.1); }
+label:has(input.score-no:checked) .score-btn-no { background: #dc3545; color: #fff; }
+.score-btn-na   { border-color: #adb5bd; color: #6c757d; background: #fff; }
+.score-btn-na:hover { background: rgba(108,117,125,.1); }
+label:has(input.score-na:checked) .score-btn-na { background: #6c757d; color: #fff; border-color: #6c757d; }
+.score-btn-num  { border-color: #adb5bd; color: #495057; background: #fff; }
+.score-btn-num:hover { background: rgba(13,110,253,.1); border-color: #0d6efd; }
+label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: #fff; border-color: #0d6efd; }
 .crit-row.row-yes td { background: rgba(25,135,84,.07); }
 .crit-row.row-no td { background: rgba(220,53,69,.07); }
 #score-preview {
@@ -138,26 +145,26 @@ label:has(input.score-no:checked) .score-circle { border-color: #dc3545; backgro
                   {% if crit.score_type == 'range' %}
                     {% for i in range(1, (crit.score_max or 5) + 1) %}
                     <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val">
-                      <span class="score-circle">{{ i }}</span>
+                      <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val score-num">
+                      <span class="score-btn score-btn-num">{{ i }}</span>
                     </label>
                     {% endfor %}
                     <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none" checked>
-                      <span class="score-circle text-muted">—</span>
+                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na" checked>
+                      <span class="score-btn score-btn-na">Н/П</span>
                     </label>
                   {% else %}
                     <label class="mb-0">
                       <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes">
-                      <span class="score-circle">Да</span>
+                      <span class="score-btn score-btn-yes">Да</span>
                     </label>
                     <label class="mb-0">
                       <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no">
-                      <span class="score-circle">Нет</span>
+                      <span class="score-btn score-btn-no">Нет</span>
                     </label>
                     <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none" checked>
-                      <span class="score-circle text-muted">—</span>
+                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na" checked>
+                      <span class="score-btn score-btn-na">Н/П</span>
                     </label>
                   {% endif %}
                   <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted toggle-comment"
@@ -327,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
       updateScorePreview();
     });
   });
-  document.querySelectorAll('[name^="criterion_"][value="na"]').forEach(r => {
+  document.querySelectorAll('.score-na').forEach(r => {
     r.addEventListener('change', function() {
       this.closest('tr').classList.remove('row-yes', 'row-no');
       updateScorePreview();
