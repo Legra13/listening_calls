@@ -92,6 +92,7 @@ class Evaluation(Base):
     evaluator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     general_comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     checklist: Mapped["Checklist"] = relationship(back_populates="evaluations")
     evaluator: Mapped["User | None"] = relationship(back_populates="evaluations")

@@ -72,9 +72,21 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
                    placeholder="Заполнится автоматически">
           </div>
           <div class="col-md-2">
-            <label class="form-label small fw-semibold">Дата звонка</label>
-            <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
-                   value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}">
+            <label class="form-label small fw-semibold">
+              Дата звонка
+              <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                 title="Заполняется автоматически из Битрикс при вводе ID сделки"></i>
+            </label>
+            <input type="date" id="eval_date" name="eval_date"
+                   class="form-control form-control-sm bg-light text-muted"
+                   value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}"
+                   readonly>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted">Дата оценки</label>
+            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                   value="{{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y %H:%M') if (ev.updated_at or ev.created_at) else '—' }}"
+                   disabled>
           </div>
           <input type="hidden" id="stage" name="stage" value="{{ ev.stage or 'в работе' }}">
         </div>

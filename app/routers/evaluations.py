@@ -348,6 +348,7 @@ async def evaluations_update(
 
     total_score, _ = calculate_scores(items_raw, cl)
     evaluation.total_score = total_score
+    evaluation.updated_at = datetime.utcnow()
 
     # Replace items
     db.query(EvaluationItem).filter(EvaluationItem.evaluation_id == eval_id).delete()

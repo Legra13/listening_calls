@@ -28,9 +28,10 @@
           {% if ev.department %}
             <span class="badge bg-secondary-subtle text-secondary">{{ ev.department }}</span> ·
           {% endif %}
-          {% if ev.eval_date %}{{ ev.eval_date.strftime('%d.%m.%Y') }} ·{% endif %}
+          {% if ev.eval_date %}Звонок: {{ ev.eval_date.strftime('%d.%m.%Y') }} ·{% endif %}
           {{ ev.checklist.name if ev.checklist else '—' }}
           {% if ev.evaluator %} · Оценил: {{ ev.evaluator.username }}{% endif %}
+          · Оценка сохранена: <strong>{{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y %H:%M') if (ev.updated_at or ev.created_at) else '—' }}</strong>
         </div>
         <div class="d-flex gap-2 mt-2">
           <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-outline-secondary btn-sm">

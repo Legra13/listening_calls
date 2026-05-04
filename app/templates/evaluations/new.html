@@ -100,9 +100,19 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
                    class="form-control form-control-sm" placeholder="Заполнится автоматически">
           </div>
           <div class="col-md-2">
-            <label class="form-label small fw-semibold">Дата звонка</label>
-            <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
-                   value="{{ '' }}">
+            <label class="form-label small fw-semibold">
+              Дата звонка
+              <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
+                 title="Заполняется автоматически из Битрикс при вводе ID сделки"></i>
+            </label>
+            <input type="date" id="eval_date" name="eval_date"
+                   class="form-control form-control-sm bg-light text-muted"
+                   readonly>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted">Дата оценки</label>
+            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                   value="Сохраняется автоматически" disabled>
           </div>
           <input type="hidden" id="stage" name="stage" value="в работе">
         </div>
