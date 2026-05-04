@@ -14,6 +14,16 @@ templates = Jinja2Templates(directory="app/templates")
 
 # ── List ──────────────────────────────────────────────────────────────────────
 
+_SORT_COLUMNS = {
+    "id":       Evaluation.id,
+    "operator": Evaluation.operator_name,
+    "date":     Evaluation.eval_date,
+    "score":    Evaluation.total_score,
+    "stage":    Evaluation.stage,
+    "dept":     Evaluation.department,
+}
+
+
 @router.get("")
 def evaluations_index(
     request: Request,
@@ -23,13 +33,14 @@ def evaluations_index(
     department: str = "",
     date_from: str = "",
     date_to: str = "",
+    sort: str = "id",
+    dir: str = "desc",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = (
         db.query(Evaluation)
         .options(joinedload(Evaluation.checklist), joinedload(Evaluation.evaluator))
-        .order_by(Evaluation.created_at.desc())
     )
     if operator:
         q = q.filter(Evaluation.operator_name.ilike(f"%{operator}%"))
@@ -49,6 +60,9 @@ def evaluations_index(
             q = q.filter(Evaluation.eval_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
         except ValueError:
             pass
+
+    col = _SORT_COLUMNS.get(sort, Evaluation.id)
+    q = q.order_by(col.asc() if dir == "asc" else col.desc())
 
     evaluations = q.limit(200).all()
     checklists = db.query(Checklist).all()
@@ -86,6 +100,8 @@ def evaluations_index(
             "date_from": date_from,
             "date_to": date_to,
         },
+        "sort": sort,
+        "dir": dir,
         "score_color": score_color,
         "flash": pop_flash(request),
     })
