@@ -115,3 +115,47 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
         raise
     except Exception as exc:
         raise ConnectionError(f"Ошибка подключения к Битрикс: {exc}") from exc
+
+
+def get_employees() -> list[dict]:
+    """Возвращает список активных сотрудников из Битрикс24."""
+    try:
+        conn = _get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT ID, NAME, LAST_NAME, UF_DEPARTMENT FROM `{_USERS_TABLE}` "
+                    "WHERE ACTIVE = 1 ORDER BY LAST_NAME, NAME",
+                )
+                rows = cur.fetchall()
+
+            dept_cache: dict[int, str] = {}
+            result = []
+            for row in rows:
+                parts = [row.get("LAST_NAME") or "", row.get("NAME") or ""]
+                full_name = " ".join(p for p in parts if p).strip()
+                if not full_name:
+                    continue
+                dept_ids = []
+                try:
+                    dept_ids = json.loads(row.get("UF_DEPARTMENT") or "[]")
+                except Exception:
+                    pass
+                dept_name = ""
+                if dept_ids:
+                    did = dept_ids[0]
+                    if did not in dept_cache:
+                        with conn.cursor() as cur2:
+                            cur2.execute(
+                                f"SELECT NAME FROM `{_DEPTS_TABLE}` WHERE ID = %s LIMIT 1",
+                                (did,),
+                            )
+                            dr = cur2.fetchone()
+                            dept_cache[did] = dr["NAME"] if dr else ""
+                    dept_name = dept_cache.get(did, "")
+                result.append({"name": full_name, "department": dept_name})
+            return result
+        finally:
+            conn.close()
+    except Exception:
+        return []

@@ -16,6 +16,7 @@ label:has(input.score-yes:checked) .score-circle { border-color: #198754; backgr
 label:has(input.score-no:checked) .score-circle { border-color: #dc3545; background:#dc3545; color:#fff; }
 .crit-row.row-yes td { background: rgba(25,135,84,.07); }
 .crit-row.row-no td { background: rgba(220,53,69,.07); }
+#score-preview { position: sticky; top: 12px; z-index: 10; transition: background 0.3s; }
 </style>
 {% endblock %}
 
@@ -28,148 +29,178 @@ label:has(input.score-no:checked) .score-circle { border-color: #dc3545; backgro
   </ol>
 </nav>
 
-<form method="post" action="/evaluations/{{ ev.id }}/update">
-  <input type="hidden" name="checklist_id" value="{{ selected_cl.id }}">
+<datalist id="employees-datalist"></datalist>
 
-  <!-- Информация о сделке -->
-  <div class="card shadow-sm mb-3">
-    <div class="card-header bg-white py-2">
-      <span class="fw-semibold">{{ selected_cl.name }}</span>
-    </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label small fw-semibold">ID сделки в Битрикс</label>
-          <div class="input-group input-group-sm">
-            <input type="text" id="deal_id_input" name="deal_id"
-                   class="form-control" value="{{ ev.deal_id or '' }}">
-            <button type="button" class="btn btn-outline-secondary" onclick="lookupDeal()">
-              <i class="bi bi-search"></i>
-            </button>
+<div class="d-flex align-items-start gap-3">
+  <form method="post" action="/evaluations/{{ ev.id }}/update" id="eval-form" class="flex-grow-1">
+    <input type="hidden" name="checklist_id" value="{{ selected_cl.id }}">
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-white py-2">
+        <span class="fw-semibold">{{ selected_cl.name }}</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">ID сделки в Битрикс</label>
+            <div class="input-group input-group-sm">
+              <input type="text" id="deal_id_input" name="deal_id"
+                     class="form-control" value="{{ ev.deal_id or '' }}">
+              <button type="button" class="btn btn-outline-secondary" onclick="lookupDeal()">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <div id="deal-lookup-status" class="mt-1 small"></div>
           </div>
-          <div id="deal-lookup-status" class="mt-1 small"></div>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Оператор <span class="text-danger">*</span></label>
-          <input type="text" id="operator_name" name="operator_name"
-                 class="form-control form-control-sm" required value="{{ ev.operator_name }}">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">Отдел</label>
-          <input type="text" id="department" name="department"
-                 class="form-control form-control-sm" value="{{ ev.department or '' }}"
-                 placeholder="Заполнится автоматически">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold">Дата звонка</label>
-          <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
-                 value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold">Стадия сделки</label>
-          <select id="stage" name="stage" class="form-select form-select-sm">
-            <option value="в работе"        {% if ev.stage == "в работе" %}selected{% endif %}>В работе</option>
-            <option value="сделка успешна"   {% if ev.stage == "сделка успешна" %}selected{% endif %}>Успешна</option>
-            <option value="не смог продать"  {% if ev.stage == "не смог продать" %}selected{% endif %}>Не продал</option>
-          </select>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Сотрудник <span class="text-danger">*</span></label>
+            <input type="text" id="operator_name" name="operator_name"
+                   list="employees-datalist"
+                   class="form-control form-control-sm" required value="{{ ev.operator_name }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Отдел</label>
+            <input type="text" id="department" name="department"
+                   class="form-control form-control-sm" value="{{ ev.department or '' }}"
+                   placeholder="Заполнится автоматически">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Дата звонка</label>
+            <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
+                   value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Стадия сделки</label>
+            <select id="stage" name="stage" class="form-select form-select-sm">
+              <option value="в работе"       {% if ev.stage == "в работе" %}selected{% endif %}>В работе</option>
+              <option value="сделка успешна"  {% if ev.stage == "сделка успешна" %}selected{% endif %}>Успешна</option>
+              <option value="не смог продать" {% if ev.stage == "не смог продать" %}selected{% endif %}>Не продал</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Чек-лист -->
-  {% for block in selected_cl.blocks %}
-  {% if block.criteria %}
-  <div class="card shadow-sm mb-2">
-    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-      <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
-      <span class="text-muted small">вес {{ block.weight }}</span>
+    {% for block in selected_cl.blocks %}
+    {% if block.criteria %}
+    <div class="card shadow-sm mb-2">
+      <div class="card-header bg-white py-2">
+        <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0 eval-table">
+          <thead class="table-light">
+            <tr>
+              <th style="width:65%">Критерий</th>
+              <th>Оценка</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for crit in block.criteria %}
+            {% set item = item_map.get(crit.id) %}
+            {% set cur_val = item.value if item else "na" %}
+            <tr class="crit-row {% if cur_val == 'yes' %}row-yes{% elif cur_val == 'no' %}row-no{% endif %}"
+                data-crit-id="{{ crit.id }}">
+              <td class="align-middle small">
+                <div>{{ crit.text }}
+                  {% if crit.description %}
+                  <i class="bi bi-info-circle text-muted ms-1"
+                     data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
+                  {% endif %}
+                  {% if crit.is_autofail %}<span class="badge bg-danger-subtle text-danger ms-1">AF</span>{% endif %}
+                </div>
+                {% set has_comment = item and item.comment %}
+                <div class="comment-block mt-1" style="{{ '' if has_comment else 'display:none' }}">
+                  <input type="text" name="comment_{{ crit.id }}"
+                         class="form-control form-control-sm"
+                         value="{{ item.comment if has_comment else '' }}"
+                         placeholder="Комментарий...">
+                </div>
+              </td>
+              <td class="align-middle">
+                <div class="d-flex gap-1 align-items-center flex-wrap">
+                  {% if crit.score_type == 'range' %}
+                    {% for i in range(1, (crit.score_max or 5) + 1) %}
+                    <label class="mb-0">
+                      <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val"
+                             {% if cur_val == i|string %}checked{% endif %}>
+                      <span class="score-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                    <label class="mb-0">
+                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none"
+                             {% if cur_val == "na" %}checked{% endif %}>
+                      <span class="score-circle text-muted">—</span>
+                    </label>
+                  {% else %}
+                    <label class="mb-0">
+                      <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
+                             {% if cur_val == "yes" %}checked{% endif %}>
+                      <span class="score-circle">Да</span>
+                    </label>
+                    <label class="mb-0">
+                      <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no"
+                             {% if cur_val == "no" %}checked{% endif %}>
+                      <span class="score-circle">Нет</span>
+                    </label>
+                    <label class="mb-0">
+                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none"
+                             {% if cur_val == "na" %}checked{% endif %}>
+                      <span class="score-circle text-muted">—</span>
+                    </label>
+                  {% endif %}
+                  <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted toggle-comment"
+                          data-crit-id="{{ crit.id }}" title="Комментарий">
+                    <i class="bi bi-chat{% if item and item.comment %}-fill text-primary{% endif %}"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="card-body p-0">
-      <table class="table table-sm table-hover mb-0 eval-table">
-        <thead class="table-light">
-          <tr>
-            <th style="width:60%">Критерий</th>
-            <th style="width:22%">Оценка</th>
-            <th style="width:18%">Комментарий</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for crit in block.criteria %}
-          {% set item = item_map.get(crit.id) %}
-          {% set cur_val = item.value if item else "na" %}
-          <tr class="crit-row {% if cur_val == 'yes' %}row-yes{% elif cur_val == 'no' %}row-no{% endif %}" data-crit-id="{{ crit.id }}">
-            <td class="align-middle small">
-              {{ crit.text }} <span class="text-muted">({{ crit.weight }})</span>
-              {% if crit.description %}
-              <i class="bi bi-info-circle text-muted ms-1"
-                 data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
-              {% endif %}
-              {% if crit.is_autofail %}<span class="badge bg-danger-subtle text-danger ms-1">AF</span>{% endif %}
-            </td>
-            <td class="align-middle">
-              <div class="d-flex gap-1 flex-wrap score-circles">
-                <!-- N/A -->
-                <label class="mb-0">
-                  <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none"
-                         {% if cur_val == "na" %}checked{% endif %}>
-                  <span class="score-circle">—</span>
-                </label>
-                {% if crit.score_type == 'range' %}
-                  {% for i in range(1, (crit.score_max or 5) + 1) %}
-                  <label class="mb-0">
-                    <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val"
-                           {% if cur_val == i|string %}checked{% endif %}>
-                    <span class="score-circle">{{ i }}</span>
-                  </label>
-                  {% endfor %}
-                {% else %}
-                  <label class="mb-0">
-                    <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no"
-                           {% if cur_val == "no" %}checked{% endif %}>
-                    <span class="score-circle score-circle-no">Нет</span>
-                  </label>
-                  <label class="mb-0">
-                    <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
-                           {% if cur_val == "yes" %}checked{% endif %}>
-                    <span class="score-circle score-circle-yes">Да</span>
-                  </label>
-                {% endif %}
-              </div>
-            </td>
-            <td class="align-middle">
-              <input type="text" name="comment_{{ crit.id }}"
-                     class="form-control form-control-sm"
-                     value="{{ item.comment if item and item.comment else '' }}"
-                     placeholder="...">
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-  {% endfor %}
+    {% endif %}
+    {% endfor %}
 
-  <div class="card shadow-sm mb-3">
-    <div class="card-body">
-      <label class="form-label small fw-semibold">Общий комментарий</label>
-      <textarea name="general_comment" class="form-control form-control-sm" rows="2">{{ ev.general_comment or '' }}</textarea>
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <label class="form-label small fw-semibold">Общий комментарий</label>
+        <textarea name="general_comment" class="form-control form-control-sm" rows="2">{{ ev.general_comment or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" class="btn btn-dark">
+        <i class="bi bi-check-lg me-1"></i>Сохранить изменения
+      </button>
+      <a href="/evaluations/{{ ev.id }}" class="btn btn-outline-secondary">Отмена</a>
+    </div>
+  </form>
+
+  <div style="width:110px; flex-shrink:0">
+    <div id="score-preview" class="card shadow-sm text-center p-2">
+      <div class="text-muted small mb-1">Текущий балл</div>
+      <div id="score-value" class="fw-bold fs-4">—</div>
     </div>
   </div>
-
-  <div class="d-flex gap-2 mb-4">
-    <button type="submit" class="btn btn-dark">
-      <i class="bi bi-check-lg me-1"></i>Сохранить изменения
-    </button>
-    <a href="/evaluations/{{ ev.id }}" class="btn btn-outline-secondary">Отмена</a>
-  </div>
-</form>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+const CRITERIA_DATA = {
+  {% for block in selected_cl.blocks %}{% for crit in block.criteria %}
+  {{ crit.id }}: {blockId:{{ block.id }}, weight:{{ crit.weight }}, type:'{{ crit.score_type or "binary" }}', max:{{ crit.score_max or 5 }}},
+  {% endfor %}{% endfor %}
+};
+const BLOCK_WEIGHTS = {
+  {% for block in selected_cl.blocks %}{{ block.id }}:{{ block.weight }},{% endfor %}
+};
+
+let employeesData = [];
+
 function lookupDeal() {
   const id = document.getElementById('deal_id_input').value.trim();
   if (!id) return;
@@ -188,16 +219,102 @@ function lookupDeal() {
     })
     .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
 }
+
+function calcScore() {
+  const blockNums = {}, blockDens = {};
+  document.querySelectorAll('[name^="criterion_"]').forEach(radio => {
+    if (!radio.checked) return;
+    const critId = parseInt(radio.name.replace('criterion_', ''));
+    const crit = CRITERIA_DATA[critId];
+    if (!crit || radio.value === 'na') return;
+    if (!blockNums[crit.blockId]) { blockNums[crit.blockId] = 0; blockDens[crit.blockId] = 0; }
+    blockDens[crit.blockId] += crit.weight;
+    if (crit.type === 'binary' && radio.value === 'yes') blockNums[crit.blockId] += crit.weight;
+    else if (crit.type === 'range') blockNums[crit.blockId] += (parseInt(radio.value) / crit.max) * crit.weight;
+  });
+  let wNum = 0, wDen = 0;
+  for (const [bId, bW] of Object.entries(BLOCK_WEIGHTS)) {
+    const id = parseInt(bId);
+    if (blockDens[id] > 0) {
+      wNum += (blockNums[id] / blockDens[id] * 100) * bW;
+      wDen += bW;
+    }
+  }
+  return wDen > 0 ? (wNum / wDen) : null;
+}
+
+function updateScorePreview() {
+  const score = calcScore();
+  const el = document.getElementById('score-value');
+  const card = document.getElementById('score-preview');
+  if (score === null) {
+    el.textContent = '—';
+    el.className = 'fw-bold fs-4';
+    card.className = 'card shadow-sm text-center p-2';
+    return;
+  }
+  el.textContent = score.toFixed(1) + '%';
+  const color = score >= 60 ? 'success' : score >= 40 ? 'warning' : 'danger';
+  card.className = 'card shadow-sm text-center p-2 border-' + color;
+  el.className = 'fw-bold fs-4 text-' + color;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Load employees
+  fetch('/api/employees', {credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      employeesData = data;
+      const dl = document.getElementById('employees-datalist');
+      data.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.name;
+        dl.appendChild(opt);
+      });
+    }).catch(() => {});
+
+  // Auto-fill department when employee selected
+  document.getElementById('operator_name').addEventListener('change', function() {
+    const found = employeesData.find(e => e.name === this.value);
+    if (found && found.department && !document.getElementById('department').value) {
+      document.getElementById('department').value = found.department;
+    }
+  });
+
+  // Row highlight + live score
   document.querySelectorAll('.score-val').forEach(function(radio) {
     radio.addEventListener('change', function() {
       const row = this.closest('tr');
       row.classList.remove('row-yes', 'row-no');
       if (this.classList.contains('score-yes')) row.classList.add('row-yes');
       else if (this.classList.contains('score-no')) row.classList.add('row-no');
+      updateScorePreview();
     });
   });
-  // tooltips
+  document.querySelectorAll('[name^="criterion_"][value="na"]').forEach(r => {
+    r.addEventListener('change', function() {
+      this.closest('tr').classList.remove('row-yes', 'row-no');
+      updateScorePreview();
+    });
+  });
+
+  // Initial score (edit mode — may have pre-filled values)
+  updateScorePreview();
+
+  // Toggle comments
+  document.querySelectorAll('.toggle-comment').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const row = this.closest('tr');
+      const block = row.querySelector('.comment-block');
+      const icon = this.querySelector('i');
+      const hidden = block.style.display === 'none';
+      block.style.display = hidden ? 'block' : 'none';
+      icon.className = hidden ? 'bi bi-chat-fill text-primary' : 'bi bi-chat';
+      if (hidden) block.querySelector('input').focus();
+    });
+  });
+
+  // Tooltips
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
     new bootstrap.Tooltip(el);
   });

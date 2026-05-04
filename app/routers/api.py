@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, DealCache, User
 from app.deps import get_current_user
-from app.bitrix import get_deal, DealInfo
+from app.bitrix import get_deal, get_employees, DealInfo
 
 router = APIRouter(prefix="/api")
 
@@ -99,6 +99,23 @@ def criteria_library(
         for crit, block, cl in rows
     ]
     return JSONResponse(result)
+
+
+_emp_cache: list[dict] = []
+_emp_cached_at: float = 0.0
+
+
+@router.get("/employees")
+def employees_list(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    import time
+    global _emp_cache, _emp_cached_at
+    if not _emp_cache or (time.time() - _emp_cached_at) > 3600:
+        _emp_cache = get_employees()
+        _emp_cached_at = time.time()
+    return JSONResponse(_emp_cache)
 
 
 def _deal_response(
