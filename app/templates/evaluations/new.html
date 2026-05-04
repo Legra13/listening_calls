@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Новая оценка — Оценка звонков{% endblock %}
+
+{% block styles %}
+<style>
+.score-circle {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid #dee2e6;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; cursor: pointer; user-select: none;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+label:has(input:checked) .score-circle { border-color: #0d6efd; background:#0d6efd; color:#fff; }
+label:has(input.score-yes:checked) .score-circle { border-color: #198754; background:#198754; color:#fff; }
+label:has(input.score-no:checked) .score-circle { border-color: #dc3545; background:#dc3545; color:#fff; }
+.crit-row.row-yes td { background: rgba(25,135,84,.07); }
+.crit-row.row-no td { background: rgba(220,53,69,.07); }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/evaluations">Оценки</a></li>
+    <li class="breadcrumb-item active">Новая оценка</li>
+  </ol>
+</nav>
+
+<!-- Шаг 1: выбор чек-листа -->
+{% if not selected_cl %}
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title mb-3">Выберите чек-лист</h6>
+        <form method="get" action="/evaluations/new">
+          <div class="mb-3">
+            <select name="checklist_id" class="form-select" required>
+              <option value="">— выберите —</option>
+              {% for cl in checklists %}
+                <option value="{{ cl.id }}">{{ cl.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-dark">Продолжить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- Шаг 2: форма оценки -->
+<form method="post" action="/evaluations" id="eval-form">
+  <input type="hidden" name="checklist_id" value="{{ selected_cl.id }}">
+
+  <!-- Информация о сделке -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-white py-2">
+      <span class="fw-semibold">{{ selected_cl.name }}</span>
+      <a href="/evaluations/new" class="btn btn-sm btn-link text-muted ms-2" style="font-size:0.8rem">
+        Сменить чек-лист
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Deal ID + поиск -->
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">ID сделки в Битрикс</label>
+          <div class="input-group input-group-sm">
+            <input type="text" id="deal_id_input" name="deal_id"
+                   class="form-control" placeholder="Например: 12345">
+            <button type="button" class="btn btn-outline-secondary" onclick="lookupDeal()">
+              <i class="bi bi-search"></i> Найти
+            </button>
+          </div>
+          <div id="deal-lookup-status" class="mt-1 small"></div>
+        </div>
+        <!-- Оператор -->
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Оператор <span class="text-danger">*</span></label>
+          <input type="text" id="operator_name" name="operator_name"
+                 class="form-control form-control-sm" required placeholder="Имя Фамилия">
+        </div>
+        <!-- Отдел -->
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Отдел</label>
+          <input type="text" id="department" name="department"
+                 class="form-control form-control-sm" placeholder="Заполнится автоматически">
+        </div>
+        <!-- Дата -->
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Дата звонка</label>
+          <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm">
+        </div>
+        <!-- Стадия -->
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Стадия сделки</label>
+          <select id="stage" name="stage" class="form-select form-select-sm">
+            <option value="в работе">В работе</option>
+            <option value="сделка успешна">Успешна</option>
+            <option value="не смог продать">Не продал</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Чек-лист -->
+  {% for block in selected_cl.blocks %}
+  {% if block.criteria %}
+  <div class="card shadow-sm mb-2">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+      <span class="text-muted small">вес {{ block.weight }}</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm table-hover mb-0 eval-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width:60%">Критерий</th>
+            <th style="width:22%">Оценка</th>
+            <th style="width:18%">Комментарий</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for crit in block.criteria %}
+          <tr class="crit-row" data-crit-id="{{ crit.id }}">
+            <td class="align-middle small">
+              {{ crit.text }} <span class="text-muted">({{ crit.weight }})</span>
+              {% if crit.description %}
+              <i class="bi bi-info-circle text-muted ms-1"
+                 data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
+              {% endif %}
+              {% if crit.is_autofail %}<span class="badge bg-danger-subtle text-danger ms-1">AF</span>{% endif %}
+            </td>
+            <td class="align-middle">
+              <div class="d-flex gap-1 flex-wrap score-circles">
+                <!-- N/A -->
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none" checked>
+                  <span class="score-circle">—</span>
+                </label>
+                {% if crit.score_type == 'range' %}
+                  {% for i in range(1, (crit.score_max or 5) + 1) %}
+                  <label class="mb-0">
+                    <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val">
+                    <span class="score-circle">{{ i }}</span>
+                  </label>
+                  {% endfor %}
+                {% else %}
+                  <label class="mb-0">
+                    <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no">
+                    <span class="score-circle score-circle-no">Нет</span>
+                  </label>
+                  <label class="mb-0">
+                    <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes">
+                    <span class="score-circle score-circle-yes">Да</span>
+                  </label>
+                {% endif %}
+              </div>
+            </td>
+            <td class="align-middle">
+              <input type="text" name="comment_{{ crit.id }}"
+                     class="form-control form-control-sm" placeholder="...">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <!-- Общий комментарий + кнопки -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <label class="form-label small fw-semibold">Общий комментарий</label>
+      <textarea name="general_comment" class="form-control form-control-sm" rows="2"
+                placeholder="Необязательно"></textarea>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-dark">
+      <i class="bi bi-check-lg me-1"></i>Сохранить оценку
+    </button>
+    <a href="/evaluations" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function lookupDeal() {
+  const id = document.getElementById('deal_id_input').value.trim();
+  if (!id) return;
+  const status = document.getElementById('deal-lookup-status');
+  status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Ищу...</span>';
+
+  fetch('/api/deal/' + encodeURIComponent(id), {credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        status.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + data.error + '</span>';
+        return;
+      }
+      document.getElementById('operator_name').value = data.operator_name;
+      if (data.department) document.getElementById('department').value = data.department;
+      if (data.deal_date) document.getElementById('eval_date').value = data.deal_date;
+      const stageEl = document.getElementById('stage');
+      for (let opt of stageEl.options) {
+        if (opt.value === data.stage) { opt.selected = true; break; }
+      }
+      const icon = data.from_cache ? 'bi-database' : 'bi-check-circle';
+      status.innerHTML = '<span class="text-success"><i class="bi ' + icon + ' me-1"></i>'
+        + data.operator_name + ' · <span class="badge bg-' + data.stage_badge + '-subtle text-'
+        + data.stage_badge + '">' + data.stage_label + '</span></span>';
+    })
+    .catch(e => {
+      status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>';
+    });
+}
+
+// Enter в поле deal_id → поиск
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('deal_id_input');
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); lookupDeal(); }
+    });
+  }
+  // Подсветка строк при выборе
+  document.querySelectorAll('.score-val').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      const row = this.closest('tr');
+      row.classList.remove('row-yes', 'row-no');
+      if (this.classList.contains('score-yes')) row.classList.add('row-yes');
+      else if (this.classList.contains('score-no')) row.classList.add('row-no');
+    });
+  });
+  // tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+    new bootstrap.Tooltip(el);
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% block title %}Отчёты — Оценка звонков{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h5>
+</div>
+
+{# ── Фильтры ─────────────────────────────────────────────────────────────── #}
+<div class="card shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="get" id="filterForm">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">Чек-лист</label>
+          <select name="checklist_id" class="form-select form-select-sm">
+            <option value="">— Все чек-листы —</option>
+            {% for cl in options.checklists %}
+            <option value="{{ cl.id }}"
+              {% if filters.checklist_id and filters.checklist_id == cl.id %}selected{% endif %}>
+              {{ cl.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">Сотрудники</label>
+          <select name="operators" class="form-select form-select-sm" multiple
+                  style="height:auto;min-height:32px;max-height:120px">
+            {% for op in options.operators %}
+            <option value="{{ op }}"
+              {% if op in filters.operators %}selected{% endif %}>{{ op }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text" style="font-size:0.7rem">Ctrl/Cmd — выбрать несколько</div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">С</label>
+          <input type="date" name="date_from" class="form-control form-control-sm"
+                 value="{{ filters.date_from.isoformat() if filters.date_from else '' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">По</label>
+          <input type="date" name="date_to" class="form-control form-control-sm"
+                 value="{{ filters.date_to.isoformat() if filters.date_to else '' }}">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Применить</button>
+          <a href="/reports" class="btn btn-outline-secondary btn-sm" title="Сбросить">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── KPI карточки ────────────────────────────────────────────────────────── #}
+{% if kpi.count > 0 %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ kpi.count }}</div>
+        <div class="text-muted small">Оценок</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        {% if kpi.avg_score is not none %}
+          {% if kpi.avg_score >= 60 %}
+            <div class="fs-2 fw-bold text-success">{{ "%.1f"|format(kpi.avg_score) }}%</div>
+          {% elif kpi.avg_score >= 40 %}
+            <div class="fs-2 fw-bold text-warning">{{ "%.1f"|format(kpi.avg_score) }}%</div>
+          {% else %}
+            <div class="fs-2 fw-bold text-danger">{{ "%.1f"|format(kpi.avg_score) }}%</div>
+          {% endif %}
+        {% else %}
+          <div class="fs-2 fw-bold text-muted">—</div>
+        {% endif %}
+        <div class="text-muted small">Средний балл</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ kpi.won }}</div>
+        <div class="text-muted small">
+          Успешных
+          {% if kpi.won_pct is not none %}({{ kpi.won_pct }}%){% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-danger">{{ kpi.lost }}</div>
+        <div class="text-muted small">
+          Не продали
+          {% if kpi.lost_pct is not none %}({{ kpi.lost_pct }}%){% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% elif filters.checklist_id or filters.operators or filters.date_from or filters.date_to %}
+<div class="alert alert-secondary">
+  <i class="bi bi-search me-2"></i>Нет данных по выбранным фильтрам.
+</div>
+{% endif %}
+
+{# ── Аналитика по вкладкам ───────────────────────────────────────────────── #}
+{% if tab1 and selected_cl %}
+
+<ul class="nav nav-tabs mb-0" id="reportTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab1" type="button">
+      <i class="bi bi-grid-3x3 me-1"></i>Общие показатели
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab2" type="button">
+      <i class="bi bi-arrows-collapse me-1"></i>Корреляция
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab3" type="button">
+      <i class="bi bi-people me-1"></i>По сотрудникам
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content border border-top-0 rounded-bottom p-3 bg-white shadow-sm">
+
+  {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
+  <div class="tab-pane fade show active" id="tab1" role="tabpanel">
+
+    {# Тепловая карта #}
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="fw-semibold">Тепловая карта сотрудников</span>
+      <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary active" id="btnPct">%</button>
+        <button type="button" class="btn btn-outline-secondary" id="btnPts">Баллы</button>
+      </div>
+    </div>
+
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered table-sm mb-0 text-center align-middle" style="font-size:0.8rem">
+        <thead class="table-light">
+          <tr>
+            <th class="text-start" style="min-width:140px;white-space:nowrap">Сотрудник</th>
+            {% for block in tab1.blocks %}
+            <th style="min-width:85px;white-space:normal;line-height:1.2"
+                title="{{ block.name }}">
+              {{ (block.display_name or block.name) | truncate(16, True, '…') }}
+              <br><span class="text-muted fw-normal" style="font-size:0.7rem">вес {{ block.weight }}</span>
+            </th>
+            {% endfor %}
+            <th style="min-width:65px">Итог</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tab1.hm_rows %}
+          <tr>
+            <td class="text-start fw-semibold">{{ row.name }}</td>
+            {% for cell in row.cells %}
+            <td style="{{ heat_style(cell.pct) | safe }}">
+              <span class="val-pct">
+                {% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}
+              </span>
+              <span class="val-pts d-none">
+                {% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}
+              </span>
+            </td>
+            {% endfor %}
+            <td class="fw-semibold">
+              {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {# Команда #}
+          <tr class="table-light">
+            <td class="text-start fw-bold">Команда</td>
+            {% for cell in tab1.team_cells %}
+            <td style="{{ heat_style(cell.pct) | safe }};font-weight:600">
+              <span class="val-pct">
+                {% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}
+              </span>
+              <span class="val-pts d-none">
+                {% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}
+              </span>
+            </td>
+            {% endfor %}
+            <td class="fw-bold">
+              {% if tab1.team_total is not none %}{{ "%.1f"|format(tab1.team_total) }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {# Динамика по неделям #}
+    {% if tab1.weekly %}
+    <div class="fw-semibold mb-2">Динамика по неделям</div>
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <canvas id="weeklyChart" height="80"></canvas>
+      </div>
+      <div class="col-lg-4">
+        <div class="table-responsive" style="max-height:250px;overflow-y:auto">
+          <table class="table table-sm table-striped mb-0" style="font-size:0.8rem">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>Неделя</th>
+                <th class="text-center">Оценок</th>
+                <th class="text-center">Ср. балл</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for w in tab1.weekly %}
+              <tr>
+                <td>{{ w.week }}</td>
+                <td class="text-center">{{ w.count }}</td>
+                <td class="text-center fw-semibold">
+                  {% if w.avg is not none %}{{ "%.1f"|format(w.avg) }}%{% else %}—{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-muted small">
+      <i class="bi bi-info-circle me-1"></i>Нет оценок с датами для построения динамики.
+    </div>
+    {% endif %}
+
+  </div>{# /tab1 #}
+
+  {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
+  <div class="tab-pane fade" id="tab2" role="tabpanel">
+    <div class="fw-semibold mb-3">Корреляция блоков с результатом сделки</div>
+
+    {% if tab2 %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm align-middle" style="font-size:0.8rem">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:160px">Блок</th>
+            <th class="text-center" style="min-width:90px" title="Средний балл по успешным сделкам">
+              <i class="bi bi-check-circle text-success"></i> Успешных
+            </th>
+            <th class="text-center" style="min-width:90px" title="Средний балл по потерянным сделкам">
+              <i class="bi bi-x-circle text-danger"></i> Не продали
+            </th>
+            <th class="text-center" style="min-width:80px">Δ Won−Lost</th>
+            <th class="text-center" style="min-width:90px"
+                title="Win Rate среди сделок, где блок выполнен (>0%)">WR выполнено</th>
+            <th class="text-center" style="min-width:90px"
+                title="Win Rate среди сделок, где блок не выполнен (0%)">WR не выполнено</th>
+            <th class="text-center" style="min-width:90px"
+                title="Разница Win Rate: влияние выполнения блока на закрытие">Влияние WR</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tab2 %}
+          <tr>
+            <td class="fw-semibold">
+              {{ row.name }}
+              {% if row.weight %}
+              <span class="text-muted fw-normal ms-1" style="font-size:0.7rem">({{ row.weight }})</span>
+              {% endif %}
+            </td>
+            <td class="text-center" style="{{ heat_style(row.avg_won) | safe }}">
+              {% if row.avg_won is not none %}{{ "%.1f"|format(row.avg_won) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-center" style="{{ heat_style(row.avg_lost) | safe }}">
+              {% if row.avg_lost is not none %}{{ "%.1f"|format(row.avg_lost) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-center" style="{{ delta_style(row.delta) | safe }}">
+              {% if row.delta is not none %}
+                {{ "+" if row.delta >= 0 else "" }}{{ "%.1f"|format(row.delta) }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-center" style="{{ heat_style(row.wr_done) | safe }}">
+              {% if row.wr_done is not none %}{{ "%.1f"|format(row.wr_done) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-center" style="{{ heat_style(row.wr_not_done) | safe }}">
+              {% if row.wr_not_done is not none %}{{ "%.1f"|format(row.wr_not_done) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-center" style="{{ delta_style(row.wr_impact) | safe }}">
+              {% if row.wr_impact is not none %}
+                {{ "+" if row.wr_impact >= 0 else "" }}{{ "%.1f"|format(row.wr_impact) }} pp
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted small mt-2">
+      Δ — разница среднего балла между успешными и потерянными сделками.<br>
+      Влияние WR — насколько Win Rate выше, если блок выполнен (в процентных пунктах).
+    </div>
+    {% else %}
+    <div class="text-muted text-center py-4">Нет данных для корреляционного анализа.</div>
+    {% endif %}
+
+  </div>{# /tab2 #}
+
+  {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
+  <div class="tab-pane fade" id="tab3" role="tabpanel">
+
+    {# Таблица 1: оператор × блок → Won% / Lost% / Δ #}
+    <div class="fw-semibold mb-2">Won / Lost / Δ по сотрудникам</div>
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered table-sm align-middle mb-0" style="font-size:0.75rem">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:130px;white-space:nowrap">Сотрудник</th>
+            {% for block in tab3.blocks %}
+            <th class="text-center" style="min-width:80px;white-space:normal;line-height:1.2"
+                title="{{ block.name }}">
+              {{ (block.display_name or block.name) | truncate(14, True, '…') }}
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tab3.t1_rows %}
+          <tr>
+            <td class="fw-semibold">{{ row.name }}</td>
+            {% for cell in row.cells %}
+            <td class="text-center p-1">
+              {% if cell.won is not none or cell.lost is not none %}
+              <div style="font-size:0.68rem;line-height:1.3">
+                <span class="text-success">{{ "%.0f"|format(cell.won) if cell.won is not none else "—" }}%</span>
+                <span class="text-muted mx-1">/</span>
+                <span class="text-danger">{{ "%.0f"|format(cell.lost) if cell.lost is not none else "—" }}%</span>
+                <br>
+                <span style="{{ delta_style(cell.delta) | safe }}">
+                  {{ ("+" if cell.delta >= 0 else "") + "%.1f"|format(cell.delta) if cell.delta is not none else "—" }}
+                </span>
+              </div>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+          {# Команда #}
+          <tr class="table-light">
+            <td class="fw-bold">Команда</td>
+            {% for cell in tab3.team_cells %}
+            <td class="text-center p-1">
+              {% if cell.won is not none or cell.lost is not none %}
+              <div style="font-size:0.68rem;line-height:1.3;font-weight:600">
+                <span class="text-success">{{ "%.0f"|format(cell.won) if cell.won is not none else "—" }}%</span>
+                <span class="text-muted mx-1">/</span>
+                <span class="text-danger">{{ "%.0f"|format(cell.lost) if cell.lost is not none else "—" }}%</span>
+                <br>
+                <span style="{{ delta_style(cell.delta) | safe }}">
+                  {{ ("+" if cell.delta >= 0 else "") + "%.1f"|format(cell.delta) if cell.delta is not none else "—" }}
+                </span>
+              </div>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {# Таблица 2: Win Rate по уровням выполнения #}
+    <div class="fw-semibold mb-1">Win Rate по уровням выполнения блока</div>
+    <div class="text-muted small mb-2">
+      Ячейка: Win Rate % среди сделок с известным итогом. <em>n</em> — всего сделок в диапазоне.
+      Чем выше WR справа — тем сильнее влияние блока на закрытие.
+    </div>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm align-middle" style="font-size:0.78rem">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:90px;white-space:nowrap">Выполнение</th>
+            {% for block in tab3.blocks %}
+            <th class="text-center" style="min-width:75px;white-space:normal;line-height:1.2"
+                title="{{ block.name }}">
+              {{ (block.display_name or block.name) | truncate(14, True, '…') }}
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tab3.t2_rows %}
+          <tr>
+            <td class="fw-semibold">{{ row.label }}</td>
+            {% for cell in row.cells %}
+            <td class="text-center" style="{{ heat_style(cell.wr) | safe }}">
+              {% if cell.wr is not none %}
+                {{ "%.1f"|format(cell.wr) }}%
+                <br><span style="font-size:0.65rem;opacity:0.8">n={{ cell.n }}</span>
+              {% elif cell.n > 0 %}
+                <span class="text-muted">n={{ cell.n }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>{# /tab3 #}
+
+</div>{# /tab-content #}
+
+{% elif kpi.count > 0 and not selected_cl %}
+<div class="alert alert-info mt-3">
+  <i class="bi bi-info-circle me-2"></i>
+  Выберите <strong>чек-лист</strong> выше для просмотра детальной аналитики по блокам.
+</div>
+
+{% elif not kpi.count %}
+<div class="card shadow-sm mt-2">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-bar-chart display-6 mb-2 d-block"></i>
+    <p class="mb-1">Выберите фильтры и нажмите <strong>Применить</strong></p>
+    <p class="small mb-0">Для детальной аналитики укажите чек-лист.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+/* Переключатель % / Баллы */
+document.getElementById('btnPct')?.addEventListener('click', function () {
+  document.querySelectorAll('.val-pct').forEach(e => e.classList.remove('d-none'));
+  document.querySelectorAll('.val-pts').forEach(e => e.classList.add('d-none'));
+  this.classList.add('active');
+  document.getElementById('btnPts').classList.remove('active');
+});
+document.getElementById('btnPts')?.addEventListener('click', function () {
+  document.querySelectorAll('.val-pts').forEach(e => e.classList.remove('d-none'));
+  document.querySelectorAll('.val-pct').forEach(e => e.classList.add('d-none'));
+  this.classList.add('active');
+  document.getElementById('btnPct').classList.remove('active');
+});
+
+/* График динамики по неделям */
+const weeklyData = {{ weekly_json | safe }};
+const weeklyCtx = document.getElementById('weeklyChart');
+if (weeklyCtx && weeklyData.length > 0) {
+  new Chart(weeklyCtx, {
+    type: 'line',
+    data: {
+      labels: weeklyData.map(d => d.week),
+      datasets: [{
+        label: 'Средний балл',
+        data: weeklyData.map(d => d.avg),
+        borderColor: 'rgb(59,130,246)',
+        backgroundColor: 'rgba(59,130,246,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.y}% (${weeklyData[ctx.dataIndex].count} оценок)`
+          }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Оценка #{{ ev.id }} — {{ ev.operator_name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/evaluations">Оценки</a></li>
+    <li class="breadcrumb-item active">Оценка #{{ ev.id }}</li>
+  </ol>
+</nav>
+
+{% set stage_badge = {
+  "сделка успешна": "success",
+  "не смог продать": "danger",
+  "в работе": "warning"
+}.get(ev.stage, "secondary") %}
+
+<!-- Header -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col">
+        <h5 class="mb-1">{{ ev.operator_name }}</h5>
+        <div class="text-muted small">
+          {% if ev.deal_id %}
+            Сделка <strong>#{{ ev.deal_id }}</strong> ·
+          {% endif %}
+          {% if ev.department %}
+            <span class="badge bg-secondary-subtle text-secondary">{{ ev.department }}</span> ·
+          {% endif %}
+          {% if ev.eval_date %}{{ ev.eval_date.strftime('%d.%m.%Y') }} ·{% endif %}
+          {{ ev.checklist.name if ev.checklist else '—' }}
+          {% if ev.evaluator %} · Оценил: {{ ev.evaluator.username }}{% endif %}
+        </div>
+      </div>
+      <div class="col-auto text-center">
+        <div class="display-6 fw-bold text-{{ score_color(ev.total_score) }}">
+          {{ "%.1f"|format(ev.total_score) }}%
+        </div>
+        <div class="small text-muted">Итоговый балл</div>
+      </div>
+      <div class="col-auto">
+        <span class="badge bg-{{ stage_badge }}-subtle text-{{ stage_badge }} fs-6">
+          {% if ev.stage == "сделка успешна" %}✓ Успешна
+          {% elif ev.stage == "не смог продать" %}✗ Не продал
+          {% elif ev.stage == "в работе" %}⏳ В работе
+          {% else %}{{ ev.stage }}{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Блоки -->
+{% for block in ev.checklist.blocks %}
+{% if block.criteria %}
+<div class="card shadow-sm mb-2">
+  <div class="card-header bg-white py-2 d-flex justify-content-between">
+    <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+    {% if block_scores.get(block.id) is not none %}
+    <span class="badge bg-{{ score_color(block_scores[block.id]) }}-subtle
+                       text-{{ score_color(block_scores[block.id]) }}">
+      {{ "%.0f"|format(block_scores[block.id]) }}%
+    </span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <tbody>
+        {% for crit in block.criteria %}
+        {% set item = item_map.get(crit.id) %}
+        {% set val = item.value if item else "na" %}
+        <tr class="{% if val == 'yes' %}table-success{% elif val == 'no' %}table-danger{% endif %}">
+          <td class="small align-middle" style="width:65%">
+            {{ crit.text }}
+            <span class="text-muted">({{ crit.weight }})</span>
+            {% if crit.description %}
+            <i class="bi bi-info-circle text-muted ms-1"
+               data-bs-toggle="tooltip" data-bs-placement="right"
+               title="{{ crit.description }}"></i>
+            {% endif %}
+          </td>
+          <td class="align-middle fw-semibold" style="width:10%">
+            {% set score_type = crit.score_type if crit.score_type else 'binary' %}
+            {% if score_type == 'range' %}
+              {% if val != 'na' %}
+                <span class="badge bg-primary">{{ val }} / {{ crit.score_max or 5 }}</span>
+              {% else %}
+                <span class="text-muted">Н/П</span>
+              {% endif %}
+            {% else %}
+              {% if val == "yes" %}
+                <span class="text-success"><i class="bi bi-check-lg"></i> Да</span>
+              {% elif val == "no" %}
+                <span class="text-danger"><i class="bi bi-x-lg"></i> Нет</span>
+              {% else %}
+                <span class="text-muted">Н/П</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td class="text-muted small align-middle">
+            {{ item.comment if item and item.comment else "" }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if ev.general_comment %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <p class="small fw-semibold text-muted mb-1">Общий комментарий</p>
+    <p class="mb-0">{{ ev.general_comment }}</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="d-flex gap-2 mb-4">
+  <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>Редактировать
+  </a>
+  <form action="/evaluations/{{ ev.id }}/delete" method="post"
+        onsubmit="return confirm('Удалить оценку #{{ ev.id }}?')">
+    <button type="submit" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>Удалить
+    </button>
+  </form>
+  <a href="/evaluations" class="btn btn-link btn-sm text-muted">← К списку</a>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Настройки формы оценки — Оценка звонков{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/checklists">Формы оценки</a></li>
+    <li class="breadcrumb-item active">Настройки формы оценки</li>
+  </ol>
+</nav>
+
+<h5 class="mb-1">Настройки формы оценки</h5>
+<p class="text-muted small mb-4">
+  Укажите общие параметры формы оценки, которые будут применяться ко всем критериям.
+  Нажмите «Сохранить», чтобы перейти к странице создания групп и критериев.
+</p>
+
+<form action="/checklists" method="post">
+  <div class="row">
+    <div class="col-lg-6">
+
+      <p class="fw-semibold mb-3">Основные настройки</p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Название <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control" autofocus required
+               placeholder="Введите название формы оценки">
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Описание</label>
+        <textarea name="description" class="form-control" rows="3"
+                  placeholder="Введите описание формы оценки"></textarea>
+      </div>
+
+      <div class="row g-4 mb-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Метод оценки</label>
+          <div class="form-check mt-1">
+            <input class="form-check-input" type="radio" name="calculation"
+                   id="calc_simple" value="average" checked>
+            <label class="form-check-label small" for="calc_simple">
+              Простая оценка
+              <div class="text-muted" style="font-size:0.75rem;font-weight:400">
+                Каждый критерий имеет одинаковый вес
+              </div>
+            </label>
+          </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="radio" name="calculation"
+                   id="calc_weighted" value="weighted">
+            <label class="form-check-label small" for="calc_weighted">
+              Взвешенная оценка
+              <div class="text-muted" style="font-size:0.75rem;font-weight:400">
+                Для каждого критерия указывается % значимости при подсчёте итогового балла
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Расчёт оценки</label>
+          <div class="form-check mt-1">
+            <input class="form-check-input" type="radio" name="score_display"
+                   id="score_sum" value="sum" checked>
+            <label class="form-check-label small" for="score_sum">Сумма баллов</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="score_display"
+                   id="score_avg" value="average">
+            <label class="form-check-label small" for="score_avg">Средний балл</label>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4">
+      <p class="fw-semibold mb-3">Дополнительные настройки</p>
+
+      <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" name="autofail_enabled"
+               id="autofail" value="1">
+        <label class="form-check-label" for="autofail">
+          <span class="small fw-semibold">Автофейл формы оценки</span>
+          <div class="text-muted small">
+            Если критерий с флагом автофейл получает «Нет» — итоговый балл становится 0%
+          </div>
+        </label>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="/checklists" class="btn btn-outline-secondary">Отмена</a>
+      </div>
+
+    </div>
+  </div>
+</form>
+{% endblock %}

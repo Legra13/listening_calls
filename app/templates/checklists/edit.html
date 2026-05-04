@@ -1,0 +1,776 @@
+{% extends "base.html" %}
+{% block title %}{{ cl.name }} — Настройка критериев{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-2">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/checklists">Формы оценки</a></li>
+    <li class="breadcrumb-item">
+      <a href="/checklists/{{ cl.id }}/settings">Настройки формы оценки</a>
+    </li>
+    <li class="breadcrumb-item active">Настройки критериев</li>
+  </ol>
+</nav>
+
+<!-- Header -->
+<div class="d-flex align-items-start justify-content-between mb-1">
+  <div>
+    <h5 class="mb-1 d-flex align-items-center gap-2">
+      {{ cl.name }}
+      {% if cl.status == "draft" %}
+        <span class="badge bg-secondary-subtle text-secondary fw-normal" style="font-size:0.7rem">Черновик</span>
+      {% elif cl.status == "active" %}
+        <span class="badge bg-success-subtle text-success fw-normal" style="font-size:0.7rem">Активна</span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning fw-normal" style="font-size:0.7rem">Архив</span>
+      {% endif %}
+    </h5>
+    <div class="text-muted small">
+      Метод оценки: <strong>{{ "Взвешенная оценка" if cl.calculation == "weighted" else "Простая оценка" }}</strong>
+      · Расчёт оценки: <strong>{{ "Сумма баллов" if cl.calculation == "weighted" else "Средний балл" }}</strong>
+      {% if cl.autofail_enabled %}
+        · <span class="text-danger fw-semibold">Автофейл включён</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3">
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+        Действия
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        <li>
+          <a class="dropdown-item small" href="/checklists/{{ cl.id }}/settings">
+            <i class="bi bi-gear me-2"></i>Настройки формы
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <form action="/checklists/{{ cl.id }}/archive" method="post">
+            <button class="dropdown-item small {{ 'text-success' if cl.status == 'archived' else 'text-warning' }}" type="submit">
+              {% if cl.status == "archived" %}
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Восстановить
+              {% else %}
+                <i class="bi bi-archive me-2"></i>Архивировать
+              {% endif %}
+            </button>
+          </form>
+        </li>
+        {% if cl.status != "active" %}
+        <li>
+          <form action="/checklists/{{ cl.id }}/delete" method="post"
+                onsubmit="return confirm('Удалить форму оценки «{{ cl.name }}»?')">
+            <button class="dropdown-item text-danger small" type="submit">
+              <i class="bi bi-trash me-2"></i>Удалить форму
+            </button>
+          </form>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    {% if cl.status != "active" %}
+    <form action="/checklists/{{ cl.id }}/publish" method="post" class="m-0">
+      <button class="btn btn-sm btn-primary">Опубликовать форму оценки</button>
+    </form>
+    {% else %}
+    <span class="badge bg-success-subtle text-success px-3 py-2">
+      <i class="bi bi-check-circle me-1"></i>Опубликована
+    </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Score counter + action buttons -->
+<div class="d-flex align-items-center justify-content-end gap-2 mt-3 mb-3">
+  {% set total_weight = namespace(n=0) %}
+  {% for b in cl.blocks %}{% set total_weight.n = total_weight.n + b.weight %}{% endfor %}
+  <span class="text-muted small me-2">
+    Балл по форме оценки: <strong>{{ total_weight.n }}</strong>
+    {% set total_crit = namespace(n=0) %}
+    {% for b in cl.blocks %}{% set total_crit.n = total_crit.n + b.criteria|length %}{% endfor %}
+    {% if total_weight.n > 0 %}
+    <span class="ms-1">{{ total_weight.n }}%</span>
+    {% endif %}
+  </span>
+  <button class="btn btn-sm btn-outline-secondary" onclick="openAddGroupModal()">
+    <i class="bi bi-plus-lg me-1"></i>Добавить группу
+  </button>
+  <button class="btn btn-sm btn-outline-primary" onclick="openAddCritTopLevel()">
+    <i class="bi bi-plus-lg me-1"></i>Добавить критерий
+  </button>
+</div>
+
+<!-- Groups & criteria -->
+{% if not cl.blocks %}
+<div class="text-center py-5 text-muted border rounded">
+  <i class="bi bi-list-check fs-1 d-block mb-2 opacity-25"></i>
+  Нет групп критериев. Нажмите «Добавить группу», чтобы начать.
+</div>
+{% endif %}
+
+{% for block in cl.blocks %}
+  {% set crit_total_weight = namespace(n=0) %}
+  {% for c in block.criteria %}{% set crit_total_weight.n = crit_total_weight.n + c.weight %}{% endfor %}
+  {% set form_total_weight = namespace(n=0) %}
+  {% for b in cl.blocks %}{% set form_total_weight.n = form_total_weight.n + b.weight %}{% endfor %}
+  {% set block_pct = (block.weight / form_total_weight.n * 100) | round(0) | int if form_total_weight.n > 0 else 0 %}
+
+  <div class="border rounded mb-2" id="block-{{ block.id }}">
+
+    <!-- Group header -->
+    <div class="d-flex align-items-center px-3 py-2"
+         style="background:#eef2ff; border-radius:4px 4px 0 0">
+      <button class="btn btn-link text-muted p-0 me-2 lh-1 toggle-group-btn"
+              type="button" data-block-id="{{ block.id }}">
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+      <div class="ms-auto d-flex align-items-center gap-3 small text-muted">
+        <span>Балл по группе <strong class="text-dark">{{ block.weight }}</strong></span>
+        <span>Вес группы <strong class="text-dark">{{ block_pct }}%</strong></span>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-link text-muted p-0 lh-1" type="button"
+                  data-bs-toggle="dropdown">
+            <i class="bi bi-three-dots-vertical fs-6"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li>
+              <a class="dropdown-item small edit-group-btn" href="#"
+                 data-block-id="{{ block.id }}"
+                 data-name="{{ (block.display_name or block.name)|e }}"
+                 data-weight="{{ block.weight }}">
+                <i class="bi bi-pencil me-2"></i>Редактировать группу
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form action="/checklists/{{ cl.id }}/blocks/{{ block.id }}/delete" method="post"
+                    onsubmit="return confirm('Удалить группу «{{ (block.display_name or block.name)|e }}» со всеми критериями?')">
+                <button class="dropdown-item text-danger small" type="submit">
+                  <i class="bi bi-trash me-2"></i>Удалить группу
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Criteria body -->
+    <div id="group-body-{{ block.id }}">
+      {% for crit in block.criteria %}
+        {% set crit_pct = ((crit.weight / crit_total_weight.n * block.weight) | round(1)) if crit_total_weight.n > 0 else 0 %}
+        <div class="border-top px-3 py-2 d-flex align-items-start">
+          <div class="flex-grow-1">
+            <div class="small fw-semibold mb-1">{{ crit.text }}</div>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <div class="d-flex align-items-center gap-1">
+                {% if crit.score_type == 'range' %}
+                  {% for i in range(1, (crit.score_max or 5) + 1) %}
+                    <span class="rounded-circle border d-flex align-items-center justify-content-center"
+                          style="width:26px;height:26px;font-size:0.6rem;flex-shrink:0">{{ i }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="rounded-circle border d-flex align-items-center justify-content-center text-muted"
+                        style="width:26px;height:26px;font-size:0.6rem;flex-shrink:0">Н/П</span>
+                  <span class="rounded-circle border d-flex align-items-center justify-content-center text-danger"
+                        style="width:26px;height:26px;font-size:0.6rem;flex-shrink:0">Нет</span>
+                  <span class="rounded-circle border d-flex align-items-center justify-content-center text-success"
+                        style="width:26px;height:26px;font-size:0.6rem;flex-shrink:0">Да</span>
+                {% endif %}
+              </div>
+              <span class="text-muted small">Вес критерия <strong>{{ crit_pct }}%</strong></span>
+              {% if crit.is_autofail %}
+                <span class="badge bg-danger-subtle text-danger small">
+                  <i class="bi bi-x-circle me-1"></i>Автофейл
+                </span>
+              {% endif %}
+              {% if crit.description %}
+                <span class="text-muted small fst-italic">
+                  <i class="bi bi-info-circle me-1"></i>{{ crit.description[:70] }}{% if crit.description|length > 70 %}…{% endif %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="dropdown ms-2 flex-shrink-0">
+            <button class="btn btn-sm btn-link text-muted p-0 lh-1" type="button"
+                    data-bs-toggle="dropdown">
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              <li>
+                <a class="dropdown-item small edit-crit-btn" href="#"
+                   data-crit-id="{{ crit.id }}"
+                   data-block-id="{{ block.id }}"
+                   data-text="{{ crit.text|e }}"
+                   data-description="{{ (crit.description or '')|e }}"
+                   data-weight="{{ crit.weight }}"
+                   data-autofail="{{ '1' if crit.is_autofail else '' }}"
+                   data-score-type="{{ crit.score_type or 'binary' }}"
+                   data-score-max="{{ crit.score_max or 5 }}">
+                  <i class="bi bi-pencil me-2"></i>Редактировать
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form action="/checklists/{{ cl.id }}/blocks/{{ block.id }}/criteria/{{ crit.id }}/delete"
+                      method="post" onsubmit="return confirm('Удалить критерий?')">
+                  <button class="dropdown-item text-danger small" type="submit">
+                    <i class="bi bi-trash me-2"></i>Удалить
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+      {% endfor %}
+
+      <div class="border-top px-3 py-2 text-end">
+        <button class="btn btn-sm btn-link text-primary text-decoration-none p-0 add-crit-in-group"
+                type="button" data-block-id="{{ block.id }}">
+          <i class="bi bi-plus-lg me-1"></i>Добавить критерий
+        </button>
+      </div>
+    </div>
+
+  </div>
+{% endfor %}
+
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add group -->
+<div class="modal fade" id="modalAddGroup" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Настройки группы критериев</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info small py-2 mb-3">
+          Объединяйте критерии формы оценки в группы, чтобы отслеживать результаты и их динамику по одному общему навыку сотрудника.
+        </div>
+        <form id="formAddGroup" action="/checklists/{{ cl.id }}/blocks" method="post">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">
+              Название <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="display_name" id="addGroupName"
+                   class="form-control" required placeholder="Введите название группы">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Вес группы (%)</label>
+            <input type="number" name="weight" id="addGroupWeight"
+                   class="form-control" value="0" min="0" max="100">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary btn-sm"
+                onclick="document.getElementById('formAddGroup').submit()">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit group -->
+<div class="modal fade" id="modalEditGroup" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Редактировать группу</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditGroup" method="post" onsubmit="return false;">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Название <span class="text-danger">*</span></label>
+            <input type="text" name="display_name" id="editGroupName"
+                   class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Вес группы (%)</label>
+            <input type="number" name="weight" id="editGroupWeight"
+                   class="form-control" min="0" max="100">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary btn-sm"
+                onclick="document.getElementById('formEditGroup').submit()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add criterion: choose source -->
+<div class="modal fade" id="modalAddCritChoice" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Добавить критерий</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info small py-2 mb-3">
+          Создайте новый критерий или добавьте критерий из библиотеки. Библиотека содержит критерии которые возможно добавлены в другие формы оценки.
+        </div>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-outline-secondary" id="btnFromLibrary">
+            Критерий из библиотеки
+          </button>
+          <button class="btn btn-primary" id="btnNewCrit">
+            Новый критерий
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New criterion form -->
+<div class="modal fade" id="modalNewCrit" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Настройки критерия</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNewCrit" method="post" onsubmit="return false;">
+          <div id="newCritGroupRow" class="mb-3" style="display:none">
+            <label class="form-label small fw-semibold">Группа <span class="text-danger">*</span></label>
+            <select id="newCritGroupSel" class="form-select form-select-sm">
+              {% for b in cl.blocks %}
+                <option value="{{ b.id }}">{{ b.display_name or b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Название <span class="text-danger">*</span></label>
+            <input type="text" name="text" id="newCritText" class="form-control" required
+                   placeholder="Название критерия">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Описание</label>
+            <textarea name="description" id="newCritDesc" class="form-control" rows="2"
+                      placeholder="Описание критерия (необязательно)"></textarea>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Вес</label>
+              <input type="number" name="weight" id="newCritWeight"
+                     class="form-control" value="1" min="0">
+            </div>
+            <div class="col-md-8 pb-1">
+              <small id="newCritWeightHint" class="text-muted"></small>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label small fw-semibold">Диапазон оценки</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="score_type"
+                       id="newCritScoreBinary" value="binary" checked>
+                <label class="form-check-label small" for="newCritScoreBinary">Да / Нет</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="score_type"
+                       id="newCritScoreRange" value="range">
+                <label class="form-check-label small" for="newCritScoreRange">Числовая шкала (1–N)</label>
+              </div>
+            </div>
+            <div id="newCritScoreMaxRow" class="mt-2" style="display:none">
+              <label class="form-label small">Максимальный балл</label>
+              <input type="number" name="score_max" id="newCritScoreMax"
+                     class="form-control form-control-sm" style="width:100px" value="5" min="2" max="10">
+            </div>
+          </div>
+          {% if cl.autofail_enabled %}
+          <div class="mt-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_autofail"
+                     value="1" id="newCritAutofail">
+              <label class="form-check-label small text-danger fw-semibold" for="newCritAutofail">
+                <i class="bi bi-x-circle me-1"></i>Автофейл формы оценки
+              </label>
+            </div>
+          </div>
+          {% endif %}
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary btn-sm" id="btnSubmitNewCrit">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit criterion -->
+<div class="modal fade" id="modalEditCrit" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Настройки критерия</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditCrit" method="post" onsubmit="return false;">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Название <span class="text-danger">*</span></label>
+            <input type="text" name="text" id="editCritText" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Описание</label>
+            <textarea name="description" id="editCritDesc" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Вес</label>
+              <input type="number" name="weight" id="editCritWeight"
+                     class="form-control" min="0">
+            </div>
+            <div class="col-md-8 pb-1">
+              <small id="editCritWeightHint" class="text-muted"></small>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label small fw-semibold">Диапазон оценки</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="score_type"
+                       id="editCritScoreBinary" value="binary">
+                <label class="form-check-label small" for="editCritScoreBinary">Да / Нет</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="score_type"
+                       id="editCritScoreRange" value="range">
+                <label class="form-check-label small" for="editCritScoreRange">Числовая шкала (1–N)</label>
+              </div>
+            </div>
+            <div id="editCritScoreMaxRow" class="mt-2" style="display:none">
+              <label class="form-label small">Максимальный балл</label>
+              <input type="number" name="score_max" id="editCritScoreMax"
+                     class="form-control form-control-sm" style="width:100px" min="2" max="10">
+            </div>
+          </div>
+          {% if cl.autofail_enabled %}
+          <div class="mt-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_autofail"
+                     value="1" id="editCritAutofail">
+              <label class="form-check-label small text-danger fw-semibold" for="editCritAutofail">
+                <i class="bi bi-x-circle me-1"></i>Автофейл формы оценки
+              </label>
+            </div>
+          </div>
+          {% endif %}
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary btn-sm"
+                onclick="document.getElementById('formEditCrit').submit()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Criteria library -->
+<div class="modal fade" id="modalLibrary" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-semibold">Выберите критерии из библиотеки</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info small py-2 mb-3">
+          В данном списке отображаются критерии из других форм оценки
+        </div>
+        <div id="libraryLoading" class="text-center py-3 text-muted">
+          <span class="spinner-border spinner-border-sm me-1"></span>Загрузка...
+        </div>
+        <div id="libraryContent" style="display:none">
+          <div class="table-responsive" style="max-height:350px;overflow-y:auto">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light" style="position:sticky;top:0">
+                <tr>
+                  <th style="width:32px"></th>
+                  <th>Название</th>
+                  <th>Описание</th>
+                  <th>Форма оценки</th>
+                </tr>
+              </thead>
+              <tbody id="libraryTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="libraryEmpty" style="display:none" class="text-center py-3 text-muted">
+          Библиотека пуста — нет критериев из других форм оценки
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-1">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+        <button class="btn btn-primary btn-sm" id="btnAddFromLib">Добавить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CL_ID = {{ cl.id }};
+const BASE = location.pathname.split('/checklists/')[0];
+let activeBlockId = null;
+let fromTopLevel = false;
+let libCriteria = [];
+
+const BLOCK_CRIT_WEIGHTS = {
+  {% for b in cl.blocks %}{{ b.id }}: {{ b.criteria | sum(attribute='weight') }}{% if not loop.last %}, {% endif %}{% endfor %}
+};
+const BLOCK_NAMES = {
+  {% for b in cl.blocks %}{{ b.id }}: {{ (b.display_name or b.name) | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}
+};
+
+function updateWeightHint(blockId, hintId, excludeWeight) {
+  const hint = document.getElementById(hintId);
+  if (!hint) return;
+  const used = (BLOCK_CRIT_WEIGHTS[blockId] || 0) - (excludeWeight || 0);
+  if (used > 0) {
+    const remaining = 100 - used;
+    hint.textContent = 'Уже в группе: ' + used + ' | Осталось до 100: ' + remaining;
+    hint.className = 'text-' + (remaining < 0 ? 'danger' : 'muted') + ' small';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+const M = {};
+document.addEventListener('DOMContentLoaded', function() {
+  ['modalAddGroup','modalEditGroup','modalAddCritChoice',
+   'modalNewCrit','modalEditCrit','modalLibrary'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) M[id] = new bootstrap.Modal(el);
+  });
+
+  // Toggle group collapse
+  document.querySelectorAll('.toggle-group-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.blockId;
+      const body = document.getElementById('group-body-' + id);
+      const icon = this.querySelector('i');
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? 'block' : 'none';
+      icon.className = hidden ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+    });
+  });
+
+  // Edit group
+  document.querySelectorAll('.edit-group-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('editGroupName').value = this.dataset.name;
+      document.getElementById('editGroupWeight').value = this.dataset.weight;
+      document.getElementById('formEditGroup').action =
+        BASE + '/checklists/' + CL_ID + '/blocks/' + this.dataset.blockId;
+      M['modalEditGroup'].show();
+    });
+  });
+
+  // Add criterion inside group
+  document.querySelectorAll('.add-crit-in-group').forEach(btn => {
+    btn.addEventListener('click', function() {
+      fromTopLevel = false;
+      activeBlockId = this.dataset.blockId;
+      M['modalAddCritChoice'].show();
+    });
+  });
+
+  // Edit criterion
+  document.querySelectorAll('.edit-crit-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('editCritText').value = this.dataset.text;
+      document.getElementById('editCritDesc').value = this.dataset.description;
+      document.getElementById('editCritWeight').value = this.dataset.weight;
+      const af = document.getElementById('editCritAutofail');
+      if (af) af.checked = this.dataset.autofail === '1';
+      // Score type
+      const scoreType = this.dataset.scoreType || 'binary';
+      const scoreMax = this.dataset.scoreMax || '5';
+      const sBin = document.getElementById('editCritScoreBinary');
+      const sRange = document.getElementById('editCritScoreRange');
+      if (sBin) sBin.checked = (scoreType === 'binary');
+      if (sRange) sRange.checked = (scoreType === 'range');
+      const smRow = document.getElementById('editCritScoreMaxRow');
+      if (smRow) smRow.style.display = scoreType === 'range' ? 'block' : 'none';
+      const smInput = document.getElementById('editCritScoreMax');
+      if (smInput) smInput.value = scoreMax;
+      document.getElementById('formEditCrit').action =
+        BASE + '/checklists/' + CL_ID + '/blocks/' + this.dataset.blockId +
+        '/criteria/' + this.dataset.critId;
+      updateWeightHint(this.dataset.blockId, 'editCritWeightHint', parseInt(this.dataset.weight) || 0);
+      M['modalEditCrit'].show();
+    });
+  });
+
+  // Show/hide score max row for new/edit crit
+  document.querySelectorAll('input[name="score_type"]').forEach(r => {
+    r.addEventListener('change', function() {
+      const prefix = this.id.startsWith('new') ? 'new' : 'edit';
+      const row = document.getElementById(prefix + 'CritScoreMaxRow');
+      if (row) row.style.display = this.value === 'range' ? 'block' : 'none';
+    });
+  });
+
+  // Choice modal: new criterion
+  document.getElementById('btnNewCrit').addEventListener('click', function() {
+    M['modalAddCritChoice'].hide();
+    const sel = document.getElementById('newCritGroupSel');
+    const groupRow = document.getElementById('newCritGroupRow');
+    const hasMultiple = sel && sel.options.length > 1;
+    // Show group selector only from top-level button when there are multiple groups
+    if (fromTopLevel && hasMultiple) {
+      groupRow.style.display = 'block';
+    } else {
+      groupRow.style.display = 'none';
+    }
+    if (sel && activeBlockId) sel.value = activeBlockId;
+    // Reset fields
+    document.getElementById('newCritText').value = '';
+    document.getElementById('newCritDesc').value = '';
+    document.getElementById('newCritWeight').value = '1';
+    const af = document.getElementById('newCritAutofail');
+    if (af) af.checked = false;
+    // Reset score type to binary
+    const nBin = document.getElementById('newCritScoreBinary');
+    const nRange = document.getElementById('newCritScoreRange');
+    if (nBin) nBin.checked = true;
+    if (nRange) nRange.checked = false;
+    const nSmRow = document.getElementById('newCritScoreMaxRow');
+    if (nSmRow) nSmRow.style.display = 'none';
+    const nSmInput = document.getElementById('newCritScoreMax');
+    if (nSmInput) nSmInput.value = '5';
+    updateWeightHint(activeBlockId, 'newCritWeightHint');
+    setTimeout(() => {
+      M['modalNewCrit'].show();
+      setTimeout(() => document.getElementById('newCritText').focus(), 300);
+    }, 200);
+  });
+
+  // Update weight hint when group changes
+  const newCritGroupSel = document.getElementById('newCritGroupSel');
+  if (newCritGroupSel) {
+    newCritGroupSel.addEventListener('change', function() {
+      updateWeightHint(this.value, 'newCritWeightHint');
+    });
+  }
+
+  // Choice modal: from library
+  document.getElementById('btnFromLibrary').addEventListener('click', function() {
+    M['modalAddCritChoice'].hide();
+    document.getElementById('libraryLoading').style.display = 'block';
+    document.getElementById('libraryContent').style.display = 'none';
+    document.getElementById('libraryEmpty').style.display = 'none';
+    setTimeout(() => {
+      M['modalLibrary'].show();
+      loadLibrary();
+    }, 200);
+  });
+
+  // Submit new criterion
+  document.getElementById('btnSubmitNewCrit').addEventListener('click', function() {
+    const form = document.getElementById('formNewCrit');
+    const sel = document.getElementById('newCritGroupSel');
+    const blockId = (sel && sel.value) ? sel.value : activeBlockId;
+    if (!blockId) {
+      alert('Выберите группу для критерия');
+      return;
+    }
+    form.action = BASE + '/checklists/' + CL_ID + '/blocks/' + blockId + '/criteria';
+    form.submit();
+  });
+
+  // Add from library
+  document.getElementById('btnAddFromLib').addEventListener('click', function() {
+    const checked = document.querySelectorAll('#libraryTableBody input[type=checkbox]:checked');
+    if (!checked.length) { alert('Выберите хотя бы один критерий'); return; }
+    const blockId = activeBlockId;
+    if (!blockId) { alert('Не выбрана группа'); return; }
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = BASE + '/checklists/' + CL_ID + '/blocks/' + blockId + '/criteria-from-library';
+    checked.forEach(cb => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'crit_ids'; inp.value = cb.value;
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  });
+});
+
+function openAddGroupModal() {
+  document.getElementById('addGroupName').value = '';
+  document.getElementById('addGroupWeight').value = '0';
+  M['modalAddGroup'].show();
+  setTimeout(() => document.getElementById('addGroupName').focus(), 300);
+}
+
+function openAddCritTopLevel() {
+  {% if not cl.blocks %}
+  alert('Сначала создайте хотя бы одну группу критериев');
+  return;
+  {% else %}
+  fromTopLevel = true;
+  activeBlockId = '{{ cl.blocks[0].id }}';
+  M['modalAddCritChoice'].show();
+  {% endif %}
+}
+
+function loadLibrary() {
+  fetch('/api/criteria-library?checklist_id=' + CL_ID, {credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('libraryLoading').style.display = 'none';
+      const tbody = document.getElementById('libraryTableBody');
+      tbody.innerHTML = '';
+      if (!data.length) {
+        document.getElementById('libraryEmpty').style.display = 'block';
+        return;
+      }
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        const desc = item.description ? item.description.substring(0, 60) +
+                     (item.description.length > 60 ? '…' : '') : '';
+        tr.innerHTML =
+          '<td><input type="checkbox" class="form-check-input" value="' + item.id + '"></td>' +
+          '<td class="small">' + escHtml(item.text) + '</td>' +
+          '<td class="small text-muted">' + escHtml(desc) + '</td>' +
+          '<td class="small text-muted">' + escHtml(item.checklist_name) + '</td>';
+        tbody.appendChild(tr);
+      });
+      document.getElementById('libraryContent').style.display = 'block';
+    })
+    .catch(() => {
+      document.getElementById('libraryLoading').style.display = 'none';
+      document.getElementById('libraryEmpty').style.display = 'block';
+    });
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

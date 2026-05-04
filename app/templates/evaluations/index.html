@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Оценки — Оценка звонков{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Оценки</h5>
+  <a href="/evaluations/new" class="btn btn-sm btn-dark">
+    <i class="bi bi-plus-lg me-1"></i>Новая оценка
+  </a>
+</div>
+
+<!-- Фильтры -->
+<form method="get" action="/evaluations" class="row g-2 mb-3">
+  <div class="col-auto">
+    <input type="text" name="operator" class="form-control form-control-sm"
+           placeholder="Оператор" value="{{ filters.operator }}">
+  </div>
+  <div class="col-auto">
+    <select name="department" class="form-select form-select-sm">
+      <option value="">Все отделы</option>
+      {% for d in departments %}
+        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="checklist_id" class="form-select form-select-sm">
+      <option value="">Все чек-листы</option>
+      {% for cl in checklists %}
+        <option value="{{ cl.id }}" {% if filters.checklist_id == cl.id|string %}selected{% endif %}>
+          {{ cl.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="stage" class="form-select form-select-sm">
+      <option value="">Все стадии</option>
+      <option value="сделка успешна"   {% if filters.stage == "сделка успешна" %}selected{% endif %}>Успешна</option>
+      <option value="не смог продать"  {% if filters.stage == "не смог продать" %}selected{% endif %}>Не продал</option>
+      <option value="в работе"         {% if filters.stage == "в работе" %}selected{% endif %}>В работе</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-funnel me-1"></i>Фильтр
+    </button>
+    <a href="/evaluations" class="btn btn-sm btn-link text-muted">Сбросить</a>
+  </div>
+</form>
+
+{% if evaluations %}
+<div class="card shadow-sm">
+  <table class="table table-hover table-sm mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Оператор</th>
+        <th>Отдел</th>
+        <th>Сделка</th>
+        <th>Чек-лист</th>
+        <th>Дата</th>
+        <th>Итог</th>
+        <th>Стадия</th>
+        <th>Оценщик</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ev in evaluations %}
+      {% set stage_badge = {
+        "сделка успешна": "success",
+        "не смог продать": "danger",
+        "в работе": "warning"
+      }.get(ev.stage, "secondary") %}
+      <tr>
+        <td class="text-muted small align-middle">{{ ev.id }}</td>
+        <td class="align-middle fw-semibold">{{ ev.operator_name }}</td>
+        <td class="align-middle small text-muted">{{ ev.department or '—' }}</td>
+        <td class="align-middle small text-muted">
+          {% if ev.deal_id %}#{{ ev.deal_id }}{% else %}—{% endif %}
+        </td>
+        <td class="align-middle small">{{ ev.checklist.name if ev.checklist else '—' }}</td>
+        <td class="align-middle small text-muted">
+          {{ ev.eval_date.strftime('%d.%m.%Y') if ev.eval_date else '—' }}
+        </td>
+        <td class="align-middle">
+          {% if ev.total_score is not none %}
+            <span class="badge bg-{{ score_color(ev.total_score) }}-subtle
+                              text-{{ score_color(ev.total_score) }} fw-semibold"
+                  style="font-size:0.85rem">
+              {{ "%.1f"|format(ev.total_score) }}%
+            </span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="align-middle">
+          <span class="badge bg-{{ stage_badge }}-subtle text-{{ stage_badge }} small">
+            {% if ev.stage == "сделка успешна" %}Успешна
+            {% elif ev.stage == "не смог продать" %}Не продал
+            {% elif ev.stage == "в работе" %}В работе
+            {% else %}{{ ev.stage }}{% endif %}
+          </span>
+        </td>
+        <td class="align-middle small text-muted">
+          {{ ev.evaluator.username if ev.evaluator else '—' }}
+        </td>
+        <td class="text-end align-middle">
+          <a href="/evaluations/{{ ev.id }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye"></i>
+          </a>
+          <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="text-muted small mt-2">Показано: {{ evaluations|length }}</div>
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-clipboard display-6 mb-2 d-block"></i>
+    <p class="mb-2">Оценок пока нет</p>
+    <a href="/evaluations/new" class="btn btn-sm btn-dark">Создать первую</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

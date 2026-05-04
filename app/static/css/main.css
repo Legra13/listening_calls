@@ -1,0 +1,27 @@
+body {
+  background-color: #f8f9fa;
+}
+
+.navbar {
+  border-bottom: 1px solid #333;
+}
+
+.table th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6c757d;
+}
+
+.card {
+  border: 1px solid #e9ecef;
+}
+
+.badge.bg-success-subtle {
+  background-color: #d1e7dd !important;
+}
+
+.badge.bg-secondary-subtle {
+  background-color: #e2e3e5 !important;
+}
