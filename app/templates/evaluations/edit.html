@@ -69,14 +69,7 @@ label:has(input.score-no:checked) .score-circle { border-color: #dc3545; backgro
             <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
                    value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}">
           </div>
-          <div class="col-md-2">
-            <label class="form-label small fw-semibold">Стадия сделки</label>
-            <select id="stage" name="stage" class="form-select form-select-sm">
-              <option value="в работе"       {% if ev.stage == "в работе" %}selected{% endif %}>В работе</option>
-              <option value="сделка успешна"  {% if ev.stage == "сделка успешна" %}selected{% endif %}>Успешна</option>
-              <option value="не смог продать" {% if ev.stage == "не смог продать" %}selected{% endif %}>Не продал</option>
-            </select>
-          </div>
+          <input type="hidden" id="stage" name="stage" value="{{ ev.stage or 'в работе' }}">
         </div>
       </div>
     </div>

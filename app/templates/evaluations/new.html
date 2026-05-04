@@ -97,14 +97,7 @@ label:has(input.score-no:checked) .score-circle { border-color: #dc3545; backgro
             <input type="date" id="eval_date" name="eval_date" class="form-control form-control-sm"
                    value="{{ '' }}">
           </div>
-          <div class="col-md-2">
-            <label class="form-label small fw-semibold">Стадия сделки</label>
-            <select id="stage" name="stage" class="form-select form-select-sm">
-              <option value="в работе">В работе</option>
-              <option value="сделка успешна">Успешна</option>
-              <option value="не смог продать">Не продал</option>
-            </select>
-          </div>
+          <input type="hidden" id="stage" name="stage" value="в работе">
         </div>
       </div>
     </div>
