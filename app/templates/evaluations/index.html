@@ -9,11 +9,14 @@
   </a>
 </div>
 
+<datalist id="employees-filter-datalist"></datalist>
+
 <!-- Фильтры -->
 <form method="get" action="/evaluations" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
     <label class="form-label form-label-sm mb-1 text-muted">Сотрудник</label>
     <input type="text" name="operator" class="form-control form-control-sm"
+           list="employees-filter-datalist"
            placeholder="Введите имя" value="{{ filters.operator }}" style="width:160px">
   </div>
   {% if departments %}
@@ -39,9 +42,14 @@
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label form-label-sm mb-1 text-muted">Стадия сделки</label>
-    <select name="stage" class="form-select form-select-sm" style="width:130px">
-      <option value="">Любая</option>
+    <label class="form-label form-label-sm mb-1 text-muted">
+      Результат сделки
+      <i class="bi bi-info-circle ms-1" style="cursor:default"
+         data-bs-toggle="tooltip"
+         title="Заполняется автоматически из Битрикс при вводе ID сделки в форме оценки"></i>
+    </label>
+    <select name="stage" class="form-select form-select-sm" style="width:140px">
+      <option value="">Любой</option>
       <option value="сделка успешна"   {% if filters.stage == "сделка успешна" %}selected{% endif %}>Успешна</option>
       <option value="не смог продать"  {% if filters.stage == "не смог продать" %}selected{% endif %}>Не продал</option>
       <option value="в работе"         {% if filters.stage == "в работе" %}selected{% endif %}>В работе</option>
@@ -143,4 +151,25 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/employees', {credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      const dl = document.getElementById('employees-filter-datalist');
+      data.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.name;
+        dl.appendChild(opt);
+      });
+    }).catch(() => {});
+
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+    new bootstrap.Tooltip(el);
+  });
+});
+</script>
 {% endblock %}
