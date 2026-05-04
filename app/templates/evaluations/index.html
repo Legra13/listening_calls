@@ -9,7 +9,11 @@
   </a>
 </div>
 
-<datalist id="employees-filter-datalist"></datalist>
+<datalist id="employees-filter-datalist">
+  {% for name in known_operators %}
+  <option value="{{ name }}">
+  {% endfor %}
+</datalist>
 
 <!-- Фильтры -->
 <form method="get" action="/evaluations" class="row g-2 align-items-end mb-3">
@@ -156,17 +160,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  fetch('/api/employees', {credentials: 'same-origin'})
-    .then(r => r.json())
-    .then(data => {
-      const dl = document.getElementById('employees-filter-datalist');
-      data.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e.name;
-        dl.appendChild(opt);
-      });
-    }).catch(() => {});
-
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
     new bootstrap.Tooltip(el);
   });

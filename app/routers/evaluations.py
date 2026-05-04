@@ -62,12 +62,22 @@ def evaluations_index(
     )
     departments = [r[0] for r in dept_rows]
 
+    operator_rows = (
+        db.query(Evaluation.operator_name)
+        .filter(Evaluation.operator_name.isnot(None), Evaluation.operator_name != "")
+        .distinct()
+        .order_by(Evaluation.operator_name)
+        .all()
+    )
+    known_operators = [r[0] for r in operator_rows]
+
     return templates.TemplateResponse("evaluations/index.html", {
         "request": request,
         "current_user": current_user,
         "evaluations": evaluations,
         "checklists": checklists,
         "departments": departments,
+        "known_operators": known_operators,
         "filters": {
             "operator": operator,
             "checklist_id": checklist_id,
