@@ -161,6 +161,8 @@
             </th>
             {% endfor %}
             <th style="min-width:65px">Итог</th>
+            <th style="min-width:75px;white-space:nowrap" title="% успешных сделок от закрытых (без «в работе»)">% Успех</th>
+            <th style="min-width:75px;white-space:nowrap" title="% проигранных сделок от закрытых (без «в работе»)">% Провал</th>
           </tr>
         </thead>
         <tbody>
@@ -180,6 +182,12 @@
             <td class="fw-semibold">
               {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
             </td>
+            <td class="fw-semibold text-success">
+              {% if row.won_pct is not none %}{{ "%.1f"|format(row.won_pct) }}%{% else %}—{% endif %}
+            </td>
+            <td class="fw-semibold text-danger">
+              {% if row.lost_pct is not none %}{{ "%.1f"|format(row.lost_pct) }}%{% else %}—{% endif %}
+            </td>
           </tr>
           {% endfor %}
           {# Команда #}
@@ -198,6 +206,12 @@
             <td class="fw-bold">
               {% if tab1.team_total is not none %}{{ "%.1f"|format(tab1.team_total) }}%{% else %}—{% endif %}
             </td>
+            <td class="fw-bold text-success">
+              {% if tab1.team_won_pct is not none %}{{ "%.1f"|format(tab1.team_won_pct) }}%{% else %}—{% endif %}
+            </td>
+            <td class="fw-bold text-danger">
+              {% if tab1.team_lost_pct is not none %}{{ "%.1f"|format(tab1.team_lost_pct) }}%{% else %}—{% endif %}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -205,34 +219,38 @@
 
     {# Динамика по неделям #}
     {% if tab1.weekly %}
-    <div class="fw-semibold mb-2">Динамика по неделям</div>
-    <div class="row g-3">
-      <div class="col-lg-8">
-        <canvas id="weeklyChart" height="80"></canvas>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="fw-semibold">Динамика по неделям</span>
+      <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary active" id="btnWeekChart">График</button>
+        <button type="button" class="btn btn-outline-secondary" id="btnWeekTable">Таблица</button>
       </div>
-      <div class="col-lg-4">
-        <div class="table-responsive" style="max-height:250px;overflow-y:auto">
-          <table class="table table-sm table-striped mb-0" style="font-size:0.8rem">
-            <thead class="table-light sticky-top">
-              <tr>
-                <th>Неделя</th>
-                <th class="text-center">Оценок</th>
-                <th class="text-center">Ср. балл</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for w in tab1.weekly %}
-              <tr>
-                <td>{{ w.week }}</td>
-                <td class="text-center">{{ w.count }}</td>
-                <td class="text-center fw-semibold">
-                  {% if w.avg is not none %}{{ "%.1f"|format(w.avg) }}%{% else %}—{% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+    </div>
+    <div id="weeklyChartWrap">
+      <canvas id="weeklyChart" height="80"></canvas>
+    </div>
+    <div id="weeklyTableWrap" class="d-none">
+      <div class="table-responsive" style="max-height:300px;overflow-y:auto">
+        <table class="table table-sm table-striped mb-0" style="font-size:0.8rem">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th>Неделя</th>
+              <th class="text-center">Оценок</th>
+              <th class="text-center">Ср. балл</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for w in tab1.weekly %}
+            <tr>
+              <td>{{ w.week }}</td>
+              <td class="text-center">{{ w.count }}</td>
+              <td class="text-center fw-semibold">
+                {% if w.avg is not none %}{{ "%.1f"|format(w.avg) }}%{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% else %}
@@ -248,6 +266,9 @@
     <div class="fw-semibold mb-3">Корреляция блоков с результатом сделки</div>
 
     {% if tab2 %}
+    <div class="mb-4" style="height:320px">
+      <canvas id="corrChart"></canvas>
+    </div>
     <div class="table-responsive">
       <table class="table table-bordered table-sm align-middle" style="font-size:0.8rem">
         <thead class="table-light">
@@ -446,7 +467,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
-/* Переключатель % / Баллы */
+/* Переключатель % / Баллы (тепловая карта) */
 document.getElementById('btnPct')?.addEventListener('click', function () {
   document.querySelectorAll('.val-pct').forEach(e => e.classList.remove('d-none'));
   document.querySelectorAll('.val-pts').forEach(e => e.classList.add('d-none'));
@@ -458,6 +479,20 @@ document.getElementById('btnPts')?.addEventListener('click', function () {
   document.querySelectorAll('.val-pct').forEach(e => e.classList.add('d-none'));
   this.classList.add('active');
   document.getElementById('btnPct').classList.remove('active');
+});
+
+/* Переключатель График / Таблица (динамика по неделям) */
+document.getElementById('btnWeekChart')?.addEventListener('click', function () {
+  document.getElementById('weeklyChartWrap').classList.remove('d-none');
+  document.getElementById('weeklyTableWrap').classList.add('d-none');
+  this.classList.add('active');
+  document.getElementById('btnWeekTable').classList.remove('active');
+});
+document.getElementById('btnWeekTable')?.addEventListener('click', function () {
+  document.getElementById('weeklyTableWrap').classList.remove('d-none');
+  document.getElementById('weeklyChartWrap').classList.add('d-none');
+  this.classList.add('active');
+  document.getElementById('btnWeekChart').classList.remove('active');
 });
 
 /* График динамики по неделям */
@@ -489,6 +524,52 @@ if (weeklyCtx && weeklyData.length > 0) {
         tooltip: {
           callbacks: {
             label: ctx => `${ctx.parsed.y}% (${weeklyData[ctx.dataIndex].count} оценок)`
+          }
+        }
+      }
+    }
+  });
+}
+
+/* Бар-чарт корреляции блоков (Tab 2) */
+const tab2Data = {{ tab2_json | safe }};
+const corrCtx = document.getElementById('corrChart');
+if (corrCtx && tab2Data.length > 0) {
+  const labels = tab2Data.map(d => d.name);
+  new Chart(corrCtx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Успешные сделки',
+          data: tab2Data.map(d => d.avg_won),
+          backgroundColor: 'rgba(34,197,94,0.7)',
+          borderColor: 'rgb(34,197,94)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Не продали',
+          data: tab2Data.map(d => d.avg_lost),
+          backgroundColor: 'rgba(239,68,68,0.7)',
+          borderColor: 'rgb(239,68,68)',
+          borderWidth: 1,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+        y: { ticks: { font: { size: 11 } } },
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw.toFixed(1) + '%' : '—'}`
           }
         }
       }

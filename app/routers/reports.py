@@ -51,11 +51,13 @@ def reports_index(
             .first()
         )
 
+    tab2_json = "[]"
     if selected_cl and rows:
         tab1 = compute_tab1(rows, selected_cl)
         tab2 = compute_tab2(rows, selected_cl)
         tab3 = compute_tab3(rows, selected_cl)
         weekly_json = json.dumps(tab1["weekly"])
+        tab2_json = json.dumps(tab2)
 
     return templates.TemplateResponse("reports/index.html", {
         "request": request,
@@ -69,6 +71,7 @@ def reports_index(
         "tab2": tab2,
         "tab3": tab3,
         "weekly_json": weekly_json,
+        "tab2_json": tab2_json,
         "heat_style": heat_style,
         "delta_style": delta_style,
     })

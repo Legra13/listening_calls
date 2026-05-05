@@ -156,7 +156,16 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
             pts = round(pct / 100 * block.weight, 1) if pct is not None else None
             cells.append({"pct": pct, "pts": pts})
         total = _avg([r["ev"].total_score for r in op_rows if r["ev"].total_score is not None])
-        hm_rows.append({"name": op, "cells": cells, "total": total})
+        won = sum(1 for r in op_rows if r["ev"].stage == WON)
+        lost = sum(1 for r in op_rows if r["ev"].stage == LOST)
+        closed = won + lost
+        hm_rows.append({
+            "name": op,
+            "cells": cells,
+            "total": total,
+            "won_pct": round(won / closed * 100, 1) if closed else None,
+            "lost_pct": round(lost / closed * 100, 1) if closed else None,
+        })
 
     team_cells = []
     for block in blocks:
@@ -165,6 +174,9 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
         pts = round(pct / 100 * block.weight, 1) if pct is not None else None
         team_cells.append({"pct": pct, "pts": pts})
     team_total = _avg([r["ev"].total_score for r in rows if r["ev"].total_score is not None])
+    team_won = sum(1 for r in rows if r["ev"].stage == WON)
+    team_lost = sum(1 for r in rows if r["ev"].stage == LOST)
+    team_closed = team_won + team_lost
 
     weeks: dict[str, list[float]] = defaultdict(list)
     for r in rows:
@@ -182,6 +194,8 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
         "hm_rows": hm_rows,
         "team_cells": team_cells,
         "team_total": team_total,
+        "team_won_pct": round(team_won / team_closed * 100, 1) if team_closed else None,
+        "team_lost_pct": round(team_lost / team_closed * 100, 1) if team_closed else None,
         "weekly": weekly,
     }
 
