@@ -57,6 +57,7 @@ def delta_style(d: float | None) -> str:
 @dataclass
 class Filters:
     operators: list[str] = field(default_factory=list)
+    department: str = ""
     date_from: date | None = None
     date_to: date | None = None
     checklist_id: int | None = None
@@ -74,6 +75,8 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
               .joinedload(Block.criteria),
         )
     )
+    if filters.department:
+        q = q.filter(Evaluation.department == filters.department)
     if filters.operators:
         q = q.filter(Evaluation.operator_name.in_(filters.operators))
     if filters.date_from:
@@ -86,16 +89,32 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
 
 
 def get_filter_options(db: Session) -> dict:
-    ops = (
-        db.query(Evaluation.operator_name)
-        .filter(Evaluation.operator_name != "")
+    op_rows = (
+        db.query(Evaluation.operator_name, Evaluation.department)
+        .filter(Evaluation.operator_name.isnot(None), Evaluation.operator_name != "")
         .distinct()
         .order_by(Evaluation.operator_name)
         .all()
     )
+    # deduplicate by operator name, keep first department found
+    seen: set[str] = set()
+    operators = []
+    for name, dept in op_rows:
+        if name not in seen:
+            seen.add(name)
+            operators.append({"name": name, "dept": dept or ""})
+
+    dept_rows = (
+        db.query(Evaluation.department)
+        .filter(Evaluation.department.isnot(None), Evaluation.department != "")
+        .distinct()
+        .order_by(Evaluation.department)
+        .all()
+    )
     checklists = db.query(Checklist).filter(Checklist.status == "active").all()
     return {
-        "operators": [r[0] for r in ops],
+        "operators": operators,
+        "departments": [r[0] for r in dept_rows],
         "checklists": checklists,
     }
 

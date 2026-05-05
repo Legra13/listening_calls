@@ -10,7 +10,9 @@
 <div class="card shadow-sm mb-4">
   <div class="card-body py-3">
     <form method="get" id="filterForm">
-      <div class="row g-2 align-items-end">
+      <div class="row g-2 align-items-start">
+
+        {# Чек-лист #}
         <div class="col-md-3">
           <label class="form-label small fw-semibold mb-1">Чек-лист</label>
           <select name="checklist_id" class="form-select form-select-sm">
@@ -23,33 +25,61 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold mb-1">Сотрудники</label>
-          <select name="operators" class="form-select form-select-sm" multiple
-                  style="height:auto;min-height:32px;max-height:120px">
-            {% for op in options.operators %}
-            <option value="{{ op }}"
-              {% if op in filters.operators %}selected{% endif %}>{{ op }}</option>
+
+        {# Отдел #}
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">Отдел</label>
+          <select name="department" id="deptSelect" class="form-select form-select-sm">
+            <option value="">— Все отделы —</option>
+            {% for d in options.departments %}
+            <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
           </select>
-          <div class="form-text" style="font-size:0.7rem">Ctrl/Cmd — выбрать несколько</div>
         </div>
+
+        {# Сотрудники — чекбоксы в скроллируемом блоке #}
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">
+            Сотрудники
+            <span id="opSelectedCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+          </label>
+          <div id="opList"
+               style="max-height:120px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+            {% for op in options.operators %}
+            <div class="form-check py-0 op-item" data-dept="{{ op.dept }}">
+              <input class="form-check-input op-cb" type="checkbox" name="operators"
+                     value="{{ op.name }}" id="op_{{ loop.index }}"
+                     {% if op.name in filters.operators %}checked{% endif %}>
+              <label class="form-check-label" for="op_{{ loop.index }}">{{ op.name }}</label>
+            </div>
+            {% endfor %}
+            {% if not options.operators %}
+            <div class="text-muted small py-1">Нет данных</div>
+            {% endif %}
+          </div>
+          <div class="form-text" style="font-size:0.7rem">Можно выбрать несколько</div>
+        </div>
+
+        {# Даты #}
         <div class="col-md-2">
           <label class="form-label small fw-semibold mb-1">С</label>
           <input type="date" name="date_from" class="form-control form-control-sm"
                  value="{{ filters.date_from.isoformat() if filters.date_from else '' }}">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label small fw-semibold mb-1">По</label>
+          <label class="form-label small fw-semibold mb-1 mt-2">По</label>
           <input type="date" name="date_to" class="form-control form-control-sm"
                  value="{{ filters.date_to.isoformat() if filters.date_to else '' }}">
         </div>
-        <div class="col-md-2 d-flex gap-2">
-          <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Применить</button>
-          <a href="/reports" class="btn btn-outline-secondary btn-sm" title="Сбросить">
-            <i class="bi bi-x-lg"></i>
+
+        {# Кнопки #}
+        <div class="col-md-2 d-flex flex-column gap-2 pt-4">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-funnel me-1"></i>Применить
+          </button>
+          <a href="/reports" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Сбросить
           </a>
         </div>
+
       </div>
     </form>
   </div>
@@ -467,6 +497,28 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
+/* Фильтр сотрудников по отделу */
+function updateOpList() {
+  const dept = document.getElementById('deptSelect')?.value || '';
+  const items = document.querySelectorAll('.op-item');
+  items.forEach(item => {
+    const match = !dept || item.dataset.dept === dept;
+    item.style.display = match ? '' : 'none';
+    if (!match) item.querySelector('input').checked = false;
+  });
+  updateOpCount();
+}
+
+function updateOpCount() {
+  const checked = document.querySelectorAll('.op-cb:checked').length;
+  const el = document.getElementById('opSelectedCount');
+  if (el) el.textContent = checked > 0 ? `(выбрано: ${checked})` : '';
+}
+
+document.getElementById('deptSelect')?.addEventListener('change', updateOpList);
+document.querySelectorAll('.op-cb').forEach(cb => cb.addEventListener('change', updateOpCount));
+updateOpCount();
+
 /* Переключатель % / Баллы (тепловая карта) */
 document.getElementById('btnPct')?.addEventListener('click', function () {
   document.querySelectorAll('.val-pct').forEach(e => e.classList.remove('d-none'));

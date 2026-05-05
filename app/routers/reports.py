@@ -20,6 +20,7 @@ templates = Jinja2Templates(directory="app/templates")
 def reports_index(
     request: Request,
     checklist_id: str = "",
+    department: str = "",
     operators: list[str] = Query(default=[]),
     date_from: str = "",
     date_to: str = "",
@@ -29,6 +30,7 @@ def reports_index(
     options = get_filter_options(db)
 
     filters = Filters(
+        department=department,
         operators=operators,
         date_from=date.fromisoformat(date_from) if date_from else None,
         date_to=date.fromisoformat(date_to) if date_to else None,
