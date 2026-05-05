@@ -146,13 +146,27 @@
 {% endif %}
 
 {# ── Аналитика по вкладкам ───────────────────────────────────────────────── #}
-{% if tab1 and selected_cl %}
-
-{% if auto_cl %}
-<div class="text-muted small mb-2">
-  <i class="bi bi-info-circle me-1"></i>Чек-лист определён автоматически: <strong>{{ selected_cl.name }}</strong>
+{% if selected_cl and available_cls %}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+  <span class="text-muted small">Чек-лист:</span>
+  {% for cl in available_cls %}
+    {% if cl.id == selected_cl.id %}
+      <span class="badge bg-primary">{{ cl.name }}</span>
+    {% else %}
+      {# ссылка на тот же URL, но с другим checklist_id #}
+      <a href="?checklist_id={{ cl.id }}{% if filters.department %}&department={{ filters.department }}{% endif %}{% for op in filters.operators %}&operators={{ op }}{% endfor %}{% if filters.date_from %}&date_from={{ filters.date_from.isoformat() }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to.isoformat() }}{% endif %}"
+         class="badge bg-secondary text-decoration-none">{{ cl.name }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if available_cls|length > 1 %}
+  <span class="text-muted small">
+    — у выбранных сотрудников несколько чек-листов, аналитика строится по одному
+  </span>
+  {% endif %}
 </div>
 {% endif %}
+
+{% if tab1 and selected_cl %}
 
 <ul class="nav nav-tabs mb-0" id="reportTabs" role="tablist">
   <li class="nav-item">
