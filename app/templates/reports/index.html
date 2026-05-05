@@ -148,6 +148,12 @@
 {# ── Аналитика по вкладкам ───────────────────────────────────────────────── #}
 {% if tab1 and selected_cl %}
 
+{% if auto_cl %}
+<div class="text-muted small mb-2">
+  <i class="bi bi-info-circle me-1"></i>Чек-лист определён автоматически: <strong>{{ selected_cl.name }}</strong>
+</div>
+{% endif %}
+
 <ul class="nav nav-tabs mb-0" id="reportTabs" role="tablist">
   <li class="nav-item">
     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab1" type="button">
@@ -478,11 +484,7 @@
 
 </div>{# /tab-content #}
 
-{% elif kpi.count > 0 and not selected_cl %}
-<div class="alert alert-info mt-3">
-  <i class="bi bi-info-circle me-2"></i>
-  Выберите <strong>чек-лист</strong> выше для просмотра детальной аналитики по блокам.
-</div>
+{# убрано: теперь чек-лист подбирается автоматически #}
 
 {% elif not kpi.count %}
 <div class="card shadow-sm mt-2">

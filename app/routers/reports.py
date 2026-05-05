@@ -44,6 +44,7 @@ def reports_index(
     selected_cl = None
     tab1 = tab2 = tab3 = None
     weekly_json = "[]"
+    auto_cl = False  # был ли чек-лист выбран автоматически
 
     if filters.checklist_id:
         selected_cl = (
@@ -52,6 +53,19 @@ def reports_index(
             .filter(Checklist.id == filters.checklist_id)
             .first()
         )
+    elif rows:
+        # автоопределяем самый частый чек-лист среди отфильтрованных оценок
+        from collections import Counter
+        cl_counter = Counter(r["ev"].checklist_id for r in rows if r["ev"].checklist_id)
+        if cl_counter:
+            top_cl_id = cl_counter.most_common(1)[0][0]
+            selected_cl = (
+                db.query(Checklist)
+                .options(joinedload(Checklist.blocks))
+                .filter(Checklist.id == top_cl_id)
+                .first()
+            )
+            auto_cl = True
 
     tab2_json = "[]"
     if selected_cl and rows:
@@ -69,6 +83,7 @@ def reports_index(
         "filters": filters,
         "kpi": kpi,
         "selected_cl": selected_cl,
+        "auto_cl": auto_cl,
         "tab1": tab1,
         "tab2": tab2,
         "tab3": tab3,
