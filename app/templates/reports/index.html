@@ -50,7 +50,9 @@
               <input class="form-check-input op-cb" type="checkbox" name="operators"
                      value="{{ op.name }}" id="op_{{ loop.index }}"
                      {% if op.name in filters.operators %}checked{% endif %}>
-              <label class="form-check-label" for="op_{{ loop.index }}">{{ op.name }}</label>
+              <label class="form-check-label" for="op_{{ loop.index }}">
+                {{ op.name }} <span class="text-muted">({{ op.count }})</span>
+              </label>
             </div>
             {% endfor %}
             {% if not options.operators %}

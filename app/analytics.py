@@ -89,20 +89,22 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
 
 
 def get_filter_options(db: Session) -> dict:
+    from sqlalchemy import func as sa_func
     op_rows = (
-        db.query(Evaluation.operator_name, Evaluation.department)
+        db.query(Evaluation.operator_name, Evaluation.department, sa_func.count(Evaluation.id))
         .filter(Evaluation.operator_name.isnot(None), Evaluation.operator_name != "")
-        .distinct()
+        .group_by(Evaluation.operator_name, Evaluation.department)
         .order_by(Evaluation.operator_name)
         .all()
     )
-    # deduplicate by operator name, keep first department found
-    seen: set[str] = set()
-    operators = []
-    for name, dept in op_rows:
+    # merge rows with same operator name (different depts edge case), sum counts
+    seen: dict[str, dict] = {}
+    for name, dept, cnt in op_rows:
         if name not in seen:
-            seen.add(name)
-            operators.append({"name": name, "dept": dept or ""})
+            seen[name] = {"name": name, "dept": dept or "", "count": cnt}
+        else:
+            seen[name]["count"] += cnt
+    operators = list(seen.values())
 
     dept_rows = (
         db.query(Evaluation.department)
