@@ -21,9 +21,43 @@ label:has(input.score-na:checked) .score-btn-na { background: #6c757d; color: #f
 .score-btn-num  { border-color: #adb5bd; color: #495057; background: #fff; }
 .score-btn-num:hover { background: rgba(13,110,253,.1); border-color: #0d6efd; }
 label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: #fff; border-color: #0d6efd; }
-.crit-row.row-yes td { background: rgba(25,135,84,.07); }
-.crit-row.row-no td { background: rgba(220,53,69,.07); }
-#score-preview { position: sticky; top: 12px; z-index: 10; transition: background 0.3s; }
+
+.crit-item {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.crit-item.item-yes { border-color: #a3cfbb; background: rgba(25,135,84,.04); }
+.crit-item.item-no  { border-color: #f1aeb5; background: rgba(220,53,69,.04); }
+
+.comment-area { display: none; margin-top: 8px; }
+.comment-area.open { display: block; }
+
+.block-card { margin-bottom: 10px; }
+.block-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer; user-select: none;
+  font-size: 0.8rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: #374151;
+  transition: background 0.1s;
+  margin-bottom: 6px;
+}
+.block-header:hover { background: #e9ecef; }
+.block-header .chevron { transition: transform 0.2s; color: #9ca3af; }
+.block-header.collapsed .chevron { transform: rotate(-90deg); }
+.block-body.collapsed { display: none; }
+.block-progress { font-size: 0.72rem; font-weight: 500; padding: 2px 7px; }
+
+#score-preview { position: sticky; top: 12px; z-index: 10; transition: border-color 0.3s; }
+#progress-counter { font-size: 11px; color: #6c757d; margin-top: 4px; }
 </style>
 {% endblock %}
 
@@ -75,7 +109,7 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
             <label class="form-label small fw-semibold">
               Дата звонка
               <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
-                 title="Заполняется автоматически из Битрикс при вводе ID сделки"></i>
+                 title="Заполняется из Битрикс при вводе ID сделки"></i>
             </label>
             <input type="date" id="eval_date" name="eval_date"
                    class="form-control form-control-sm bg-light text-muted"
@@ -95,82 +129,78 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
 
     {% for block in selected_cl.blocks %}
     {% if block.criteria %}
-    <div class="card shadow-sm mb-2">
-      <div class="card-header bg-white py-2">
-        <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+    <div class="block-card" data-block-id="{{ block.id }}">
+      <div class="block-header" id="block-hdr-{{ block.id }}">
+        <span>
+          <i class="bi bi-chevron-down chevron me-2"></i>
+          {{ block.display_name or block.name }}
+        </span>
+        <span class="badge bg-light text-muted border block-progress" id="prog-{{ block.id }}"></span>
       </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0 eval-table">
-          <thead class="table-light">
-            <tr>
-              <th style="width:65%">Критерий</th>
-              <th>Оценка</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for crit in block.criteria %}
-            {% set item = item_map.get(crit.id) %}
-            {% set cur_val = item.value if item else "na" %}
-            <tr class="crit-row {% if cur_val == 'yes' %}row-yes{% elif cur_val == 'no' %}row-no{% endif %}"
-                data-crit-id="{{ crit.id }}">
-              <td class="align-middle small">
-                <div>{{ crit.text }}
-                  {% if crit.description %}
-                  <i class="bi bi-info-circle text-muted ms-1"
-                     data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
-                  {% endif %}
-                  {% if crit.is_autofail %}<span class="badge bg-danger-subtle text-danger ms-1">AF</span>{% endif %}
-                </div>
-                {% set has_comment = item and item.comment %}
-                <div class="comment-block mt-1" style="{{ '' if has_comment else 'display:none' }}">
-                  <input type="text" name="comment_{{ crit.id }}"
-                         class="form-control form-control-sm"
-                         value="{{ item.comment if has_comment else '' }}"
-                         placeholder="Комментарий...">
-                </div>
-              </td>
-              <td class="align-middle">
-                <div class="d-flex gap-1 align-items-center flex-wrap">
-                  {% if crit.score_type == 'range' %}
-                    {% for i in range(1, (crit.score_max or 5) + 1) %}
-                    <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val score-num"
-                             {% if cur_val == i|string %}checked{% endif %}>
-                      <span class="score-btn score-btn-num">{{ i }}</span>
-                    </label>
-                    {% endfor %}
-                    <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
-                             {% if cur_val == "na" %}checked{% endif %}>
-                      <span class="score-btn score-btn-na">Н/П</span>
-                    </label>
-                  {% else %}
-                    <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
-                             {% if cur_val == "yes" %}checked{% endif %}>
-                      <span class="score-btn score-btn-yes">Да</span>
-                    </label>
-                    <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no"
-                             {% if cur_val == "no" %}checked{% endif %}>
-                      <span class="score-btn score-btn-no">Нет</span>
-                    </label>
-                    <label class="mb-0">
-                      <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
-                             {% if cur_val == "na" %}checked{% endif %}>
-                      <span class="score-btn score-btn-na">Н/П</span>
-                    </label>
-                  {% endif %}
-                  <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted toggle-comment"
-                          data-crit-id="{{ crit.id }}" title="Комментарий">
-                    <i class="bi bi-chat{% if item and item.comment %}-fill text-primary{% endif %}"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="block-body" id="block-body-{{ block.id }}">
+        {% for crit in block.criteria %}
+        {% set item = item_map.get(crit.id) %}
+        {% set cur_val = item.value if item else "na" %}
+        <div class="crit-item {% if cur_val == 'yes' %}item-yes{% elif cur_val == 'no' %}item-no{% endif %}"
+             data-crit-id="{{ crit.id }}">
+          <div class="d-flex align-items-start gap-3">
+            <div class="flex-grow-1 small" style="color:#374151; padding-top:3px; line-height:1.45">
+              {{ crit.text }}
+              {% if crit.description %}
+              <i class="bi bi-info-circle text-muted ms-1"
+                 data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
+              {% endif %}
+              {% if crit.is_autofail %}
+              <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:0.65rem">AF</span>
+              {% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+              {% if crit.score_type == 'range' %}
+                {% for i in range(1, (crit.score_max or 5) + 1) %}
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="{{ i }}" class="d-none score-val score-num"
+                         {% if cur_val == i|string %}checked{% endif %}>
+                  <span class="score-btn score-btn-num">{{ i }}</span>
+                </label>
+                {% endfor %}
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
+                         {% if cur_val == "na" %}checked{% endif %}>
+                  <span class="score-btn score-btn-na">Н/П</span>
+                </label>
+              {% else %}
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
+                         {% if cur_val == "yes" %}checked{% endif %}>
+                  <span class="score-btn score-btn-yes">Да</span>
+                </label>
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no"
+                         {% if cur_val == "no" %}checked{% endif %}>
+                  <span class="score-btn score-btn-no">Нет</span>
+                </label>
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
+                         {% if cur_val == "na" %}checked{% endif %}>
+                  <span class="score-btn score-btn-na">Н/П</span>
+                </label>
+              {% endif %}
+              {% set has_comment = item and item.comment %}
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted toggle-comment"
+                      title="Комментарий">
+                <i class="bi bi-chat{% if has_comment %}-fill text-primary{% endif %}"></i>
+              </button>
+            </div>
+          </div>
+          {% set has_comment = item and item.comment %}
+          <div class="comment-area{% if has_comment %} open{% endif %}">
+            <input type="text" name="comment_{{ crit.id }}"
+                   class="form-control form-control-sm"
+                   value="{{ item.comment if has_comment else '' }}"
+                   placeholder="Комментарий к критерию...">
+          </div>
+        </div>
+        {% endfor %}
       </div>
     </div>
     {% endif %}
@@ -191,10 +221,11 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
     </div>
   </form>
 
-  <div style="width:110px; flex-shrink:0">
+  <div style="width:120px; flex-shrink:0">
     <div id="score-preview" class="card shadow-sm text-center p-2">
       <div class="text-muted small mb-1">Текущий балл</div>
       <div id="score-value" class="fw-bold fs-4">—</div>
+      <div id="progress-counter" class="progress-text">0 / 0 ✓</div>
     </div>
   </div>
 </div>
@@ -225,8 +256,6 @@ function lookupDeal() {
       document.getElementById('operator_name').value = data.operator_name;
       if (data.department) document.getElementById('department').value = data.department;
       if (data.deal_date) document.getElementById('eval_date').value = data.deal_date;
-      const stageEl = document.getElementById('stage');
-      for (let opt of stageEl.options) { if (opt.value === data.stage) { opt.selected = true; break; } }
       status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.operator_name + '</span>';
     })
     .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
@@ -271,8 +300,38 @@ function updateScorePreview() {
   el.className = 'fw-bold fs-4 text-' + color;
 }
 
+function updateProgress() {
+  const total = Object.keys(CRITERIA_DATA).length;
+  let filled = 0;
+  document.querySelectorAll('[name^="criterion_"].score-val:checked').forEach(() => filled++);
+  const el = document.getElementById('progress-counter');
+  if (el) el.textContent = filled + ' / ' + total + ' ✓';
+
+  for (const blockId of Object.keys(BLOCK_WEIGHTS)) {
+    const blockCrits = Object.entries(CRITERIA_DATA).filter(([, c]) => c.blockId === parseInt(blockId));
+    const blockTotal = blockCrits.length;
+    let blockFilled = 0;
+    blockCrits.forEach(([critId]) => {
+      if (document.querySelector('[name="criterion_' + critId + '"].score-val:checked')) blockFilled++;
+    });
+    const badge = document.getElementById('prog-' + blockId);
+    if (!badge) continue;
+    badge.textContent = blockFilled + '/' + blockTotal;
+    badge.className = blockFilled === blockTotal
+      ? 'badge bg-success-subtle text-success border border-success-subtle block-progress'
+      : 'badge bg-light text-muted border block-progress';
+  }
+}
+
+function showComment(item) {
+  const area = item.querySelector('.comment-area');
+  const icon = item.querySelector('.toggle-comment i');
+  area.classList.add('open');
+  if (icon) icon.className = 'bi bi-chat-fill text-primary';
+  setTimeout(() => area.querySelector('input').focus(), 30);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Load employees
   fetch('/api/employees', {credentials: 'same-origin'})
     .then(r => r.json())
     .then(data => {
@@ -285,7 +344,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }).catch(() => {});
 
-  // Auto-fill department when employee selected
   document.getElementById('operator_name').addEventListener('change', function() {
     const found = employeesData.find(e => e.name === this.value);
     if (found && found.department && !document.getElementById('department').value) {
@@ -293,43 +351,55 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Row highlight + live score
   document.querySelectorAll('.score-val').forEach(function(radio) {
     radio.addEventListener('change', function() {
-      const row = this.closest('tr');
-      row.classList.remove('row-yes', 'row-no');
-      if (this.classList.contains('score-yes')) row.classList.add('row-yes');
-      else if (this.classList.contains('score-no')) row.classList.add('row-no');
+      const item = this.closest('.crit-item');
+      item.classList.remove('item-yes', 'item-no');
+      if (this.classList.contains('score-yes')) item.classList.add('item-yes');
+      else if (this.classList.contains('score-no')) {
+        item.classList.add('item-no');
+        showComment(item);
+      }
       updateScorePreview();
+      updateProgress();
     });
   });
+
   document.querySelectorAll('.score-na').forEach(r => {
     r.addEventListener('change', function() {
-      this.closest('tr').classList.remove('row-yes', 'row-no');
+      this.closest('.crit-item').classList.remove('item-yes', 'item-no');
       updateScorePreview();
+      updateProgress();
     });
   });
 
-  // Initial score (edit mode — may have pre-filled values)
-  updateScorePreview();
-
-  // Toggle comments
   document.querySelectorAll('.toggle-comment').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      const row = this.closest('tr');
-      const block = row.querySelector('.comment-block');
+      const item = this.closest('.crit-item');
+      const area = item.querySelector('.comment-area');
       const icon = this.querySelector('i');
-      const hidden = block.style.display === 'none';
-      block.style.display = hidden ? 'block' : 'none';
-      icon.className = hidden ? 'bi bi-chat-fill text-primary' : 'bi bi-chat';
-      if (hidden) block.querySelector('input').focus();
+      const opening = !area.classList.contains('open');
+      area.classList.toggle('open', opening);
+      icon.className = opening ? 'bi bi-chat-fill text-primary' : 'bi bi-chat';
+      if (opening) area.querySelector('input').focus();
     });
   });
 
-  // Tooltips
+  document.querySelectorAll('.block-header').forEach(function(hdr) {
+    hdr.addEventListener('click', function() {
+      const id = this.id.replace('block-hdr-', '');
+      const body = document.getElementById('block-body-' + id);
+      const collapsed = body.classList.toggle('collapsed');
+      this.classList.toggle('collapsed', collapsed);
+    });
+  });
+
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
     new bootstrap.Tooltip(el);
   });
+
+  updateScorePreview();
+  updateProgress();
 });
 </script>
 {% endblock %}
