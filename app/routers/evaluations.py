@@ -56,6 +56,7 @@ def evaluations_index(
     request: Request,
     operator: str = "",
     checklist_id: str = "",
+    checklist_status: str = "",
     stage: str = "",
     department: str = "",
     date_from: str = "",
@@ -68,11 +69,14 @@ def evaluations_index(
     q = (
         db.query(Evaluation)
         .options(joinedload(Evaluation.checklist), joinedload(Evaluation.evaluator))
+        .join(Evaluation.checklist)
     )
     if operator:
         q = q.filter(Evaluation.operator_name.ilike(f"%{operator}%"))
     if checklist_id:
         q = q.filter(Evaluation.checklist_id == int(checklist_id))
+    if checklist_status:
+        q = q.filter(Checklist.status == checklist_status)
     if stage:
         q = q.filter(Evaluation.stage == stage)
     if department:
@@ -122,6 +126,7 @@ def evaluations_index(
         "filters": {
             "operator": operator,
             "checklist_id": checklist_id,
+            "checklist_status": checklist_status,
             "stage": stage,
             "department": department,
             "date_from": date_from,
