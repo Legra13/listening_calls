@@ -57,19 +57,21 @@ def calculate_scores(
             else:
                 if val == "yes":
                     b_num += crit.weight
-        block_scores[block.id] = round(b_num / b_den * 100, 1) if b_den > 0 else 0.0
+        # None = все критерии NA (блок не применялся), 0.0 = блок применялся но всё «нет»
+        block_scores[block.id] = round(b_num / b_den * 100, 1) if b_den > 0 else None
 
     calculation = getattr(checklist, 'calculation', 'weighted')
     if calculation == "average":
         valid_scores = [s for s in block_scores.values() if s is not None]
         total_score = round(sum(valid_scores) / len(valid_scores), 1) if valid_scores else 0.0
     else:
-        # Взвешенная сумма по весам блоков
+        # Взвешенная сумма — блоки с None (все NA) исключаются из знаменателя
         w_num = 0.0
         w_den = 0.0
         for block in checklist.blocks:
-            if block.id in block_scores:
-                w_num += block_scores[block.id] * block.weight
+            s = block_scores.get(block.id)
+            if s is not None:
+                w_num += s * block.weight
                 w_den += block.weight
         total_score = round(w_num / w_den, 1) if w_den > 0 else 0.0
 

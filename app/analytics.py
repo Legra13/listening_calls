@@ -128,6 +128,17 @@ def _avg(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 1) if values else None
 
 
+def _calc_total(block_scores: dict[int, float | None], blocks: list) -> float | None:
+    """Взвешенный итог по блокам — блоки с None (все NA) исключаются."""
+    w_num = w_den = 0.0
+    for bl in blocks:
+        s = block_scores.get(bl.id)
+        if s is not None:
+            w_num += s * bl.weight
+            w_den += bl.weight
+    return round(w_num / w_den, 1) if w_den > 0 else None
+
+
 def _wr(rows: list[dict]) -> float | None:
     if not rows:
         return None
@@ -173,11 +184,12 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
         op_rows = [r for r in rows if r["ev"].operator_name == op]
         cells = []
         for block in blocks:
-            vals = [r["block_scores"][block.id] for r in op_rows if block.id in r["block_scores"]]
+            vals = [r["block_scores"][block.id] for r in op_rows
+                    if r["block_scores"].get(block.id) is not None]
             pct = _avg(vals)
             pts = round(pct / 100 * block.weight, 1) if pct is not None else None
             cells.append({"pct": pct, "pts": pts})
-        total = _avg([r["ev"].total_score for r in op_rows if r["ev"].total_score is not None])
+        total = _avg([_calc_total(r["block_scores"], blocks) for r in op_rows])
         won = sum(1 for r in op_rows if r["ev"].stage == WON)
         lost = sum(1 for r in op_rows if r["ev"].stage == LOST)
         closed = won + lost
@@ -191,11 +203,12 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
 
     team_cells = []
     for block in blocks:
-        vals = [r["block_scores"][block.id] for r in rows if block.id in r["block_scores"]]
+        vals = [r["block_scores"][block.id] for r in rows
+                if r["block_scores"].get(block.id) is not None]
         pct = _avg(vals)
         pts = round(pct / 100 * block.weight, 1) if pct is not None else None
         team_cells.append({"pct": pct, "pts": pts})
-    team_total = _avg([r["ev"].total_score for r in rows if r["ev"].total_score is not None])
+    team_total = _avg([_calc_total(r["block_scores"], blocks) for r in rows])
     team_won = sum(1 for r in rows if r["ev"].stage == WON)
     team_lost = sum(1 for r in rows if r["ev"].stage == LOST)
     team_closed = team_won + team_lost
@@ -232,14 +245,16 @@ def compute_tab2(rows: list[dict], checklist: Checklist) -> list[dict]:
     result = []
     for block in blocks:
         bid = block.id
-        won_vals = [float(r["block_scores"].get(bid, 0.0)) for r in won_rows]
-        lost_vals = [float(r["block_scores"].get(bid, 0.0)) for r in lost_rows]
+        # Исключаем строки, где блок не применялся (None = все NA)
+        won_vals = [r["block_scores"][bid] for r in won_rows if r["block_scores"].get(bid) is not None]
+        lost_vals = [r["block_scores"][bid] for r in lost_rows if r["block_scores"].get(bid) is not None]
         avg_won = _avg(won_vals) if won_vals else None
         avg_lost = _avg(lost_vals) if lost_vals else None
         delta = round(avg_won - avg_lost, 1) if (avg_won is not None and avg_lost is not None) else None
 
-        done = [r for r in rows if r["block_scores"].get(bid, 0.0) > 0]
-        not_done = [r for r in rows if r["block_scores"].get(bid, 0.0) == 0.0]
+        applicable = [r for r in rows if r["block_scores"].get(bid) is not None]
+        done = [r for r in applicable if r["block_scores"][bid] > 0]
+        not_done = [r for r in applicable if r["block_scores"][bid] == 0.0]
         wr_done = _wr(done)
         wr_not_done = _wr(not_done)
         wr_impact = round(wr_done - wr_not_done, 1) if (wr_done is not None and wr_not_done is not None) else None
@@ -271,8 +286,10 @@ def compute_tab3(rows: list[dict], checklist: Checklist) -> dict:
         cells = []
         for block in blocks:
             bid = block.id
-            avg_won = _avg([float(r["block_scores"].get(bid, 0.0)) for r in won_r]) if won_r else None
-            avg_lost = _avg([float(r["block_scores"].get(bid, 0.0)) for r in lost_r]) if lost_r else None
+            won_vals = [r["block_scores"][bid] for r in won_r if r["block_scores"].get(bid) is not None]
+            lost_vals = [r["block_scores"][bid] for r in lost_r if r["block_scores"].get(bid) is not None]
+            avg_won = _avg(won_vals) if won_vals else None
+            avg_lost = _avg(lost_vals) if lost_vals else None
             delta = round(avg_won - avg_lost, 1) if (avg_won is not None and avg_lost is not None) else None
             cells.append({"won": avg_won, "lost": avg_lost, "delta": delta})
         return cells
@@ -284,7 +301,7 @@ def compute_tab3(rows: list[dict], checklist: Checklist) -> dict:
     team_cells = _t1_cells(rows)
 
     RANGES = [
-        ("0%",      lambda v: v is None or v == 0.0),
+        ("0%",      lambda v: v is not None and v == 0.0),
         ("1–40%",   lambda v: v is not None and 0 < v <= 40),
         ("40–70%",  lambda v: v is not None and 40 < v <= 70),
         ("70–100%", lambda v: v is not None and 70 < v <= 100),
