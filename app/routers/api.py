@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, DealCache, User
 from app.deps import get_current_user
-from app.bitrix import get_deal, get_employees, DealInfo
+from app.bitrix import get_deal, get_employees, get_departments, DealInfo
 
 router = APIRouter(prefix="/api")
 
@@ -103,11 +103,27 @@ def criteria_library(
 
 _emp_cache: list[dict] = []
 _emp_cached_at: float = 0.0
+_dept_cache: list[dict] = []
+_dept_cached_at: float = 0.0
+
+
+@router.get("/departments")
+def departments_list(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    import time
+    global _dept_cache, _dept_cached_at
+    if not _dept_cache or (time.time() - _dept_cached_at) > 3600:
+        _dept_cache = get_departments()
+        _dept_cached_at = time.time()
+    return JSONResponse(_dept_cache)
 
 
 @router.get("/employees")
 def employees_list(
     request: Request,
+    department: str = "",
     current_user: User = Depends(get_current_user),
 ):
     import time
@@ -115,6 +131,8 @@ def employees_list(
     if not _emp_cache or (time.time() - _emp_cached_at) > 3600:
         _emp_cache = get_employees()
         _emp_cached_at = time.time()
+    if department:
+        return JSONResponse([e for e in _emp_cache if e.get("department") == department])
     return JSONResponse(_emp_cache)
 
 

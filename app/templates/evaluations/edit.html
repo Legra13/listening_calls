@@ -5,53 +5,78 @@
 <style>
 .score-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 4px 14px; border-radius: 20px; border: 1.5px solid;
-  font-size: 0.78rem; font-weight: 500; cursor: pointer; user-select: none;
-  min-width: 52px; transition: background 0.12s, color 0.12s;
+  width: 36px; height: 28px; border-radius: 6px; border: 1.5px solid;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none;
+  transition: background 0.1s, color 0.1s;
 }
-.score-btn-yes  { border-color: #198754; color: #198754; background: #fff; }
-.score-btn-yes:hover { background: rgba(25,135,84,.1); }
-label:has(input.score-yes:checked) .score-btn-yes { background: #198754; color: #fff; }
-.score-btn-no   { border-color: #dc3545; color: #dc3545; background: #fff; }
-.score-btn-no:hover { background: rgba(220,53,69,.1); }
-label:has(input.score-no:checked) .score-btn-no { background: #dc3545; color: #fff; }
-.score-btn-na   { border-color: #adb5bd; color: #6c757d; background: #fff; }
+.score-btn-0   { border-color: #dc3545; color: #dc3545; background: #fff; }
+.score-btn-0:hover { background: rgba(220,53,69,.1); }
+label:has(input.score-no:checked)  .score-btn-0 { background: #dc3545; color: #fff; }
+.score-btn-1   { border-color: #198754; color: #198754; background: #fff; }
+.score-btn-1:hover { background: rgba(25,135,84,.1); }
+label:has(input.score-yes:checked) .score-btn-1 { background: #198754; color: #fff; }
+.score-btn-na  { border-color: #adb5bd; color: #9ca3af; background: #fff; font-size: 1rem; }
 .score-btn-na:hover { background: rgba(108,117,125,.1); }
-label:has(input.score-na:checked) .score-btn-na { background: #6c757d; color: #fff; border-color: #6c757d; }
-.score-btn-num  { border-color: #adb5bd; color: #495057; background: #fff; }
+label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #fff; border-color: #6c757d; }
+.score-btn-num { border-color: #adb5bd; color: #495057; background: #fff; }
 .score-btn-num:hover { background: rgba(13,110,253,.1); border-color: #0d6efd; }
 label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: #fff; border-color: #0d6efd; }
 
 .crit-item {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 10px 14px;
-  margin-bottom: 6px;
-  background: #fff;
+  border: 1px solid #e9ecef; border-radius: 6px;
+  padding: 9px 12px; margin-bottom: 5px; background: #fff;
   transition: border-color 0.15s, background 0.15s;
 }
 .crit-item.item-yes { border-color: #a3cfbb; background: rgba(25,135,84,.04); }
 .crit-item.item-no  { border-color: #f1aeb5; background: rgba(220,53,69,.04); }
 
-.comment-area { display: none; margin-top: 8px; }
+.comment-area { display: none; margin-top: 8px; border-top: 1px solid #f0f0f0; padding-top: 8px; }
 .comment-area.open { display: block; }
+
+.comment-entry {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; border-radius: 5px; background: #f8f9fa;
+  margin-bottom: 4px; font-size: 0.8rem;
+}
+.comment-entry .c-text { flex: 1; color: #374151; }
+.comment-entry .c-time { font-size: 0.73rem; color: #6c757d; white-space: nowrap; font-family: monospace; }
+.flag-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.flag-dot-sm { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-left: 1px; }
+
+.btn-icon {
+  background: none; border: none; padding: 2px 4px; cursor: pointer;
+  color: #9ca3af; line-height: 1; font-size: 0.75rem; border-radius: 3px;
+  transition: color 0.1s, background 0.1s;
+}
+.btn-icon:hover { background: #e9ecef; color: #374151; }
+.btn-icon.danger:hover { background: #fee2e2; color: #dc3545; }
+
+.flag-selector { display: flex; align-items: center; gap: 4px; }
+.flag-btn-sel {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: border-color 0.1s; flex-shrink: 0;
+}
+.flag-btn-sel.active { border-color: #1a1a2e !important; }
+.flag-btn-sel[data-flag=""]       { background: #d1d5db; }
+.flag-btn-sel[data-flag="red"]    { background: #ef4444; }
+.flag-btn-sel[data-flag="yellow"] { background: #f59e0b; }
+.flag-btn-sel[data-flag="green"]  { background: #22c55e; }
+
+.toggle-comment { background: none; border: none; padding: 2px 5px; cursor: pointer; color: #adb5bd; border-radius: 4px; line-height: 1; transition: color 0.1s; }
+.toggle-comment:hover { color: #6c757d; }
+.toggle-comment.has-comments { color: #374151; }
 
 .block-card { margin-bottom: 10px; }
 .block-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 9px 14px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  cursor: pointer; user-select: none;
-  font-size: 0.8rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  color: #374151;
-  transition: background 0.1s;
-  margin-bottom: 6px;
+  padding: 9px 14px; background: #f8f9fa; border: 1px solid #dee2e6;
+  border-radius: 8px; cursor: pointer; user-select: none;
+  font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #374151; transition: background 0.1s; margin-bottom: 6px;
 }
 .block-header:hover { background: #e9ecef; }
-.block-header .chevron { transition: transform 0.2s; color: #9ca3af; }
+.block-header .chevron { transition: transform 0.2s; color: #9ca3af; font-size: 0.7rem; }
 .block-header.collapsed .chevron { transform: rotate(-90deg); }
 .block-body.collapsed { display: none; }
 .block-progress { font-size: 0.72rem; font-weight: 500; padding: 2px 7px; }
@@ -70,71 +95,60 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
   </ol>
 </nav>
 
-<datalist id="employees-datalist"></datalist>
-
 <div class="d-flex align-items-start gap-3">
   <form method="post" action="/evaluations/{{ ev.id }}/update" id="eval-form" class="flex-grow-1">
     <input type="hidden" name="checklist_id" value="{{ selected_cl.id }}">
 
     <div class="card shadow-sm mb-3">
-      <div class="card-header bg-white py-2">
-        <span class="fw-semibold">{{ selected_cl.name }}</span>
+      <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
+        <span class="badge bg-dark fs-6 px-3 py-2">{{ selected_cl.name }}</span>
       </div>
-      <div class="card-body">
-        <div class="row g-3">
+      <div class="card-body pb-2">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Отдел</label>
+            <select id="dept_select" class="form-select form-select-sm" name="department">
+              <option value="">Загрузка...</option>
+            </select>
+          </div>
           <div class="col-md-4">
-            <label class="form-label small fw-semibold">ID сделки в Битрикс</label>
+            <label class="form-label small fw-semibold mb-1">Сотрудник <span class="text-danger">*</span></label>
+            <select id="emp_select" class="form-select form-select-sm" name="operator_name" required>
+              <option value="{{ ev.operator_name }}" selected>{{ ev.operator_name }}</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">ID сделки Битрикс</label>
             <div class="input-group input-group-sm">
-              <input type="text" id="deal_id_input" name="deal_id"
-                     class="form-control" value="{{ ev.deal_id or '' }}">
+              <input type="text" id="deal_id_input" name="deal_id" class="form-control" value="{{ ev.deal_id or '' }}">
               <button type="button" class="btn btn-outline-secondary" onclick="lookupDeal()">
                 <i class="bi bi-search"></i>
               </button>
             </div>
             <div id="deal-lookup-status" class="mt-1 small"></div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Сотрудник <span class="text-danger">*</span></label>
-            <input type="text" id="operator_name" name="operator_name"
-                   list="employees-datalist"
-                   class="form-control form-control-sm" required value="{{ ev.operator_name }}">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Отдел</label>
-            <input type="text" id="department" name="department"
-                   class="form-control form-control-sm" value="{{ ev.department or '' }}"
-                   placeholder="Заполнится автоматически">
-          </div>
           <div class="col-md-2">
-            <label class="form-label small fw-semibold">
-              Дата звонка
-              <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip"
-                 title="Заполняется из Битрикс при вводе ID сделки"></i>
-            </label>
+            <label class="form-label small fw-semibold mb-1">Дата звонка</label>
             <input type="date" id="eval_date" name="eval_date"
                    class="form-control form-control-sm bg-light text-muted"
-                   value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}"
-                   readonly>
+                   value="{{ ev.eval_date.strftime('%Y-%m-%d') if ev.eval_date else '' }}" readonly>
           </div>
-          <div class="col-md-2">
-            <label class="form-label small fw-semibold text-muted">Дата оценки</label>
-            <input type="text" class="form-control form-control-sm bg-light text-muted"
-                   value="{{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y %H:%M') if (ev.updated_at or ev.created_at) else '—' }}"
-                   disabled>
-          </div>
-          <input type="hidden" id="stage" name="stage" value="{{ ev.stage or 'в работе' }}">
         </div>
+        <div class="row g-2 mt-0">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1 text-muted">Дата оценки</label>
+            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                   value="{{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y %H:%M') if (ev.updated_at or ev.created_at) else '—' }}" disabled>
+          </div>
+        </div>
+        <input type="hidden" id="stage" name="stage" value="{{ ev.stage or 'в работе' }}">
       </div>
     </div>
 
-    {% for block in selected_cl.blocks %}
-    {% if block.criteria %}
-    <div class="block-card" data-block-id="{{ block.id }}">
+    {% for block in selected_cl.blocks %}{% if block.criteria %}
+    <div class="block-card">
       <div class="block-header" id="block-hdr-{{ block.id }}">
-        <span>
-          <i class="bi bi-chevron-down chevron me-2"></i>
-          {{ block.display_name or block.name }}
-        </span>
+        <span><i class="bi bi-chevron-down chevron me-2"></i>{{ block.display_name or block.name }}</span>
         <span class="badge bg-light text-muted border block-progress" id="prog-{{ block.id }}"></span>
       </div>
       <div class="block-body" id="block-body-{{ block.id }}">
@@ -143,12 +157,11 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
         {% set cur_val = item.value if item else "na" %}
         <div class="crit-item {% if cur_val == 'yes' %}item-yes{% elif cur_val == 'no' %}item-no{% endif %}"
              data-crit-id="{{ crit.id }}">
-          <div class="d-flex align-items-start gap-3">
-            <div class="flex-grow-1 small" style="color:#374151; padding-top:3px; line-height:1.45">
+          <div class="d-flex align-items-start gap-2">
+            <div class="flex-grow-1 small" style="color:#374151;padding-top:2px;line-height:1.45">
               {{ crit.text }}
               {% if crit.description %}
-              <i class="bi bi-info-circle text-muted ms-1"
-                 data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
+              <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
               {% endif %}
               {% if crit.is_autofail %}
               <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:0.65rem">AF</span>
@@ -166,66 +179,73 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
                 <label class="mb-0">
                   <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
                          {% if cur_val == "na" %}checked{% endif %}>
-                  <span class="score-btn score-btn-na">Н/П</span>
+                  <span class="score-btn score-btn-na" title="Не проверялось">○</span>
                 </label>
               {% else %}
                 <label class="mb-0">
-                  <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
-                         {% if cur_val == "yes" %}checked{% endif %}>
-                  <span class="score-btn score-btn-yes">Да</span>
-                </label>
-                <label class="mb-0">
                   <input type="radio" name="criterion_{{ crit.id }}" value="no" class="d-none score-val score-no"
                          {% if cur_val == "no" %}checked{% endif %}>
-                  <span class="score-btn score-btn-no">Нет</span>
+                  <span class="score-btn score-btn-0">0</span>
+                </label>
+                <label class="mb-0">
+                  <input type="radio" name="criterion_{{ crit.id }}" value="yes" class="d-none score-val score-yes"
+                         {% if cur_val == "yes" %}checked{% endif %}>
+                  <span class="score-btn score-btn-1">1</span>
                 </label>
                 <label class="mb-0">
                   <input type="radio" name="criterion_{{ crit.id }}" value="na" class="d-none score-na"
                          {% if cur_val == "na" %}checked{% endif %}>
-                  <span class="score-btn score-btn-na">Н/П</span>
+                  <span class="score-btn score-btn-na" title="Не проверялось">○</span>
                 </label>
               {% endif %}
-              {% set has_comment = item and item.comment %}
-              <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted toggle-comment"
-                      title="Комментарий">
-                <i class="bi bi-chat{% if has_comment %}-fill text-primary{% endif %}"></i>
+              <button type="button" class="toggle-comment" data-crit="{{ crit.id }}" title="Комментарии">
+                <i class="bi bi-chat"></i>
               </button>
             </div>
           </div>
-          {% set has_comment = item and item.comment %}
-          <div class="comment-area{% if has_comment %} open{% endif %}">
-            <input type="text" name="comment_{{ crit.id }}"
-                   class="form-control form-control-sm"
-                   value="{{ item.comment if has_comment else '' }}"
-                   placeholder="Комментарий к критерию...">
+          <div class="comment-area" id="comment-area-{{ crit.id }}">
+            <div id="comment-list-{{ crit.id }}"></div>
+            <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+              <div class="flag-selector" id="flag-selector-{{ crit.id }}">
+                <button type="button" class="flag-btn-sel active" data-flag="" title="Без флажка"></button>
+                <button type="button" class="flag-btn-sel" data-flag="red" title="Ошибка"></button>
+                <button type="button" class="flag-btn-sel" data-flag="yellow" title="Примечание"></button>
+                <button type="button" class="flag-btn-sel" data-flag="green" title="Хороший пример"></button>
+              </div>
+              <input type="text" id="comment-time-{{ crit.id }}"
+                     class="form-control form-control-sm" style="width:70px" placeholder="0:00" title="Тайминг">
+              <input type="text" id="comment-input-{{ crit.id }}"
+                     class="form-control form-control-sm flex-grow-1" placeholder="Комментарий...">
+              <button type="button" class="btn btn-sm btn-outline-secondary" style="white-space:nowrap"
+                      id="comment-add-btn-{{ crit.id }}"
+                      onclick="addOrUpdateComment({{ crit.id }})">+ Добавить</button>
+            </div>
+            <input type="hidden" name="comments_json_{{ crit.id }}" id="comments-json-{{ crit.id }}" value="[]">
           </div>
         </div>
         {% endfor %}
       </div>
     </div>
-    {% endif %}
-    {% endfor %}
+    {% endif %}{% endfor %}
 
     <div class="card shadow-sm mb-3">
-      <div class="card-body">
-        <label class="form-label small fw-semibold">Общий комментарий</label>
+      <div class="card-body py-2">
+        <label class="form-label small fw-semibold mb-1">Общий комментарий</label>
         <textarea name="general_comment" class="form-control form-control-sm" rows="2">{{ ev.general_comment or '' }}</textarea>
       </div>
     </div>
 
     <div class="d-flex gap-2 mb-4">
-      <button type="submit" class="btn btn-dark">
-        <i class="bi bi-check-lg me-1"></i>Сохранить изменения
-      </button>
+      <button type="submit" class="btn btn-dark"><i class="bi bi-check-lg me-1"></i>Сохранить изменения</button>
       <a href="/evaluations/{{ ev.id }}" class="btn btn-outline-secondary">Отмена</a>
     </div>
   </form>
 
-  <div style="width:120px; flex-shrink:0">
+  <div style="width:120px;flex-shrink:0">
     <div id="score-preview" class="card shadow-sm text-center p-2">
       <div class="text-muted small mb-1">Текущий балл</div>
       <div id="score-value" class="fw-bold fs-4">—</div>
-      <div id="progress-counter" class="progress-text">0 / 0 ✓</div>
+      <div id="progress-counter">0 / 0 ✓</div>
     </div>
   </div>
 </div>
@@ -242,58 +262,132 @@ const BLOCK_WEIGHTS = {
   {% for block in selected_cl.blocks %}{{ block.id }}:{{ block.weight }},{% endfor %}
 };
 
-let employeesData = [];
+// Predefined comments from server
+const SAVED_COMMENTS = {
+  {% for block in selected_cl.blocks %}{% for crit in block.criteria %}
+  {% set item = item_map.get(crit.id) %}
+  {% if item and item.comment %}
+  {{ crit.id }}: {{ item.comment | tojson }},
+  {% endif %}
+  {% endfor %}{% endfor %}
+};
 
-function lookupDeal() {
-  const id = document.getElementById('deal_id_input').value.trim();
-  if (!id) return;
-  const status = document.getElementById('deal-lookup-status');
-  status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Ищу...</span>';
-  fetch('/api/deal/' + encodeURIComponent(id), {credentials: 'same-origin'})
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) { status.innerHTML = '<span class="text-danger">' + data.error + '</span>'; return; }
-      document.getElementById('operator_name').value = data.operator_name;
-      if (data.department) document.getElementById('department').value = data.department;
-      if (data.deal_date) document.getElementById('eval_date').value = data.deal_date;
-      status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.operator_name + '</span>';
-    })
-    .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
+const comments = {};
+let editingComment = null;
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+const FLAG_COLORS = {red:'#ef4444', green:'#22c55e', yellow:'#f59e0b', '':'#d1d5db'};
+
+function parseServerComment(raw) {
+  if (!raw) return [];
+  try { const d = JSON.parse(raw); if (Array.isArray(d)) return d; } catch(e) {}
+  return [{text: raw, flag: '', time: ''}];
+}
+
+function renderCommentsList(critId) {
+  const data = comments[critId] || [];
+  const listEl = document.getElementById('comment-list-' + critId);
+  if (!listEl) return;
+  listEl.innerHTML = data.map((c, i) => {
+    const col = FLAG_COLORS[c.flag || ''] || '#d1d5db';
+    return `<div class="comment-entry">
+      <span class="flag-dot" style="background:${col}"></span>
+      ${c.time ? `<span class="c-time">${escapeHtml(c.time)}</span>` : ''}
+      <span class="c-text">${escapeHtml(c.text)}</span>
+      <button type="button" class="btn-icon" onclick="startEditComment(${critId},${i})" title="Редактировать"><i class="bi bi-pencil-fill"></i></button>
+      <button type="button" class="btn-icon danger" onclick="deleteComment(${critId},${i})" title="Удалить"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+  }).join('');
+  document.getElementById('comments-json-' + critId).value = JSON.stringify(data);
+  updateCommentBtn(critId);
+}
+
+function updateCommentBtn(critId) {
+  const btn = document.querySelector(`.toggle-comment[data-crit="${critId}"]`);
+  if (!btn) return;
+  const data = comments[critId] || [];
+  if (data.length === 0) { btn.innerHTML = '<i class="bi bi-chat"></i>'; btn.classList.remove('has-comments'); return; }
+  const flags = [...new Set(data.map(c => c.flag || ''))];
+  const dots = flags.map(f => `<span class="flag-dot-sm" style="background:${FLAG_COLORS[f]||'#d1d5db'}"></span>`).join('');
+  btn.innerHTML = `<i class="bi bi-chat-fill"></i>${dots}`;
+  btn.classList.add('has-comments');
+}
+
+function addOrUpdateComment(critId) {
+  const textEl = document.getElementById('comment-input-' + critId);
+  const timeEl = document.getElementById('comment-time-' + critId);
+  const text = textEl.value.trim();
+  if (!text) { textEl.focus(); return; }
+  const flag = document.querySelector(`#flag-selector-${critId} .flag-btn-sel.active`)?.dataset.flag ?? '';
+  const time = timeEl?.value.trim() || '';
+  if (!comments[critId]) comments[critId] = [];
+  if (editingComment && editingComment.critId === critId) {
+    comments[critId][editingComment.index] = {text, flag, time};
+    editingComment = null;
+    document.getElementById('comment-add-btn-' + critId).textContent = '+ Добавить';
+  } else {
+    comments[critId].push({text, flag, time});
+  }
+  textEl.value = '';
+  if (timeEl) timeEl.value = '';
+  document.querySelectorAll(`#flag-selector-${critId} .flag-btn-sel`).forEach(b => b.classList.remove('active'));
+  document.querySelector(`#flag-selector-${critId} .flag-btn-sel[data-flag=""]`)?.classList.add('active');
+  renderCommentsList(critId);
+}
+
+function startEditComment(critId, index) {
+  const c = (comments[critId] || [])[index];
+  if (!c) return;
+  const textEl = document.getElementById('comment-input-' + critId);
+  const timeEl = document.getElementById('comment-time-' + critId);
+  textEl.value = c.text;
+  if (timeEl) timeEl.value = c.time || '';
+  document.querySelectorAll(`#flag-selector-${critId} .flag-btn-sel`).forEach(b => b.classList.remove('active'));
+  document.querySelector(`#flag-selector-${critId} .flag-btn-sel[data-flag="${c.flag || ''}"]`)?.classList.add('active');
+  editingComment = {critId, index};
+  document.getElementById('comment-add-btn-' + critId).textContent = '✓ Обновить';
+  document.getElementById('comment-area-' + critId)?.classList.add('open');
+  textEl.focus();
+}
+
+function deleteComment(critId, index) {
+  if (!comments[critId]) return;
+  comments[critId].splice(index, 1);
+  if (editingComment && editingComment.critId === critId && editingComment.index === index) {
+    editingComment = null;
+    const btn = document.getElementById('comment-add-btn-' + critId);
+    if (btn) btn.textContent = '+ Добавить';
+  }
+  renderCommentsList(critId);
 }
 
 function calcScore() {
   const blockNums = {}, blockDens = {};
-  document.querySelectorAll('[name^="criterion_"]').forEach(radio => {
-    if (!radio.checked) return;
-    const critId = parseInt(radio.name.replace('criterion_', ''));
+  document.querySelectorAll('[name^="criterion_"]').forEach(r => {
+    if (!r.checked) return;
+    const critId = parseInt(r.name.replace('criterion_', ''));
     const crit = CRITERIA_DATA[critId];
-    if (!crit || radio.value === 'na') return;
+    if (!crit || r.value === 'na') return;
     if (!blockNums[crit.blockId]) { blockNums[crit.blockId] = 0; blockDens[crit.blockId] = 0; }
     blockDens[crit.blockId] += crit.weight;
-    if (crit.type === 'binary' && radio.value === 'yes') blockNums[crit.blockId] += crit.weight;
-    else if (crit.type === 'range') blockNums[crit.blockId] += (parseInt(radio.value) / crit.max) * crit.weight;
+    if (crit.type === 'binary' && r.value === 'yes') blockNums[crit.blockId] += crit.weight;
+    else if (crit.type === 'range') blockNums[crit.blockId] += (parseInt(r.value) / crit.max) * crit.weight;
   });
   let wNum = 0, wDen = 0;
   for (const [bId, bW] of Object.entries(BLOCK_WEIGHTS)) {
     const id = parseInt(bId);
-    if (blockDens[id] > 0) {
-      wNum += (blockNums[id] / blockDens[id] * 100) * bW;
-      wDen += bW;
-    }
+    if (blockDens[id] > 0) { wNum += (blockNums[id] / blockDens[id] * 100) * bW; wDen += bW; }
   }
-  return wDen > 0 ? (wNum / wDen) : null;
+  return wDen > 0 ? wNum / wDen : null;
 }
 
 function updateScorePreview() {
   const score = calcScore();
   const el = document.getElementById('score-value');
   const card = document.getElementById('score-preview');
-  if (score === null) {
-    el.textContent = '—';
-    el.className = 'fw-bold fs-4';
-    card.className = 'card shadow-sm text-center p-2';
-    return;
-  }
+  if (score === null) { el.textContent = '—'; el.className = 'fw-bold fs-4'; card.className = 'card shadow-sm text-center p-2'; return; }
   el.textContent = score.toFixed(1) + '%';
   const color = score >= 60 ? 'success' : score >= 40 ? 'warning' : 'danger';
   card.className = 'card shadow-sm text-center p-2 border-' + color;
@@ -306,86 +400,140 @@ function updateProgress() {
   document.querySelectorAll('[name^="criterion_"].score-val:checked').forEach(() => filled++);
   const el = document.getElementById('progress-counter');
   if (el) el.textContent = filled + ' / ' + total + ' ✓';
-
   for (const blockId of Object.keys(BLOCK_WEIGHTS)) {
-    const blockCrits = Object.entries(CRITERIA_DATA).filter(([, c]) => c.blockId === parseInt(blockId));
-    const blockTotal = blockCrits.length;
-    let blockFilled = 0;
-    blockCrits.forEach(([critId]) => {
-      if (document.querySelector('[name="criterion_' + critId + '"].score-val:checked')) blockFilled++;
-    });
+    const bc = Object.entries(CRITERIA_DATA).filter(([,c]) => c.blockId === parseInt(blockId));
+    let bf = 0;
+    bc.forEach(([cid]) => { if (document.querySelector(`[name="criterion_${cid}"].score-val:checked`)) bf++; });
     const badge = document.getElementById('prog-' + blockId);
     if (!badge) continue;
-    badge.textContent = blockFilled + '/' + blockTotal;
-    badge.className = blockFilled === blockTotal
+    badge.textContent = bf + '/' + bc.length;
+    badge.className = bf === bc.length
       ? 'badge bg-success-subtle text-success border border-success-subtle block-progress'
       : 'badge bg-light text-muted border block-progress';
   }
 }
 
-function showComment(item) {
-  const area = item.querySelector('.comment-area');
-  const icon = item.querySelector('.toggle-comment i');
-  area.classList.add('open');
-  if (icon) icon.className = 'bi bi-chat-fill text-primary';
-  setTimeout(() => area.querySelector('input').focus(), 30);
+async function loadDepartments(preselectDept) {
+  try {
+    const r = await fetch('/api/departments', {credentials:'same-origin'});
+    const depts = await r.json();
+    const sel = document.getElementById('dept_select');
+    sel.innerHTML = '<option value="">— Все отделы —</option>';
+    depts.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.name; opt.textContent = d.name;
+      if (preselectDept && d.name === preselectDept) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    document.getElementById('dept_select').innerHTML = '<option value="">— Ошибка —</option>';
+  }
+}
+
+async function loadEmployees(department, preselectEmp) {
+  const url = '/api/employees' + (department ? '?department=' + encodeURIComponent(department) : '');
+  try {
+    const r = await fetch(url, {credentials:'same-origin'});
+    const emps = await r.json();
+    const sel = document.getElementById('emp_select');
+    sel.innerHTML = '<option value="">— выберите сотрудника —</option>';
+    emps.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.name; opt.textContent = e.name;
+      if (preselectEmp && e.name === preselectEmp) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+function lookupDeal() {
+  const id = document.getElementById('deal_id_input').value.trim();
+  if (!id) return;
+  const status = document.getElementById('deal-lookup-status');
+  status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Ищу...</span>';
+  fetch('/api/deal/' + encodeURIComponent(id), {credentials:'same-origin'})
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { status.innerHTML = '<span class="text-danger">' + data.error + '</span>'; return; }
+      if (data.department) {
+        const deptSel = document.getElementById('dept_select');
+        for (let o of deptSel.options) if (o.value === data.department) { o.selected = true; break; }
+        loadEmployees(data.department, data.operator_name);
+      } else {
+        loadEmployees('', data.operator_name);
+      }
+      if (data.deal_date) document.getElementById('eval_date').value = data.deal_date;
+      status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.operator_name + '</span>';
+    })
+    .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  fetch('/api/employees', {credentials: 'same-origin'})
-    .then(r => r.json())
-    .then(data => {
-      employeesData = data;
-      const dl = document.getElementById('employees-datalist');
-      data.forEach(e => {
-        const opt = document.createElement('option');
-        opt.value = e.name;
-        dl.appendChild(opt);
-      });
-    }).catch(() => {});
+  const savedDept = {{ (ev.department or '') | tojson }};
+  const savedEmp  = {{ ev.operator_name | tojson }};
 
-  document.getElementById('operator_name').addEventListener('change', function() {
-    const found = employeesData.find(e => e.name === this.value);
-    if (found && found.department && !document.getElementById('department').value) {
-      document.getElementById('department').value = found.department;
+  loadDepartments(savedDept).then(() => loadEmployees(savedDept, savedEmp));
+
+  // Init saved comments
+  for (const [critIdStr, raw] of Object.entries(SAVED_COMMENTS)) {
+    const critId = parseInt(critIdStr);
+    const data = parseServerComment(raw);
+    if (data.length > 0) {
+      comments[critId] = data;
+      renderCommentsList(critId);
+      // Open comment area if has comments
+      document.getElementById('comment-area-' + critId)?.classList.add('open');
     }
+  }
+
+  document.getElementById('dept_select').addEventListener('change', function() {
+    loadEmployees(this.value, '');
   });
 
-  document.querySelectorAll('.score-val').forEach(function(radio) {
-    radio.addEventListener('change', function() {
+  document.getElementById('deal_id_input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); lookupDeal(); }
+  });
+
+  document.querySelectorAll('.score-val').forEach(r => {
+    r.addEventListener('change', function() {
       const item = this.closest('.crit-item');
       item.classList.remove('item-yes', 'item-no');
       if (this.classList.contains('score-yes')) item.classList.add('item-yes');
       else if (this.classList.contains('score-no')) {
         item.classList.add('item-no');
-        showComment(item);
+        const critId = parseInt(item.dataset.critId);
+        const area = document.getElementById('comment-area-' + critId);
+        if (area && !area.classList.contains('open')) {
+          area.classList.add('open');
+          setTimeout(() => document.getElementById('comment-input-' + critId)?.focus(), 30);
+        }
       }
-      updateScorePreview();
-      updateProgress();
+      updateScorePreview(); updateProgress();
     });
   });
-
   document.querySelectorAll('.score-na').forEach(r => {
     r.addEventListener('change', function() {
       this.closest('.crit-item').classList.remove('item-yes', 'item-no');
-      updateScorePreview();
-      updateProgress();
+      updateScorePreview(); updateProgress();
     });
   });
 
-  document.querySelectorAll('.toggle-comment').forEach(function(btn) {
+  document.querySelectorAll('.toggle-comment').forEach(btn => {
     btn.addEventListener('click', function() {
-      const item = this.closest('.crit-item');
-      const area = item.querySelector('.comment-area');
-      const icon = this.querySelector('i');
-      const opening = !area.classList.contains('open');
-      area.classList.toggle('open', opening);
-      icon.className = opening ? 'bi bi-chat-fill text-primary' : 'bi bi-chat';
-      if (opening) area.querySelector('input').focus();
+      const critId = this.dataset.crit;
+      const area = document.getElementById('comment-area-' + critId);
+      area.classList.toggle('open');
     });
   });
 
-  document.querySelectorAll('.block-header').forEach(function(hdr) {
+  document.querySelectorAll('.flag-btn-sel').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.closest('.flag-selector').querySelectorAll('.flag-btn-sel').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.block-header').forEach(hdr => {
     hdr.addEventListener('click', function() {
       const id = this.id.replace('block-hdr-', '');
       const body = document.getElementById('block-body-' + id);
@@ -394,9 +542,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
-    new bootstrap.Tooltip(el);
+  document.querySelectorAll('[id^="comment-input-"]').forEach(inp => {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addOrUpdateComment(parseInt(this.id.replace('comment-input-', '')));
+      }
+    });
   });
+
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
   updateScorePreview();
   updateProgress();

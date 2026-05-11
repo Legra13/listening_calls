@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
@@ -10,6 +11,32 @@ from app.scoring import calculate_scores, score_color, MONTH_NAMES
 
 router = APIRouter(prefix="/evaluations")
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _parse_comments(raw: str | None) -> list[dict]:
+    """Парсит комментарий из БД (JSON-массив или plain text для старых записей)."""
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return [{"text": raw, "flag": "", "time": ""}]
+
+
+def _read_comments_from_form(form, crit_id: int) -> str | None:
+    """Читает JSON-комментарии из формы, валидирует, возвращает строку или None."""
+    raw = (form.get(f"comments_json_{crit_id}") or "[]").strip()
+    try:
+        lst = json.loads(raw)
+        if not isinstance(lst, list):
+            return None
+        lst = [c for c in lst if isinstance(c, dict) and str(c.get("text", "")).strip()]
+        return json.dumps(lst, ensure_ascii=False) if lst else None
+    except (json.JSONDecodeError, ValueError):
+        return None
 
 
 # ── List ──────────────────────────────────────────────────────────────────────
@@ -190,7 +217,7 @@ async def evaluations_create(
         else:
             if value not in ("yes", "no", "na"):
                 value = "na"
-        comment = (form.get(f"comment_{crit.id}") or "").strip()
+        comment = _read_comments_from_form(form, crit.id)
         items_raw.append((crit.id, value, comment))
 
     total_score, _ = calculate_scores(items_raw, cl)
@@ -258,6 +285,7 @@ def evaluations_view(
         "item_map": item_map,
         "block_scores": block_scores,
         "score_color": score_color,
+        "parse_comments": _parse_comments,
         "flash": pop_flash(request),
     })
 
@@ -359,7 +387,7 @@ async def evaluations_update(
         else:
             if value not in ("yes", "no", "na"):
                 value = "na"
-        comment = (form.get(f"comment_{crit.id}") or "").strip()
+        comment = _read_comments_from_form(form, crit.id)
         items_raw.append((crit.id, value, comment))
 
     total_score, _ = calculate_scores(items_raw, cl)

@@ -117,6 +117,21 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
         raise ConnectionError(f"Ошибка подключения к Битрикс: {exc}") from exc
 
 
+def get_departments() -> list[dict]:
+    """Возвращает список отделов из Битрикс24."""
+    try:
+        conn = _get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT ID, NAME FROM `{_DEPTS_TABLE}` ORDER BY NAME")
+                rows = cur.fetchall()
+            return [{"id": r["ID"], "name": r["NAME"]} for r in rows if r.get("NAME")]
+        finally:
+            conn.close()
+    except Exception:
+        return []
+
+
 def get_employees() -> list[dict]:
     """Возвращает список активных сотрудников из Битрикс24."""
     try:

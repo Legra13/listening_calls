@@ -98,20 +98,35 @@
               {% if val != 'na' %}
                 <span class="badge bg-primary">{{ val }} / {{ crit.score_max or 5 }}</span>
               {% else %}
-                <span class="text-muted">Н/П</span>
+                <span class="text-muted">○</span>
               {% endif %}
             {% else %}
               {% if val == "yes" %}
-                <span class="text-success"><i class="bi bi-check-lg"></i> Да</span>
+                <span class="text-success fw-bold">1</span>
               {% elif val == "no" %}
-                <span class="text-danger"><i class="bi bi-x-lg"></i> Нет</span>
+                <span class="text-danger fw-bold">0</span>
               {% else %}
-                <span class="text-muted">Н/П</span>
+                <span class="text-muted">○</span>
               {% endif %}
             {% endif %}
           </td>
-          <td class="text-muted small align-middle">
-            {{ item.comment if item and item.comment else "" }}
+          <td class="small align-middle" style="max-width:300px">
+            {% set coms = parse_comments(item.comment if item else None) %}
+            {% for c in coms %}
+            <div class="d-flex align-items-start gap-1 mb-1">
+              {% if c.flag == 'red' %}
+                <span style="width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:3px;display:inline-block"></span>
+              {% elif c.flag == 'green' %}
+                <span style="width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:3px;display:inline-block"></span>
+              {% elif c.flag == 'yellow' %}
+                <span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;flex-shrink:0;margin-top:3px;display:inline-block"></span>
+              {% else %}
+                <span style="width:9px;height:9px;border-radius:50%;background:#e5e7eb;flex-shrink:0;margin-top:3px;display:inline-block"></span>
+              {% endif %}
+              {% if c.time %}<span class="text-muted" style="font-family:monospace;font-size:0.7rem;white-space:nowrap">{{ c.time }}</span>{% endif %}
+              <span class="text-secondary">{{ c.text }}</span>
+            </div>
+            {% endfor %}
           </td>
         </tr>
         {% endfor %}
