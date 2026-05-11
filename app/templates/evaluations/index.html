@@ -9,31 +9,24 @@
   </a>
 </div>
 
-<datalist id="employees-filter-datalist">
-  {% for name in known_operators %}
-  <option value="{{ name }}">
-  {% endfor %}
-</datalist>
 
 <!-- Фильтры -->
 <form method="get" action="/evaluations" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label class="form-label form-label-sm mb-1 text-muted">Сотрудник</label>
-    <input type="text" name="operator" class="form-control form-control-sm"
-           list="employees-filter-datalist"
-           placeholder="Введите имя" value="{{ filters.operator }}" style="width:160px">
-  </div>
-  {% if departments %}
-  <div class="col-auto">
     <label class="form-label form-label-sm mb-1 text-muted">Отдел</label>
-    <select name="department" class="form-select form-select-sm" style="width:150px">
+    <select id="filter-dept" name="department" class="form-select form-select-sm" style="width:200px">
       <option value="">Все отделы</option>
-      {% for d in departments %}
-        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
-      {% endfor %}
     </select>
   </div>
-  {% endif %}
+  <div class="col-auto">
+    <label class="form-label form-label-sm mb-1 text-muted">Сотрудник</label>
+    <input type="text" id="filter-operator" name="operator"
+           class="form-control form-control-sm"
+           list="filter-emp-dl"
+           placeholder="— все —"
+           value="{{ filters.operator }}" style="width:190px">
+    <datalist id="filter-emp-dl"></datalist>
+  </div>
   <div class="col-auto">
     <label class="form-label form-label-sm mb-1 text-muted">Чек-лист</label>
     <select name="checklist_id" class="form-select form-select-sm" style="width:170px">
@@ -183,9 +176,46 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
-    new bootstrap.Tooltip(el);
+const FILTER_DEPT    = {{ filters.department | tojson }};
+const FILTER_OPERATOR = {{ filters.operator | tojson }};
+
+async function loadFilterDepts() {
+  try {
+    const r = await fetch('/api/departments', {credentials: 'same-origin'});
+    const depts = await r.json();
+    const sel = document.getElementById('filter-dept');
+    sel.innerHTML = '<option value="">Все отделы</option>';
+    depts.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.name; o.textContent = d.name;
+      if (d.name === FILTER_DEPT) o.selected = true;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+}
+
+async function loadFilterEmps(dept) {
+  try {
+    const url = '/api/employees' + (dept ? '?department=' + encodeURIComponent(dept) : '');
+    const r = await fetch(url, {credentials: 'same-origin'});
+    const emps = await r.json();
+    const dl = document.getElementById('filter-emp-dl');
+    dl.innerHTML = emps.map(e => `<option value="${e.name.replace(/"/g, '&quot;')}">`).join('');
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+  await loadFilterDepts();
+  await loadFilterEmps(FILTER_DEPT);
+
+  document.getElementById('filter-dept').addEventListener('change', function() {
+    loadFilterEmps(this.value);
+    // Сбрасываем сотрудника только если фильтр был применён без смены отдела
+    if (!FILTER_DEPT || this.value !== FILTER_DEPT) {
+      document.getElementById('filter-operator').value = '';
+    }
   });
 });
 </script>
