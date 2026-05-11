@@ -56,7 +56,7 @@ def evaluations_index(
     request: Request,
     operator: str = "",
     checklist_id: str = "",
-    checklist_status: str = "",
+    eval_status: str = "",
     stage: str = "",
     department: str = "",
     date_from: str = "",
@@ -69,14 +69,13 @@ def evaluations_index(
     q = (
         db.query(Evaluation)
         .options(joinedload(Evaluation.checklist), joinedload(Evaluation.evaluator))
-        .join(Evaluation.checklist)
     )
     if operator:
         q = q.filter(Evaluation.operator_name.ilike(f"%{operator}%"))
     if checklist_id:
         q = q.filter(Evaluation.checklist_id == int(checklist_id))
-    if checklist_status:
-        q = q.filter(Checklist.status == checklist_status)
+    if eval_status:
+        q = q.filter(Evaluation.status == eval_status)
     if stage:
         q = q.filter(Evaluation.stage == stage)
     if department:
@@ -126,7 +125,7 @@ def evaluations_index(
         "filters": {
             "operator": operator,
             "checklist_id": checklist_id,
-            "checklist_status": checklist_status,
+            "eval_status": eval_status,
             "stage": stage,
             "department": department,
             "date_from": date_from,
@@ -227,6 +226,25 @@ async def evaluations_create(
 
     total_score, _ = calculate_scores(items_raw, cl)
 
+    action = (form.get("action") or "publish").strip()
+    status = "draft" if action == "save_draft" else "published"
+
+    # Duplicate check: if publishing with a deal_id, warn and fall back to draft
+    dup_id: int | None = None
+    if status == "published" and deal_id:
+        dup = (
+            db.query(Evaluation.id)
+            .filter(
+                Evaluation.deal_id == deal_id,
+                Evaluation.checklist_id == checklist_id,
+                Evaluation.status == "published",
+            )
+            .first()
+        )
+        if dup:
+            dup_id = dup[0]
+            status = "draft"
+
     evaluation = Evaluation(
         checklist_id=checklist_id,
         deal_id=deal_id or None,
@@ -240,6 +258,7 @@ async def evaluations_create(
         total_score=total_score,
         evaluator_id=current_user.id,
         general_comment=general_comment or None,
+        status=status,
     )
     db.add(evaluation)
     db.flush()
@@ -253,7 +272,12 @@ async def evaluations_create(
         ))
 
     db.commit()
-    flash(request, f"Оценка сохранена. Итог: {total_score:.1f}%")
+    if dup_id:
+        flash(request, f"Сделка #{deal_id} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
+    elif status == "draft":
+        flash(request, "Черновик сохранён.")
+    else:
+        flash(request, f"Оценка опубликована. Итог: {total_score:.1f}%")
     return RedirectResponse(f"/evaluations/{evaluation.id}", status_code=302)
 
 
@@ -399,6 +423,27 @@ async def evaluations_update(
     evaluation.total_score = total_score
     evaluation.updated_at = datetime.utcnow()
 
+    action = (form.get("action") or "publish").strip()
+    new_status = "draft" if action == "save_draft" else "published"
+
+    dup_id: int | None = None
+    if new_status == "published" and evaluation.deal_id:
+        dup = (
+            db.query(Evaluation.id)
+            .filter(
+                Evaluation.deal_id == evaluation.deal_id,
+                Evaluation.checklist_id == evaluation.checklist_id,
+                Evaluation.status == "published",
+                Evaluation.id != eval_id,
+            )
+            .first()
+        )
+        if dup:
+            dup_id = dup[0]
+            new_status = "draft"
+
+    evaluation.status = new_status
+
     # Replace items
     db.query(EvaluationItem).filter(EvaluationItem.evaluation_id == eval_id).delete()
     for crit_id, value, comment in items_raw:
@@ -410,7 +455,31 @@ async def evaluations_update(
         ))
 
     db.commit()
-    flash(request, f"Оценка обновлена. Итог: {total_score:.1f}%")
+    if dup_id:
+        flash(request, f"Сделка #{evaluation.deal_id} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
+    elif new_status == "draft":
+        flash(request, "Черновик сохранён.")
+    else:
+        flash(request, f"Оценка обновлена. Итог: {total_score:.1f}%")
+    return RedirectResponse(f"/evaluations/{eval_id}", status_code=302)
+
+
+# ── Publish ───────────────────────────────────────────────────────────────────
+
+@router.post("/{eval_id}/publish")
+def evaluations_publish(
+    eval_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    evaluation = db.query(Evaluation).filter(Evaluation.id == eval_id).first()
+    if not evaluation:
+        return RedirectResponse("/evaluations", status_code=302)
+    evaluation.status = "published"
+    evaluation.updated_at = datetime.utcnow()
+    db.commit()
+    flash(request, f"Оценка опубликована. Итог: {evaluation.total_score:.1f}%")
     return RedirectResponse(f"/evaluations/{eval_id}", status_code=302)
 
 

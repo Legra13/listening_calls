@@ -46,12 +46,11 @@
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label form-label-sm mb-1 text-muted">Статус чек-листа</label>
-    <select name="checklist_status" class="form-select form-select-sm" style="width:145px">
-      <option value="">Все статусы</option>
-      <option value="active"   {% if filters.checklist_status == "active"   %}selected{% endif %}>Активные</option>
-      <option value="draft"    {% if filters.checklist_status == "draft"    %}selected{% endif %}>Черновики</option>
-      <option value="archived" {% if filters.checklist_status == "archived" %}selected{% endif %}>Архивные</option>
+    <label class="form-label form-label-sm mb-1 text-muted">Статус оценки</label>
+    <select name="eval_status" class="form-select form-select-sm" style="width:145px">
+      <option value="">Все</option>
+      <option value="published" {% if filters.eval_status == "published" %}selected{% endif %}>Опубликованные</option>
+      <option value="draft"     {% if filters.eval_status == "draft"     %}selected{% endif %}>Черновики</option>
     </select>
   </div>
   <div class="col-auto">
@@ -88,7 +87,7 @@
 
 {% macro sort_url(col) %}
   {% set new_dir = "asc" if (sort == col and dir == "desc") else "desc" %}
-  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&checklist_status={{ filters.checklist_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}
+  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&eval_status={{ filters.eval_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}
 {%- endmacro %}
 
 {% macro sort_icon(col) %}
@@ -124,7 +123,10 @@
         "в работе": "warning"
       }.get(ev.stage, "secondary") %}
       <tr>
-        <td class="text-muted small align-middle">{{ ev.id }}</td>
+        <td class="text-muted small align-middle">
+          {{ ev.id }}
+          {% if ev.status == 'draft' %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem">черновик</span>{% endif %}
+        </td>
         <td class="align-middle fw-semibold">{{ ev.operator_name }}</td>
         <td class="align-middle small text-muted">{{ ev.department or '—' }}</td>
         <td class="align-middle small text-muted">

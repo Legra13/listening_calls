@@ -85,6 +85,7 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
         q = q.filter(Evaluation.eval_date <= datetime.combine(filters.date_to, datetime.max.time()))
     if filters.checklist_id:
         q = q.filter(Evaluation.checklist_id == filters.checklist_id)
+    q = q.filter(Evaluation.status == "published")
     return q.all()
 
 

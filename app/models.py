@@ -91,6 +91,8 @@ class Evaluation(Base):
     total_score: Mapped[float | None] = mapped_column(Float)
     evaluator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     general_comment: Mapped[str | None] = mapped_column(Text)
+    # status: "draft" | "published"
+    status: Mapped[str] = mapped_column(String(20), default="published")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

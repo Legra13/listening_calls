@@ -236,8 +236,9 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
     </div>
 
     <div class="d-flex gap-2 mb-4">
-      <button type="submit" class="btn btn-dark"><i class="bi bi-check-lg me-1"></i>Сохранить изменения</button>
-      <a href="/evaluations/{{ ev.id }}" class="btn btn-outline-secondary">Отмена</a>
+      <button type="submit" name="action" value="publish" class="btn btn-dark"><i class="bi bi-check-lg me-1"></i>Сохранить и опубликовать</button>
+      <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary"><i class="bi bi-floppy2 me-1"></i>Сохранить черновик</button>
+      <a href="/evaluations/{{ ev.id }}" class="btn btn-link text-muted">Отмена</a>
     </div>
   </form>
 
