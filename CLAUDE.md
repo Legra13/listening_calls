@@ -119,11 +119,11 @@
 
 Приложение запускается на VPS `188.227.87.11`.
 
-**URL:** `http://188.227.87.11:3000`
+**URL:** `http://188.227.87.11:8550`
 - Логин: `admin` / Пароль: `admin123`
 - Название приложения: **CallReview**
 
-**Архитектура:** nginx (порт 3000) → uvicorn (127.0.0.1:8550, не доступен снаружи)
+**Архитектура:** nginx (порт 8550, открыт в ufw) → uvicorn (127.0.0.1:8551, не доступен снаружи)
 
 **systemd:** `sudo systemctl restart call-eval` — перезапуск; `sudo systemctl status call-eval` — статус
 **nginx:** `sudo nginx -s reload` — перезагрузка конфига; конфиг: `/etc/nginx/sites-available/call-eval`
