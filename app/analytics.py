@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from app.models import Block, Checklist, Criterion, Evaluation, EvaluationItem
 from app.scoring import calculate_scores
@@ -69,10 +69,10 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
     q = (
         db.query(Evaluation)
         .options(
-            joinedload(Evaluation.items).joinedload(EvaluationItem.criterion),
-            joinedload(Evaluation.checklist)
-              .joinedload(Checklist.blocks)
-              .joinedload(Block.criteria),
+            selectinload(Evaluation.items).selectinload(EvaluationItem.criterion),
+            selectinload(Evaluation.checklist)
+              .selectinload(Checklist.blocks)
+              .selectinload(Block.criteria),
         )
     )
     if filters.department:
