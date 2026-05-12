@@ -1,0 +1,15 @@
+[Unit]
+Description=CallReview — инструмент оценки звонков
+After=network.target
+
+[Service]
+User=egerasimchuk
+WorkingDirectory=/home/egerasimchuk/Инструмент_прослушки_звонков
+ExecStart=/home/egerasimchuk/.local/bin/uvicorn app.main:app --host 127.0.0.1 --port 8551
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
