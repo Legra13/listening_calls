@@ -6,23 +6,10 @@
   <title>{% block title %}CallReview{% endblock %}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="/static/css/main.css?v=shrek3" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="/static/css/main.css" rel="stylesheet">
   {% block styles %}{% endblock %}
 </head>
 <body>
-
-<!-- Уши Шрека — пикают из-за верхнего края -->
-<svg id="shrek-ears" width="180" height="60" viewBox="0 0 180 60" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="28"  cy="58" rx="24" ry="42" fill="#5d9430" transform="rotate(-22 28 58)"/>
-  <ellipse cx="152" cy="58" rx="24" ry="42" fill="#5d9430" transform="rotate(22 152 58)"/>
-  <ellipse cx="28"  cy="58" rx="14" ry="28" fill="#3e6b1e" transform="rotate(-22 28 58)"/>
-  <ellipse cx="152" cy="58" rx="14" ry="28" fill="#3e6b1e" transform="rotate(22 152 58)"/>
-</svg>
-
-<!-- Водяной знак -->
-<div id="far-far-away">FAR FAR AWAY</div>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid px-4">
@@ -71,9 +58,6 @@
   </div>
 </nav>
 
-<!-- Декор: болотная сцена -->
-<div id="swamp-scene" aria-hidden="true"></div>
-
 <div class="container-fluid px-4 py-3">
   {% if flash %}
     <div class="alert alert-{{ flash.category }} alert-dismissible fade show" role="alert">
@@ -95,164 +79,5 @@
   });
 </script>
 {% block scripts %}{% endblock %}
-
-<!-- Подвал-цитата Шрека -->
-<div id="swamp-footer">
-  <span>🧅</span> &nbsp;«У меня есть слои. Я как лук — у лука тоже есть слои.» — <em>Шрек</em>&nbsp; <span>🧅</span>
-</div>
-
-<script>
-(function() {
-  'use strict';
-
-  /* ══════════════════════════════════════════════
-     1. БОЛОТНЫЕ ОГОНЬКИ — большие, с blur
-     ══════════════════════════════════════════════ */
-  var orbs = [
-    { size: 110, left: '3%',   top: '30%', dur: 8.2,  delay: 0,   color: '140,200,40',  opacity: 0.32, blur: 22 },
-    { size: 70,  left: '1%',   top: '62%', dur: 6.5,  delay: 1.5, color: '100,175,30',  opacity: 0.26, blur: 14 },
-    { size: 130, left: '88%',  top: '22%', dur: 9.8,  delay: 0.6, color: '160,215,45',  opacity: 0.28, blur: 28 },
-    { size: 80,  left: '93%',  top: '58%', dur: 7.1,  delay: 2.3, color: '120,185,35',  opacity: 0.22, blur: 16 },
-    { size: 55,  left: '48%',  top: '9%',  dur: 11.5, delay: 3.8, color: '190,225,60',  opacity: 0.20, blur: 12 },
-    { size: 90,  left: '72%',  top: '70%', dur: 7.9,  delay: 4.5, color: '194,149,59',  opacity: 0.22, blur: 18 },
-    { size: 48,  left: '17%',  top: '78%', dur: 9.3,  delay: 2.0, color: '140,200,40',  opacity: 0.20, blur: 10 },
-    { size: 65,  left: '38%',  top: '45%', dur: 12.1, delay: 5.5, color: '170,220,50',  opacity: 0.15, blur: 15 },
-    { size: 42,  left: '60%',  top: '85%', dur: 8.8,  delay: 1.2, color: '100,160,30',  opacity: 0.18, blur: 10 },
-  ];
-
-  orbs.forEach(function(o) {
-    var el = document.createElement('div');
-    el.className = 'swamp-orb';
-    el.style.cssText = [
-      'width:'      + o.size + 'px',
-      'height:'     + o.size + 'px',
-      'left:'       + o.left,
-      'top:'        + o.top,
-      'margin-left:' + (-o.size/2) + 'px',
-      'margin-top:'  + (-o.size/2) + 'px',
-      'background:radial-gradient(circle at 40% 40%,rgba(' + o.color + ',' + o.opacity + ') 0%,rgba(' + o.color + ',0.08) 50%,transparent 75%)',
-      'filter:blur(' + o.blur + 'px)',
-      'animation-duration:' + o.dur + 's',
-      'animation-delay:-'   + o.delay + 's',
-    ].join(';');
-    document.body.appendChild(el);
-  });
-
-  /* ══════════════════════════════════════════════
-     2. БОЛОТНАЯ ТРАВА — SVG силуэт во всю ширину
-     ══════════════════════════════════════════════ */
-  var strip = document.createElement('div');
-  strip.id = 'swamp-grass-strip';
-  strip.setAttribute('aria-hidden', 'true');
-
-  var ns  = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(ns, 'svg');
-  var W   = window.innerWidth + 40;
-  var H   = 90;
-  svg.setAttribute('width',  W);
-  svg.setAttribute('height', H);
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.style.cssText = 'display:block;position:absolute;bottom:0;left:-20px';
-
-  /* Земля */
-  var ground = document.createElementNS(ns, 'rect');
-  ground.setAttribute('x', 0); ground.setAttribute('y', H - 14);
-  ground.setAttribute('width', W); ground.setAttribute('height', 14);
-  ground.setAttribute('fill', '#080f04');
-  svg.appendChild(ground);
-
-  /* Генерируем травинки */
-  var colors  = ['#1a3a0c','#234d12','#1e4510','#2a5618','#163008','#264e14'];
-  var spacing = 14; // px между центрами травинок
-  var count   = Math.ceil(W / spacing) + 2;
-
-  for (var i = 0; i < count; i++) {
-    var cx   = i * spacing + (Math.random() - 0.5) * 10;
-    var bH   = 28 + Math.random() * 52;          // высота травинки
-    var lean = (Math.random() - 0.5) * 18;        // наклон
-    var bW   = 3  + Math.random() * 7;            // ширина у основания
-    var col  = colors[Math.floor(Math.random() * colors.length)];
-    var op   = (0.65 + Math.random() * 0.35).toFixed(2);
-
-    /* Кривая Безье: основание → верхушка → основание */
-    var x1  = cx - bW / 2,  x2 = cx + bW / 2;
-    var tip = cx + lean,     ty = H - 14 - bH;
-    var cp1x = x1 - 2,      cp1y = H - 14 - bH * 0.42;
-    var cp2x = tip - 3,     cp2y = ty + bH * 0.18;
-    var cp3x = tip + 3,     cp3y = ty + bH * 0.18;
-    var cp4x = x2 + 2,      cp4y = H - 14 - bH * 0.42;
-
-    var d = [
-      'M', x1.toFixed(1), (H - 14),
-      'C', cp1x.toFixed(1), cp1y.toFixed(1), cp2x.toFixed(1), cp2y.toFixed(1),
-           tip.toFixed(1),  ty.toFixed(1),
-      'C', cp3x.toFixed(1), cp3y.toFixed(1), cp4x.toFixed(1), cp4y.toFixed(1),
-           x2.toFixed(1), (H - 14),
-      'Z'
-    ].join(' ');
-
-    var path = document.createElementNS(ns, 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill', col);
-    path.setAttribute('opacity', op);
-    svg.appendChild(path);
-  }
-
-  strip.appendChild(svg);
-  document.body.appendChild(strip);
-
-  /* ══════════════════════════════════════════════
-     3. КУВШИНКИ — у края травы
-     ══════════════════════════════════════════════ */
-  var lilies = [
-    { left: '8%',  size: 38, rotate: 30 },
-    { left: '22%', size: 28, rotate: 160 },
-    { left: '55%', size: 45, rotate: 70 },
-    { left: '75%', size: 32, rotate: 220 },
-    { left: '91%', size: 40, rotate: 340 },
-  ];
-
-  lilies.forEach(function(l) {
-    var pad = document.createElement('div');
-    pad.className = 'lily-pad';
-    pad.style.cssText = [
-      'width:'  + l.size + 'px',
-      'height:' + l.size + 'px',
-      'bottom:' + (78 + Math.random() * 20) + 'px',
-      'left:'   + l.left,
-      'transform:rotate(' + l.rotate + 'deg)',
-      'opacity:' + (0.55 + Math.random() * 0.25).toFixed(2),
-    ].join(';');
-    document.body.appendChild(pad);
-  });
-
-  /* ══════════════════════════════════════════════
-     4. ПУЗЫРИ БОЛОТА — всплывают периодически
-     ══════════════════════════════════════════════ */
-  function spawnBubble() {
-    var b    = document.createElement('div');
-    b.className = 'swamp-bubble';
-    var sz   = 6 + Math.random() * 18;
-    var dur  = 3 + Math.random() * 4;
-    var left = (5 + Math.random() * 90).toFixed(1);
-    b.style.cssText = [
-      'width:'  + sz + 'px',
-      'height:' + sz + 'px',
-      'left:'   + left + '%',
-      'bottom:' + (90 + Math.random() * 20) + 'px',
-      'animation-duration:' + dur.toFixed(1) + 's',
-    ].join(';');
-    document.body.appendChild(b);
-    setTimeout(function() { b.remove(); }, dur * 1000 + 300);
-  }
-
-  /* Сразу несколько пузырей, затем периодически */
-  for (var bi = 0; bi < 5; bi++) {
-    setTimeout(spawnBubble, bi * 600);
-  }
-  setInterval(spawnBubble, 1800);
-
-})();
-</script>
 </body>
 </html>
