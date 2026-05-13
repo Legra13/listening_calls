@@ -96,16 +96,16 @@
   <table class="table table-hover table-sm mb-0">
     <thead class="table-light">
       <tr>
-        <th><a href="{{ sort_url('id') }}" class="text-decoration-none text-dark">#{{ sort_icon('id') }}</a></th>
-        <th><a href="{{ sort_url('operator') }}" class="text-decoration-none text-dark">Сотрудник{{ sort_icon('operator') }}</a></th>
-        <th><a href="{{ sort_url('dept') }}" class="text-decoration-none text-dark">Отдел{{ sort_icon('dept') }}</a></th>
-        <th>Сделка</th>
-        <th>Чек-лист</th>
-        <th><a href="{{ sort_url('date') }}" class="text-decoration-none text-dark">Дата звонка{{ sort_icon('date') }}</a></th>
-        <th><a href="{{ sort_url('score') }}" class="text-decoration-none text-dark">Итог{{ sort_icon('score') }}</a></th>
-        <th><a href="{{ sort_url('stage') }}" class="text-decoration-none text-dark">Результат сделки{{ sort_icon('stage') }}</a></th>
-        <th>Дата оценки</th>
-        <th>Оценщик</th>
+        <th data-col-key="id"><a href="{{ sort_url('id') }}" class="text-decoration-none text-dark">#{{ sort_icon('id') }}</a></th>
+        <th data-col-key="operator"><a href="{{ sort_url('operator') }}" class="text-decoration-none text-dark">Сотрудник{{ sort_icon('operator') }}</a></th>
+        <th data-col-key="dept"><a href="{{ sort_url('dept') }}" class="text-decoration-none text-dark">Отдел{{ sort_icon('dept') }}</a></th>
+        <th data-col-key="deal">Сделка</th>
+        <th data-col-key="checklist">Чек-лист</th>
+        <th data-col-key="call_date"><a href="{{ sort_url('date') }}" class="text-decoration-none text-dark">Дата звонка{{ sort_icon('date') }}</a></th>
+        <th data-col-key="score"><a href="{{ sort_url('score') }}" class="text-decoration-none text-dark">Итог{{ sort_icon('score') }}</a></th>
+        <th data-col-key="stage"><a href="{{ sort_url('stage') }}" class="text-decoration-none text-dark">Результат сделки{{ sort_icon('stage') }}</a></th>
+        <th data-col-key="eval_date">Дата оценки</th>
+        <th data-col-key="evaluator">Оценщик</th>
         <th></th>
       </tr>
     </thead>
@@ -216,11 +216,93 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   document.getElementById('filter-dept').addEventListener('change', function() {
     loadFilterEmps(this.value);
-    // Сбрасываем сотрудника только если фильтр был применён без смены отдела
     if (!FILTER_DEPT || this.value !== FILTER_DEPT) {
       document.getElementById('filter-operator').value = '';
     }
   });
+
+  initColDrag();
 });
+
+(function() {
+  const STORAGE_KEY = 'eval-col-order-v1';
+  let dragSrcIdx = null;
+
+  function colIndex(th) {
+    return Array.from(th.closest('tr').children).indexOf(th);
+  }
+
+  function moveColumn(fromIdx, toIdx) {
+    document.querySelectorAll('table tr').forEach(row => {
+      const cells = Array.from(row.children);
+      if (fromIdx >= cells.length || toIdx >= cells.length) return;
+      const cell = cells[fromIdx];
+      if (fromIdx < toIdx) {
+        row.insertBefore(cell, cells[toIdx].nextSibling);
+      } else {
+        row.insertBefore(cell, cells[toIdx]);
+      }
+    });
+  }
+
+  function saveOrder() {
+    const keys = Array.from(document.querySelectorAll('thead th[data-col-key]'))
+      .map(th => th.dataset.colKey);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+  }
+
+  function restoreOrder() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
+    if (!saved || !Array.isArray(saved)) return;
+    saved.forEach((key, targetIdx) => {
+      const ths = Array.from(document.querySelectorAll('thead th[data-col-key]'));
+      const srcIdx = ths.findIndex(th => th.dataset.colKey === key);
+      if (srcIdx !== -1 && srcIdx !== targetIdx) moveColumn(srcIdx, targetIdx);
+    });
+  }
+
+  window.initColDrag = function() {
+    restoreOrder();
+    const ths = document.querySelectorAll('thead th[data-col-key]');
+    ths.forEach(th => {
+      th.setAttribute('draggable', 'true');
+      th.style.cursor = 'grab';
+      th.title = 'Перетащите чтобы изменить порядок столбцов';
+
+      th.addEventListener('dragstart', e => {
+        dragSrcIdx = colIndex(th);
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => th.classList.add('opacity-50'), 0);
+      });
+
+      th.addEventListener('dragend', () => {
+        th.classList.remove('opacity-50');
+        document.querySelectorAll('thead th[data-col-key]').forEach(t => {
+          t.classList.remove('table-primary');
+        });
+      });
+
+      th.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        document.querySelectorAll('thead th[data-col-key]').forEach(t => t.classList.remove('table-primary'));
+        th.classList.add('table-primary');
+      });
+
+      th.addEventListener('dragleave', () => th.classList.remove('table-primary'));
+
+      th.addEventListener('drop', e => {
+        e.preventDefault();
+        const toIdx = colIndex(th);
+        if (dragSrcIdx !== null && dragSrcIdx !== toIdx) {
+          moveColumn(dragSrcIdx, toIdx);
+          saveOrder();
+        }
+        dragSrcIdx = null;
+      });
+    });
+  };
+})();
 </script>
 {% endblock %}
