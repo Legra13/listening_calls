@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import SECRET_KEY
 from app.database import create_tables
 from app.deps import NotAuthenticatedException
-from app.routers import api, auth, users, checklists, evaluations, reports
+from app.routers import api, auth, users, checklists, evaluations, reports, export
 
 app = FastAPI(title="Оценка звонков", docs_url=None, redoc_url=None)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=86400 * 30)
@@ -17,6 +17,7 @@ app.include_router(users.router)
 app.include_router(checklists.router)
 app.include_router(evaluations.router)
 app.include_router(reports.router)
+app.include_router(export.router)
 
 
 @app.exception_handler(NotAuthenticatedException)
