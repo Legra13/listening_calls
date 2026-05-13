@@ -104,6 +104,7 @@
         <th><a href="{{ sort_url('date') }}" class="text-decoration-none text-dark">Дата звонка{{ sort_icon('date') }}</a></th>
         <th><a href="{{ sort_url('score') }}" class="text-decoration-none text-dark">Итог{{ sort_icon('score') }}</a></th>
         <th><a href="{{ sort_url('stage') }}" class="text-decoration-none text-dark">Результат сделки{{ sort_icon('stage') }}</a></th>
+        <th>Дата оценки</th>
         <th>Оценщик</th>
         <th></th>
       </tr>
@@ -145,6 +146,9 @@
             {% elif ev.stage == "в работе" %}В работе
             {% else %}{{ ev.stage }}{% endif %}
           </span>
+        </td>
+        <td class="align-middle small text-muted">
+          {{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y') if (ev.updated_at or ev.created_at) else '—' }}
         </td>
         <td class="align-middle small text-muted">
           {{ (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else '—' }}
