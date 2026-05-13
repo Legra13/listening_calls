@@ -48,7 +48,7 @@
       </ul>
       <div class="d-flex align-items-center gap-3">
         <span class="text-secondary small">
-          <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+          <i class="bi bi-person-circle me-1"></i>{{ current_user.full_name or current_user.username }}
         </span>
         <form action="/logout" method="post" class="m-0">
           <button type="submit" class="btn btn-sm btn-outline-secondary">Выйти</button>

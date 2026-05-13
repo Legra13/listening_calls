@@ -147,7 +147,7 @@
           </span>
         </td>
         <td class="align-middle small text-muted">
-          {{ ev.evaluator.username if ev.evaluator else '—' }}
+          {{ (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else '—' }}
         </td>
         <td class="text-end align-middle">
           <a href="/evaluations/{{ ev.id }}" class="btn btn-sm btn-outline-secondary">

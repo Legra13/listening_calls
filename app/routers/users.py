@@ -31,6 +31,7 @@ def users_create(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
+    full_name: str = Form(default=""),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -38,8 +39,11 @@ def users_create(
     if existing:
         flash(request, f"Пользователь «{username}» уже существует", "danger")
         return RedirectResponse("/users", status_code=302)
-    create_user(db, username, password)
-    flash(request, f"Пользователь «{username}» создан")
+    user = create_user(db, username, password)
+    if full_name.strip():
+        user.full_name = full_name.strip()
+        db.commit()
+    flash(request, f"Пользователь «{full_name or username}» создан")
     return RedirectResponse("/users", status_code=302)
 
 
