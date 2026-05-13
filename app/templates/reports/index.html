@@ -77,6 +77,9 @@
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-funnel me-1"></i>Применить
           </button>
+          <a id="export-reports-btn" href="#" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Скачать xlsx
+          </a>
           <a href="/reports" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-x-lg me-1"></i>Сбросить
           </a>
@@ -646,5 +649,25 @@ if (corrCtx && tab2Data.length > 0) {
     }
   });
 }
+
+// Кнопка экспорта отчётов — передаём текущие фильтры включая множественных операторов
+(function() {
+  function buildExportUrl() {
+    const form = document.getElementById('filterForm');
+    if (!form) return '/export/reports';
+    const params = new URLSearchParams();
+    new FormData(form).forEach((v, k) => { if (v) params.append(k, v); });
+    return '/export/reports?' + params.toString();
+  }
+
+  const btn = document.getElementById('export-reports-btn');
+  if (btn) {
+    // Обновляем href при изменении любого фильтра
+    function updateHref() { btn.href = buildExportUrl(); }
+    updateHref();
+    document.getElementById('filterForm').addEventListener('change', updateHref);
+    document.getElementById('filterForm').addEventListener('input', updateHref);
+  }
+})();
 </script>
 {% endblock %}

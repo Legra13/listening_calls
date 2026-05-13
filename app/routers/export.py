@@ -8,6 +8,10 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
+from app.analytics import (
+    Filters, fetch_evaluations, get_filter_options,
+    prep_rows, compute_kpi, compute_tab1, compute_tab2, compute_tab3,
+)
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import Block as BlockModel, Checklist, Evaluation, User
@@ -16,6 +20,8 @@ from app.scoring import calculate_scores
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Side, Border
 from openpyxl.utils import get_column_letter
+
+from fastapi import Query as QueryParam
 
 router = APIRouter(prefix="/export")
 
@@ -284,7 +290,123 @@ def _sheet_summary(wb, evs, blocks):
     _autowidth(ws)
 
 
-# ── Endpoint ─────────────────────────────────────────────────────────────────
+# ── Листы для отчётов ────────────────────────────────────────────────────────
+
+def _rpt_sheet_tab1(wb, tab1: dict):
+    """Лист 1: Тепловая карта — операторы × блоки."""
+    ws = wb.create_sheet("Общие показатели")
+    blocks = tab1["blocks"]
+    block_names = [b.display_name or b.name for b in blocks]
+
+    _write_header(ws, ["Сотрудник", "Итог %", "% Побед"] + block_names)
+    ws.freeze_panes = "A2"
+
+    SCORE_COL   = 2
+    BLOCK_START = 4
+
+    for row in tab1["hm_rows"]:
+        ws.append([row["name"], row["total"], row["won_pct"]]
+                  + [c["pct"] for c in row["cells"]])
+        ri = ws.max_row
+        ws.cell(ri, SCORE_COL).fill = _score_fill(row["total"])
+        ws.cell(ri, SCORE_COL).alignment = _CENTER
+        ws.cell(ri, 3).alignment = _CENTER
+        for i, c in enumerate(row["cells"]):
+            cell = ws.cell(ri, BLOCK_START + i)
+            cell.fill = _score_fill(c["pct"])
+            cell.alignment = _CENTER
+
+    # Строка команды
+    team = tab1["team_cells"]
+    ws.append(["Команда (среднее)", tab1["team_total"], tab1.get("team_won_pct")]
+              + [c["pct"] for c in team])
+    ri = ws.max_row
+    for cell in ws[ri]:
+        cell.font = Font(bold=True)
+    ws.cell(ri, SCORE_COL).fill = _score_fill(tab1["team_total"])
+    ws.cell(ri, SCORE_COL).alignment = _CENTER
+    for i, c in enumerate(team):
+        cell = ws.cell(ri, BLOCK_START + i)
+        cell.fill = _score_fill(c["pct"])
+        cell.alignment = _CENTER
+
+    # Пустая строка + динамика по неделям
+    ws.append([])
+    _write_header(ws, ["Неделя", "Кол-во оценок", "Средний балл %"])
+    for w in tab1["weekly"]:
+        ws.append([w["week"], w["count"], w["avg"]])
+        ws.cell(ws.max_row, 3).fill = _score_fill(w["avg"])
+        ws.cell(ws.max_row, 3).alignment = _CENTER
+
+    _autowidth(ws)
+
+
+def _rpt_sheet_tab2(wb, tab2: list):
+    """Лист 2: Корреляция — блоки × результат сделки."""
+    ws = wb.create_sheet("Корреляция по блокам")
+    _write_header(ws, [
+        "Блок", "Вес", "Ср. балл (победа) %", "Ср. балл (не продал) %",
+        "Разница (Δ) %", "Win rate если сделано %", "Win rate если не сделано %", "Влияние на WR %",
+    ])
+    ws.freeze_panes = "A2"
+
+    for row in tab2:
+        ws.append([
+            row["name"], row["weight"],
+            row["avg_won"], row["avg_lost"], row["delta"],
+            row["wr_done"], row["wr_not_done"], row["wr_impact"],
+        ])
+        ri = ws.max_row
+        ws.cell(ri, 3).fill = _score_fill(row["avg_won"])
+        ws.cell(ri, 3).alignment = _CENTER
+        ws.cell(ri, 4).fill = _score_fill(row["avg_lost"])
+        ws.cell(ri, 4).alignment = _CENTER
+        for col in (5, 6, 7, 8):
+            ws.cell(ri, col).alignment = _CENTER
+
+    _autowidth(ws)
+
+
+def _rpt_sheet_tab3(wb, tab3: dict):
+    """Лист 3: По сотрудникам — корреляция блоков с результатом."""
+    ws = wb.create_sheet("По сотрудникам")
+    blocks = tab3["blocks"]
+    block_names = [b.display_name or b.name for b in blocks]
+
+    _write_header(ws, ["Сотрудник"] + block_names)
+    ws.append(["↓ Победа / Проигрыш →" ] + ["Победа / Проигрыш / Δ"] * len(blocks))
+    for cell in ws[ws.max_row]:
+        cell.font = Font(italic=True, color="888888", size=8)
+    ws.freeze_panes = "A3"
+
+    def _write_op_row(name: str, cells: list):
+        won_vals  = [f"{c['won']:.1f}%" if c["won"]  is not None else "—" for c in cells]
+        lost_vals = [f"{c['lost']:.1f}%" if c["lost"] is not None else "—" for c in cells]
+        delta_vals= [f"{c['delta']:+.1f}%" if c["delta"] is not None else "—" for c in cells]
+        combined  = [f"{w} / {l} / {d}" for w, l, d in zip(won_vals, lost_vals, delta_vals)]
+        ws.append([name] + combined)
+        ri = ws.max_row
+        for i, c in enumerate(cells):
+            cell = ws.cell(ri, 2 + i)
+            cell.alignment = _CENTER
+            if c["delta"] is not None:
+                cell.fill = _FILL_GREEN if c["delta"] > 5 else (_FILL_RED if c["delta"] < -5 else _FILL_YELLOW)
+
+    for row in tab3["t1_rows"]:
+        _write_op_row(row["name"], row["cells"])
+
+    # Команда
+    ws.append([])
+    _write_op_row("Команда (среднее)", tab3["team_cells"])
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True)
+
+    _autowidth(ws)
+    for i in range(2, len(blocks) + 2):
+        ws.column_dimensions[get_column_letter(i)].width = 26
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("")
 def export_xlsx(
@@ -315,6 +437,91 @@ def export_xlsx(
     buf.seek(0)
 
     fname = f"callreview_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get("/reports")
+def export_reports_xlsx(
+    checklist_id: str = "",
+    department: str = "",
+    operators: list[str] = QueryParam(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import date as date_type
+    from collections import Counter
+
+    filters = Filters(
+        department=department,
+        operators=operators,
+        date_from=date_type.fromisoformat(date_from) if date_from else None,
+        date_to=date_type.fromisoformat(date_to) if date_to else None,
+        checklist_id=int(checklist_id) if checklist_id else None,
+    )
+
+    evaluations = fetch_evaluations(db, filters)
+    rows = prep_rows(evaluations)
+
+    # Определяем активный чек-лист (как в reports router)
+    cl_counter = Counter(r["ev"].checklist_id for r in rows if r["ev"].checklist_id)
+    selected_cl = None
+    if filters.checklist_id and cl_counter:
+        ids = list(cl_counter.keys())
+        cl_map = {
+            cl.id: cl for cl in
+            db.query(Checklist)
+              .options(joinedload(Checklist.blocks))
+              .filter(Checklist.id.in_(ids))
+              .all()
+        }
+        selected_cl = cl_map.get(filters.checklist_id)
+    if not selected_cl and cl_counter:
+        top_id = cl_counter.most_common(1)[0][0]
+        selected_cl = (
+            db.query(Checklist)
+              .options(joinedload(Checklist.blocks))
+              .filter(Checklist.id == top_id)
+              .first()
+        )
+
+    if not selected_cl or not rows:
+        # Нет данных — возвращаем пустой файл с пояснением
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Нет данных"
+        ws["A1"] = "Нет данных по выбранным фильтрам"
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="callreview_reports_empty.xlsx"'},
+        )
+
+    rows_for_cl = [r for r in rows if r["ev"].checklist_id == selected_cl.id]
+
+    tab1 = compute_tab1(rows_for_cl, selected_cl)
+    tab2 = compute_tab2(rows_for_cl, selected_cl)
+    tab3 = compute_tab3(rows_for_cl, selected_cl)
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    _rpt_sheet_tab1(wb, tab1)
+    _rpt_sheet_tab2(wb, tab2)
+    _rpt_sheet_tab3(wb, tab3)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    fname = f"callreview_reports_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
