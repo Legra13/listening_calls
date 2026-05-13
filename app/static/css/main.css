@@ -1,279 +1,309 @@
-/* ═══════════════════════════════════════════════════════════════════
-   SHREK SWAMP THEME — CallReview
-   "Слои у меня есть! Как у лука!" — Шрек
-   ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   🧅 SHREK SWAMP KINGDOM — CallReview
+   «Это моё болото!»
+   ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Special+Elite&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap');
 
-/* ── Переменные ──────────────────────────────────────────────────── */
+/* ── Переменные палитры ───────────────────────────────────── */
 :root {
-  --swamp-darkest:  #0f2108;
-  --swamp-dark:     #1b3b12;
-  --swamp-mid:      #2f4a1e;
-  --swamp-light:    #4a6b2f;
-  --swamp-green:    #4a5d23;
-  --moss:           #7a9c45;
-  --mud-brown:      #5c4033;
-  --vine:           #7d6b3c;
-  --fiona-purple:   #6b2d5c;
-  --donkey-blue:    #7d8c8c;
-  --gingerbread:    #c2953b;
-  --parchment:      #f5e6b8;
-  --parchment-dim:  #c8b88a;
-  --dark-text:      #1e2c0d;
-  --orb-glow:       rgba(180, 220, 50, 0.35);
+  --swamp-void:    #060e03;
+  --swamp-darkest: #0d1a08;
+  --swamp-dark:    #1a3410;
+  --swamp-mid:     #223d14;
+  --swamp-light:   #2f5219;
+  --swamp-bright:  #3d6b20;
+  --moss:          #7caa42;
+  --moss-light:    #9dc45a;
+  --vine:          #8b7340;
+  --vine-light:    #b8975a;
+  --mud:           #5c3e28;
+  --parchment:     #f2dea0;
+  --parchment-dim: #c4a96a;
+  --parchment-dark:#8a7040;
+  --fiona:         #7a2d6a;
+  --donkey:        #8a9aaa;
+  --ginger:        #d4a030;
+  --ginger-bright: #f0c040;
+  --danger-swamp:  #8b2020;
+  --shadow-heavy:  rgba(0,0,0,0.6);
 }
 
-/* ── Тело и фон ──────────────────────────────────────────────────── */
+/* ── Тело — болото Шрека ─────────────────────────────────── */
 body {
-  background: linear-gradient(160deg, #3a5f2b 0%, #1b3b12 55%, #0f2108 100%);
+  background:
+    /* Концентрические кольца лука — отсылка к слоям */
+    repeating-radial-gradient(
+      ellipse at 30% 40%,
+      transparent 0px, transparent 60px,
+      rgba(80,120,30,0.04) 61px, rgba(80,120,30,0.04) 62px
+    ),
+    repeating-radial-gradient(
+      ellipse at 70% 70%,
+      transparent 0px, transparent 45px,
+      rgba(60,100,20,0.03) 46px, rgba(60,100,20,0.03) 47px
+    ),
+    linear-gradient(170deg, #2e5220 0%, #163010 45%, #0d1a08 100%);
   min-height: 100vh;
-  font-family: 'Special Elite', 'Courier New', monospace;
+  font-family: 'IM Fell English', 'Special Elite', Georgia, serif;
   color: var(--parchment);
-  position: relative;
   overflow-x: hidden;
-  padding-bottom: 100px; /* место для болотной травы */
+  padding-bottom: 110px;
 }
 
-/* Болотная дымка — туманный оверлей */
+/* Болотный туман */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 15% 60%, rgba(122, 156, 69, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 60% at 85% 30%, rgba(15, 33, 8, 0.35) 0%, transparent 70%),
-    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(92, 64, 51, 0.2) 0%, transparent 60%);
+    radial-gradient(ellipse 55% 35% at 8%  55%, rgba(90,140,30,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 55% at 92% 25%, rgba(10,25,5,0.4)   0%, transparent 70%),
+    radial-gradient(ellipse 70% 25% at 50% 100%,rgba(6,14,3,0.7)    0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Нижний градиент — плавный переход к траве */
 body::after {
   content: '';
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 90px;
-  background: linear-gradient(to top, #080f04 0%, transparent 100%);
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 110px;
+  background: linear-gradient(to top, var(--swamp-void) 0%, transparent 100%);
   pointer-events: none;
   z-index: 4;
 }
 
-/* Контент поверх псевдоэлементов */
-.navbar, .container-fluid > *, .swamp-orb, #swamp-scene {
+/* ── Навбар — таверна в болоте ───────────────────────────── */
+.navbar {
+  background:
+    linear-gradient(to bottom, #0a1506 0%, #12200a 60%, #0d1a08 100%) !important;
+  border-bottom: 4px solid var(--vine) !important;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,115,64,0.3) !important;
   position: relative;
-  z-index: 1;
+  z-index: 100;
 }
 
-/* ── Навбар ──────────────────────────────────────────────────────── */
-.navbar {
-  background: linear-gradient(to right, #0f2108, #1e3a10, #0f2108) !important;
-  border-bottom: 3px solid var(--vine);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+/* Декоративная верхняя линия навбара */
+.navbar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(to right,
+    transparent 0%, var(--vine-light) 20%,
+    var(--ginger) 50%,
+    var(--vine-light) 80%, transparent 100%);
 }
 
 .navbar-brand {
   font-family: 'Cinzel Decorative', serif !important;
-  font-size: 1.1rem !important;
-  color: var(--gingerbread) !important;
-  text-shadow: 0 0 12px rgba(194, 149, 59, 0.5);
-  letter-spacing: 0.05em;
-}
-
-.navbar-brand:hover {
-  color: var(--parchment) !important;
-  text-shadow: 0 0 20px rgba(194, 149, 59, 0.8);
+  font-size: 1.15rem !important;
+  color: var(--ginger-bright) !important;
+  text-shadow:
+    0 0 20px rgba(212,160,48,0.6),
+    0 0 40px rgba(212,160,48,0.2),
+    2px 2px 4px rgba(0,0,0,0.8) !important;
+  letter-spacing: 0.08em;
+  position: relative;
 }
 
 .nav-link {
   font-family: 'Cinzel', serif !important;
-  font-size: 0.8rem !important;
-  letter-spacing: 0.06em;
+  font-size: 0.77rem !important;
+  letter-spacing: 0.07em;
   color: var(--parchment-dim) !important;
-  transition: all 0.3s;
+  transition: all 0.25s;
+  position: relative;
 }
 
-.nav-link:hover, .nav-link.active {
-  color: var(--moss) !important;
-  text-shadow: 0 0 8px var(--orb-glow);
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; right: 50%;
+  height: 2px;
+  background: var(--ginger);
+  transition: all 0.25s;
 }
 
-.nav-link.active {
-  color: var(--gingerbread) !important;
+.nav-link:hover::after, .nav-link.active::after {
+  left: 8%; right: 8%;
 }
 
-/* ── Заголовки ───────────────────────────────────────────────────── */
+.nav-link:hover { color: var(--parchment) !important; }
+.nav-link.active { color: var(--ginger-bright) !important; }
+
+/* ── Заголовки — средневековые свитки ───────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Cinzel', serif !important;
   color: var(--parchment) !important;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  text-shadow: 1px 2px 6px rgba(0,0,0,0.7);
 }
 
-h5.mb-0 {
-  font-size: 0.95rem;
-}
+h5.mb-0 { font-size: 0.92rem; }
 
-/* ── Карточки — деревянные таблички ─────────────────────────────── */
+/* ── Карточки — деревянные щиты с гербом ────────────────── */
 .card {
-  background: var(--swamp-mid) !important;
-  background-image:
-    repeating-linear-gradient(
-      88deg,
-      transparent 0px,
-      transparent 18px,
-      rgba(0, 0, 0, 0.04) 18px,
-      rgba(0, 0, 0, 0.04) 19px
-    ),
-    repeating-linear-gradient(
-      92deg,
-      transparent 0px,
-      transparent 40px,
-      rgba(255, 255, 255, 0.02) 40px,
-      rgba(255, 255, 255, 0.02) 41px
-    ) !important;
+  background:
+    linear-gradient(135deg, rgba(45,70,28,0.97) 0%, rgba(30,50,18,0.97) 100%) !important;
   border: 2px solid var(--vine) !important;
-  border-radius: 20px 4px 20px 4px !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(122, 156, 69, 0.1) !important;
+  border-radius: 18px 4px 18px 4px !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(180,160,80,0.15),
+    inset 0 -1px 0 rgba(0,0,0,0.3) !important;
   color: var(--parchment) !important;
+  position: relative;
+  overflow: visible;
 }
 
-.card-body {
-  color: var(--parchment);
+/* Угловые кавычки как декор рамки */
+.card::before, .card::after {
+  font-family: 'Cinzel Decorative', serif;
+  color: var(--vine-light);
+  font-size: 1.4rem;
+  position: absolute;
+  line-height: 1;
+  opacity: 0.5;
 }
+.card::before { content: '❧'; top: -2px; left: 8px; }
+.card::after  { content: '❧'; bottom: -2px; right: 8px; transform: rotate(180deg); }
+
+.card-body { color: var(--parchment); }
 
 .card-header {
-  background: rgba(15, 33, 8, 0.5) !important;
+  background: rgba(10,20,6,0.5) !important;
   border-bottom: 1px solid var(--vine) !important;
   font-family: 'Cinzel', serif;
   color: var(--parchment) !important;
 }
 
-/* ── Таблицы ─────────────────────────────────────────────────────── */
+/* ── Таблицы — летопись королевства ─────────────────────── */
 .table {
   color: var(--parchment) !important;
   --bs-table-bg: transparent;
-  --bs-table-striped-bg: rgba(0, 0, 0, 0.1);
-  --bs-table-hover-bg: rgba(122, 156, 69, 0.12);
-  --bs-table-border-color: rgba(125, 107, 60, 0.35);
+  --bs-table-striped-bg: rgba(0,0,0,0.12);
+  --bs-table-hover-bg: rgba(124,170,66,0.13);
+  --bs-table-border-color: rgba(139,115,64,0.3);
 }
 
 .table-light, thead.table-light {
-  --bs-table-bg: rgba(15, 33, 8, 0.6) !important;
-  background: rgba(15, 33, 8, 0.6) !important;
+  --bs-table-bg: rgba(8,16,4,0.7) !important;
+  background: rgba(8,16,4,0.7) !important;
 }
 
 .table thead th, .table .table-light th {
   font-family: 'Cinzel', serif !important;
-  font-size: 0.72rem !important;
-  font-weight: 600 !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.07em !important;
-  color: var(--moss) !important;
+  letter-spacing: 0.09em !important;
+  color: var(--ginger-bright) !important;
   border-bottom: 2px solid var(--vine) !important;
-  background: rgba(15, 33, 8, 0.6) !important;
+  background: rgba(8,16,4,0.7) !important;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(212,160,48,0.3);
 }
 
 .table td {
-  border-color: rgba(125, 107, 60, 0.25) !important;
-  vertical-align: middle;
+  border-color: rgba(139,115,64,0.2) !important;
+  font-size: 0.88rem;
 }
 
 .table-hover > tbody > tr:hover > td {
-  background: rgba(122, 156, 69, 0.1) !important;
+  background: rgba(124,170,66,0.1) !important;
 }
 
-/* ── Кнопки ──────────────────────────────────────────────────────── */
+/* ── Кнопки — свитки с печатями ─────────────────────────── */
 .btn {
   font-family: 'Cinzel', serif !important;
-  font-size: 0.78rem !important;
-  letter-spacing: 0.04em;
-  border-radius: 15px 5px 15px 5px !important;
-  transition: all 0.3s ease !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em;
+  border-radius: 14px 4px 14px 4px !important;
+  transition: all 0.25s ease !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 .btn-dark, .btn-primary {
-  background: linear-gradient(135deg, #9a6a14, var(--gingerbread)) !important;
-  border: 2px solid var(--vine) !important;
-  color: var(--dark-text) !important;
-  font-weight: 600 !important;
+  background: linear-gradient(135deg, #8a6010, var(--ginger), #8a6010) !important;
+  background-size: 200% 100% !important;
+  border: 2px solid var(--vine-light) !important;
+  color: var(--swamp-darkest) !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
 }
 
 .btn-dark:hover, .btn-primary:hover {
-  background: linear-gradient(135deg, var(--gingerbread), #d4a840) !important;
-  box-shadow: 0 0 16px rgba(180, 220, 50, 0.45), 0 0 32px rgba(194, 149, 59, 0.25) !important;
-  transform: translateY(-1px);
+  background-position: right center !important;
+  box-shadow:
+    0 0 18px rgba(240,192,64,0.5),
+    0 0 36px rgba(124,170,66,0.2),
+    0 4px 12px rgba(0,0,0,0.4) !important;
+  transform: translateY(-2px);
+  color: var(--swamp-darkest) !important;
 }
 
 .btn-outline-secondary {
-  border-color: var(--vine) !important;
+  border: 1px solid var(--vine) !important;
   color: var(--parchment-dim) !important;
-  border-radius: 15px 5px 15px 5px !important;
 }
 
 .btn-outline-secondary:hover {
-  background: var(--swamp-mid) !important;
+  background: rgba(45,70,28,0.6) !important;
   border-color: var(--moss) !important;
   color: var(--parchment) !important;
-  box-shadow: 0 0 10px var(--orb-glow) !important;
+  box-shadow: 0 0 12px rgba(124,170,66,0.25) !important;
 }
 
 .btn-outline-danger {
-  border-color: #7a3030 !important;
-  color: #e08080 !important;
+  border-color: var(--danger-swamp) !important;
+  color: #d07070 !important;
 }
-
 .btn-outline-danger:hover {
-  background: rgba(122, 48, 48, 0.3) !important;
-  border-color: #a03535 !important;
+  background: rgba(139,32,32,0.25) !important;
   color: var(--parchment) !important;
 }
 
 .btn-outline-success {
   border-color: var(--moss) !important;
-  color: var(--moss) !important;
+  color: var(--moss-light) !important;
 }
-
 .btn-outline-success:hover {
-  background: rgba(122, 156, 69, 0.2) !important;
+  background: rgba(124,170,66,0.2) !important;
   color: var(--parchment) !important;
-  box-shadow: 0 0 12px var(--orb-glow) !important;
+  box-shadow: 0 0 14px rgba(124,170,66,0.35) !important;
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #3a6b20, var(--moss)) !important;
-  border-color: var(--swamp-green) !important;
-  color: var(--dark-text) !important;
-}
-
-.btn-success:hover {
-  box-shadow: 0 0 14px rgba(122, 156, 69, 0.5) !important;
+  background: linear-gradient(135deg, #2e5c18, var(--moss)) !important;
+  border-color: var(--swamp-bright) !important;
+  color: var(--swamp-darkest) !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
 }
 
 .btn-close {
-  filter: invert(1) sepia(1) saturate(2) hue-rotate(40deg);
+  filter: invert(0.8) sepia(1) saturate(1.5) hue-rotate(30deg);
 }
 
-/* ── Формы и инпуты ──────────────────────────────────────────────── */
-.form-control,
-.form-select {
-  background: rgba(15, 33, 8, 0.55) !important;
+/* ── Формы — магические свитки ──────────────────────────── */
+.form-control, .form-select {
+  background: rgba(8,16,4,0.65) !important;
   border: 1px solid var(--vine) !important;
   color: var(--parchment) !important;
   border-radius: 10px 3px 10px 3px !important;
-  font-family: 'Special Elite', monospace !important;
+  font-family: 'IM Fell English', serif !important;
+  font-size: 0.9rem !important;
 }
 
-.form-control:focus,
-.form-select:focus {
-  background: rgba(15, 33, 8, 0.75) !important;
+.form-control:focus, .form-select:focus {
+  background: rgba(8,16,4,0.85) !important;
   border-color: var(--moss) !important;
   color: var(--parchment) !important;
-  box-shadow: 0 0 0 0.2rem rgba(122, 156, 69, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(124,170,66,0.2) !important;
+  outline: none !important;
 }
 
-.form-control::placeholder {
-  color: rgba(245, 230, 184, 0.35) !important;
-}
+.form-control::placeholder { color: rgba(196,169,106,0.4) !important; }
 
 .form-select option {
   background: var(--swamp-dark);
@@ -283,235 +313,184 @@ h5.mb-0 {
 .form-label {
   color: var(--parchment-dim) !important;
   font-family: 'Cinzel', serif !important;
-  font-size: 0.75rem !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em;
 }
 
-.form-text {
-  color: var(--parchment-dim) !important;
-  opacity: 0.6;
-}
+.form-text { color: var(--parchment-dark) !important; }
 
 .form-check-input {
-  background-color: rgba(15, 33, 8, 0.6) !important;
+  background-color: rgba(8,16,4,0.7) !important;
   border-color: var(--vine) !important;
 }
-
 .form-check-input:checked {
   background-color: var(--moss) !important;
   border-color: var(--moss) !important;
 }
+.form-check-label { color: var(--parchment-dim) !important; }
 
-.form-check-label {
-  color: var(--parchment-dim) !important;
-}
-
-/* Инпут с скроллом (список операторов в отчётах) */
 #opList {
-  background: rgba(15, 33, 8, 0.55) !important;
+  background: rgba(8,16,4,0.6) !important;
   border-color: var(--vine) !important;
   color: var(--parchment) !important;
 }
 
-/* ── Бейджи ──────────────────────────────────────────────────────── */
+/* ── Бейджи — королевские печати ────────────────────────── */
 .badge {
   font-family: 'Cinzel', serif !important;
-  font-size: 0.68rem !important;
-  letter-spacing: 0.04em;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.05em;
+  border-radius: 10px 2px 10px 2px !important;
 }
 
-.badge.bg-success,
-.badge.bg-success-subtle {
-  background-color: rgba(74, 93, 35, 0.85) !important;
-  color: var(--moss) !important;
-  border: 1px solid var(--swamp-green);
+.badge.bg-success, .badge.bg-success-subtle {
+  background: rgba(62,100,28,0.9) !important;
+  color: var(--moss-light) !important;
+  border: 1px solid rgba(124,170,66,0.4);
 }
-
-.badge.bg-danger,
-.badge.bg-danger-subtle {
-  background-color: rgba(107, 45, 45, 0.85) !important;
-  color: #e08080 !important;
-  border: 1px solid #7a3030;
+.badge.bg-danger, .badge.bg-danger-subtle {
+  background: rgba(100,28,28,0.9) !important;
+  color: #e89090 !important;
+  border: 1px solid rgba(160,50,50,0.4);
 }
-
-.badge.bg-warning,
-.badge.bg-warning-subtle {
-  background-color: rgba(194, 149, 59, 0.25) !important;
-  color: var(--gingerbread) !important;
-  border: 1px solid var(--vine);
+.badge.bg-warning, .badge.bg-warning-subtle {
+  background: rgba(150,100,10,0.8) !important;
+  color: var(--ginger-bright) !important;
+  border: 1px solid rgba(212,160,48,0.4);
 }
-
-.badge.bg-secondary,
-.badge.bg-secondary-subtle {
-  background-color: rgba(92, 64, 51, 0.6) !important;
+.badge.bg-secondary, .badge.bg-secondary-subtle {
+  background: rgba(80,55,30,0.8) !important;
   color: var(--parchment-dim) !important;
-  border: 1px solid var(--mud-brown);
+  border: 1px solid rgba(139,115,64,0.4);
 }
 
-/* ── Алерты ──────────────────────────────────────────────────────── */
+/* ── Алерты — королевские грамоты ───────────────────────── */
 .alert {
-  border-radius: 16px 4px 16px 4px !important;
-  font-family: 'Special Elite', monospace;
+  border-radius: 14px 3px 14px 3px !important;
+  font-family: 'IM Fell English', serif;
   border-width: 2px !important;
+  border-left-width: 5px !important;
 }
+.alert-danger  { background: rgba(100,20,20,0.4) !important; border-color: #8b2020 !important; color: #ffd0d0 !important; }
+.alert-success { background: rgba(40,80,20,0.4) !important;  border-color: var(--moss) !important; color: #d0f0d0 !important; }
+.alert-warning { background: rgba(120,80,10,0.3) !important; border-color: var(--ginger) !important; color: var(--parchment) !important; }
+.alert-info    { background: rgba(60,30,80,0.3) !important;  border-color: var(--fiona) !important; color: var(--parchment) !important; }
 
-.alert-danger {
-  background: rgba(107, 45, 45, 0.35) !important;
-  border-color: #8b3333 !important;
-  color: #f5c6c6 !important;
-}
+/* ── Текст и утилиты ─────────────────────────────────────── */
+.text-muted    { color: var(--parchment-dim) !important; }
+.text-secondary{ color: var(--donkey) !important; }
+.text-dark     { color: var(--parchment) !important; }
+.text-success  { color: var(--moss-light) !important; }
+.text-danger   { color: #e89090 !important; }
+.text-warning  { color: var(--ginger-bright) !important; }
+.fw-semibold   { color: var(--parchment); }
+.fw-bold       { color: var(--parchment); }
 
-.alert-success {
-  background: rgba(74, 93, 35, 0.35) !important;
-  border-color: var(--moss) !important;
-  color: #c6f5c6 !important;
-}
+a { color: var(--moss-light); text-decoration: none; transition: color 0.2s, text-shadow 0.2s; }
+a:hover { color: var(--ginger-bright); text-shadow: 0 0 8px rgba(240,192,64,0.4); }
 
-.alert-warning {
-  background: rgba(194, 149, 59, 0.2) !important;
-  border-color: var(--gingerbread) !important;
-  color: var(--parchment) !important;
-}
+/* Кликабельные заголовки таблиц */
+.table thead a { color: var(--ginger-bright) !important; }
+.table thead a:hover { color: #fff !important; text-shadow: 0 0 10px var(--ginger); }
 
-.alert-info {
-  background: rgba(107, 45, 92, 0.25) !important;
-  border-color: var(--fiona-purple) !important;
-  color: var(--parchment) !important;
-}
-
-/* ── Текст и утилиты ─────────────────────────────────────────────── */
-.text-muted {
-  color: var(--parchment-dim) !important;
-  opacity: 0.7;
-}
-
-.text-secondary {
-  color: var(--donkey-blue) !important;
-}
-
-.text-dark {
-  color: var(--parchment) !important;
-}
-
-.text-success { color: var(--moss) !important; }
-.text-danger  { color: #e08080 !important; }
-.text-warning { color: var(--gingerbread) !important; }
-
-.fw-semibold { color: var(--parchment); }
-
-a {
-  color: var(--moss);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--gingerbread);
-  text-shadow: 0 0 8px var(--orb-glow);
-}
-
-.text-decoration-none { text-decoration: none !important; }
-
-/* Мелкий текст таблиц */
-.small, small { color: inherit; }
-
-/* ── Модальные окна ──────────────────────────────────────────────── */
-.modal-content {
-  background: var(--swamp-mid) !important;
-  border: 2px solid var(--vine) !important;
-  border-radius: 20px 4px 20px 4px !important;
-  color: var(--parchment) !important;
-}
-
-.modal-header {
-  border-bottom: 1px solid var(--vine) !important;
-  background: rgba(15, 33, 8, 0.4) !important;
-}
-
-.modal-footer {
-  border-top: 1px solid var(--vine) !important;
-}
-
-.modal-title {
-  font-family: 'Cinzel', serif !important;
-  color: var(--parchment) !important;
-}
-
-/* ── Навигация по вкладкам (tabs) ────────────────────────────────── */
+/* ── Навигационные вкладки ───────────────────────────────── */
 .nav-tabs {
   border-bottom: 2px solid var(--vine) !important;
 }
-
 .nav-tabs .nav-link {
   font-family: 'Cinzel', serif !important;
-  font-size: 0.78rem !important;
+  font-size: 0.76rem !important;
   color: var(--parchment-dim) !important;
   border: 1px solid transparent !important;
-  border-radius: 12px 4px 0 0 !important;
+  border-radius: 12px 3px 0 0 !important;
 }
-
 .nav-tabs .nav-link.active {
-  background: var(--swamp-mid) !important;
+  background: rgba(30,50,18,0.97) !important;
   border-color: var(--vine) var(--vine) transparent !important;
-  color: var(--gingerbread) !important;
+  color: var(--ginger-bright) !important;
 }
-
 .nav-tabs .nav-link:hover:not(.active) {
-  border-color: rgba(125, 107, 60, 0.4) !important;
-  color: var(--moss) !important;
+  border-color: rgba(139,115,64,0.4) !important;
+  color: var(--parchment) !important;
 }
 
-/* ── Тултипы ─────────────────────────────────────────────────────── */
+/* ── Модальные окна ──────────────────────────────────────── */
+.modal-content {
+  background: linear-gradient(170deg, rgba(38,60,22,0.98), rgba(20,38,12,0.98)) !important;
+  border: 2px solid var(--vine) !important;
+  border-radius: 18px 4px 18px 4px !important;
+  color: var(--parchment) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7) !important;
+}
+.modal-header { border-bottom: 1px solid var(--vine) !important; background: rgba(8,16,4,0.5) !important; }
+.modal-footer { border-top: 1px solid var(--vine) !important; }
+.modal-title  { font-family: 'Cinzel', serif !important; color: var(--parchment) !important; }
+
+/* ── Тултипы ─────────────────────────────────────────────── */
 .tooltip-inner {
-  background: var(--swamp-darkest) !important;
+  background: rgba(8,16,4,0.95) !important;
   border: 1px solid var(--vine) !important;
   color: var(--parchment) !important;
-  font-family: 'Special Elite', monospace !important;
+  font-family: 'IM Fell English', serif !important;
   border-radius: 8px 2px 8px 2px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
 }
 
-.tooltip-arrow::before {
-  border-top-color: var(--vine) !important;
-}
-
-/* ── Дропдаун ────────────────────────────────────────────────────── */
-.dropdown-menu {
-  background: var(--swamp-mid) !important;
-  border: 1px solid var(--vine) !important;
-  border-radius: 12px 3px 12px 3px !important;
-}
-
-.dropdown-item {
-  color: var(--parchment-dim) !important;
-  font-family: 'Special Elite', monospace !important;
-}
-
-.dropdown-item:hover {
-  background: rgba(122, 156, 69, 0.15) !important;
-  color: var(--parchment) !important;
-}
-
-/* ── Скроллбар (webkit) ──────────────────────────────────────────── */
+/* ── Скроллбар ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--swamp-darkest); }
-::-webkit-scrollbar-thumb {
-  background: var(--vine);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover { background: var(--moss); }
+::-webkit-scrollbar-thumb { background: var(--vine); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--vine-light); }
 
-/* ── Анимации ────────────────────────────────────────────────────── */
+/* ── Аккордеон ───────────────────────────────────────────── */
+.accordion-item { background: rgba(35,60,20,0.95) !important; border-color: var(--vine) !important; }
+.accordion-button { background: rgba(8,16,4,0.5) !important; color: var(--parchment) !important; font-family: 'Cinzel', serif !important; }
+.accordion-button:not(.collapsed) { color: var(--ginger-bright) !important; box-shadow: none !important; }
+.accordion-button::after { filter: invert(0.8) sepia(1) saturate(2) hue-rotate(30deg); }
+
+/* ── Bootstrap утилиты ───────────────────────────────────── */
+.bg-dark    { background: var(--swamp-darkest) !important; }
+.bg-light   { background: rgba(38,60,22,0.4)  !important; }
+.bg-white   { background: rgba(38,60,22,0.35) !important; }
+.border     { border-color: var(--vine) !important; }
+.table-primary { background: rgba(124,170,66,0.15) !important; --bs-table-bg: rgba(124,170,66,0.15) !important; }
+
+.card .table-light th,
+.card .table-light td { background: rgba(8,16,4,0.5) !important; }
+
+/* Автозаполнение */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(8,16,4,0.9) inset !important;
+  -webkit-text-fill-color: var(--parchment) !important;
+}
+
+/* ── Анимации ────────────────────────────────────────────── */
 @keyframes float-orb {
-  0%   { opacity: 0.15; transform: translateY(0px)   scale(1); }
-  30%  { opacity: 0.55; transform: translateY(-18px) scale(1.08); }
-  60%  { opacity: 0.35; transform: translateY(-8px)  scale(0.95); }
-  100% { opacity: 0.15; transform: translateY(0px)   scale(1); }
+  0%   { opacity: 0.1;  transform: translateY(0)   scale(1); }
+  35%  { opacity: 0.65; transform: translateY(-22px) scale(1.06); }
+  65%  { opacity: 0.4;  transform: translateY(-10px) scale(0.97); }
+  100% { opacity: 0.1;  transform: translateY(0)   scale(1); }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 6px rgba(122, 156, 69, 0.3); }
-  50%       { box-shadow: 0 0 22px rgba(180, 220, 50, 0.55), 0 0 44px rgba(122, 156, 69, 0.2); }
+@keyframes bubble-rise {
+  0%   { transform: translateY(0)   scale(1);    opacity: 0; }
+  10%  { opacity: 0.7; }
+  80%  { opacity: 0.5; }
+  100% { transform: translateY(-120px) scale(1.4); opacity: 0; }
 }
 
-/* ── Болотные огоньки ────────────────────────────────────────────── */
+@keyframes shimmer-vine {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.7; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(212,160,48,0.6), 2px 2px 4px rgba(0,0,0,0.8); }
+  50%       { text-shadow: 0 0 35px rgba(212,160,48,0.9), 0 0 60px rgba(240,192,64,0.3), 2px 2px 4px rgba(0,0,0,0.8); }
+}
+
+/* ── Болотные огоньки ────────────────────────────────────── */
 .swamp-orb {
   position: fixed;
   border-radius: 50%;
@@ -520,116 +499,89 @@ a:hover {
   animation: float-orb ease-in-out infinite;
 }
 
-/* ── Силуэт травы внизу ──────────────────────────────────────────── */
+/* ── Пузыри болота ───────────────────────────────────────── */
+.swamp-bubble {
+  position: fixed;
+  border-radius: 50%;
+  border: 1px solid rgba(124,170,66,0.4);
+  background: rgba(100,150,40,0.08);
+  pointer-events: none;
+  z-index: 3;
+  animation: bubble-rise ease-in infinite;
+}
+
+/* ── Трава ───────────────────────────────────────────────── */
 #swamp-grass-strip {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 90px;
+  bottom: 0; left: 0; right: 0;
+  height: 105px;
   z-index: 5;
   pointer-events: none;
   overflow: hidden;
 }
 
-/* ── Подвал-цитата ───────────────────────────────────────────────── */
+/* ── Шрек-бренд сияет ────────────────────────────────────── */
+.navbar-brand {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* ── Надпись "FAR FAR AWAY" — водяной знак ──────────────── */
+#far-far-away {
+  position: fixed;
+  bottom: 115px;
+  right: 22px;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 0.65rem;
+  color: rgba(184,151,90,0.3);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 3;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  animation: shimmer-vine 5s ease-in-out infinite;
+}
+
+/* ── Подвал — цитата Шрека ───────────────────────────────── */
 #swamp-footer {
   text-align: center;
-  padding: 18px 0 28px;
-  font-family: 'Special Elite', monospace;
-  font-size: 0.78rem;
-  color: rgba(245, 230, 184, 0.35);
-  letter-spacing: 0.06em;
-  border-top: 1px solid rgba(125, 107, 60, 0.2);
+  padding: 20px 24px 30px;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(196,169,106,0.5);
+  border-top: 1px solid rgba(139,115,64,0.25);
   margin-top: 40px;
+  position: relative;
+  z-index: 6;
+  letter-spacing: 0.04em;
 }
 
-#swamp-footer span {
-  color: rgba(194, 149, 59, 0.5);
+#swamp-footer::before {
+  content: '— 🧅 —';
+  display: block;
+  font-style: normal;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+  opacity: 0.6;
 }
 
-/* ── Специфичные переопределения Bootstrap ───────────────────────── */
-.bg-dark { background: var(--swamp-darkest) !important; }
-.bg-light { background: rgba(47, 74, 30, 0.4) !important; }
-.bg-white { background: rgba(47, 74, 30, 0.3) !important; }
-
-.border { border-color: var(--vine) !important; }
-.border-bottom { border-bottom-color: var(--vine) !important; }
-
-/* Таблица-лёгкая внутри карточки */
-.card .table-light th,
-.card .table-light td {
-  background: rgba(15, 33, 8, 0.5) !important;
+/* ── Шрековые уши — декор навбара ───────────────────────── */
+#shrek-ears {
+  position: fixed;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 101;
+  opacity: 0.32;
 }
 
-/* Пагинация и прочие bootstrap-компоненты */
-.page-link {
-  background: var(--swamp-mid) !important;
-  border-color: var(--vine) !important;
-  color: var(--parchment-dim) !important;
-}
-
-.page-link:hover {
-  background: var(--swamp-light) !important;
-  color: var(--parchment) !important;
-}
-
-/* Текст в шапке навбара */
-.navbar .text-secondary {
-  color: var(--parchment-dim) !important;
-  opacity: 0.7;
-}
-
-/* Drag-and-drop подсветка колонки в таблице оценок */
-.table-primary {
-  background: rgba(122, 156, 69, 0.18) !important;
-  --bs-table-bg: rgba(122, 156, 69, 0.18) !important;
-}
-
-/* Тепловая карта в отчётах — не переопределяем inline-стили */
-.heatmap-cell { font-family: 'Special Elite', monospace !important; }
-
-/* Поле поиска сделки (HTMX) */
-#deal-results {
-  background: var(--swamp-mid) !important;
-  border: 1px solid var(--vine) !important;
-  border-radius: 0 0 10px 10px !important;
-  color: var(--parchment) !important;
-}
-
-/* Pill-кнопки Да/Нет/Н·П в форме оценки */
-.btn-check + .btn-outline-success,
-.btn-check + .btn-outline-danger,
-.btn-check + .btn-outline-secondary {
-  border-radius: 20px !important;
-  font-family: 'Cinzel', serif !important;
-  font-size: 0.72rem !important;
-}
-
-/* Аккордеон */
-.accordion-item {
-  background: var(--swamp-mid) !important;
-  border-color: var(--vine) !important;
-}
-
-.accordion-button {
-  background: rgba(15, 33, 8, 0.4) !important;
-  color: var(--parchment) !important;
-  font-family: 'Cinzel', serif !important;
-}
-
-.accordion-button:not(.collapsed) {
-  color: var(--gingerbread) !important;
-  box-shadow: none !important;
-}
-
-.accordion-button::after {
-  filter: invert(1) sepia(1) saturate(2) hue-rotate(40deg);
-}
-
-/* Инпут в тёмном блоке (логин) */
-.form-control:-webkit-autofill,
-.form-control:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px rgba(15, 33, 8, 0.9) inset !important;
-  -webkit-text-fill-color: var(--parchment) !important;
+/* ── Кувшинки у травы ────────────────────────────────────── */
+.lily-pad {
+  position: fixed;
+  border-radius: 50% 50% 50% 0;
+  background: radial-gradient(circle at 35% 35%, rgba(80,130,30,0.6), rgba(40,80,15,0.8));
+  border: 1px solid rgba(60,100,20,0.5);
+  pointer-events: none;
+  z-index: 6;
 }
