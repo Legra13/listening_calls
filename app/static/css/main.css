@@ -32,6 +32,7 @@ body {
   color: var(--parchment);
   position: relative;
   overflow-x: hidden;
+  padding-bottom: 100px; /* место для болотной травы */
 }
 
 /* Болотная дымка — туманный оверлей */
@@ -47,22 +48,15 @@ body::before {
   z-index: 0;
 }
 
-/* Ряска/тина по низу */
+/* Нижний градиент — плавный переход к траве */
 body::after {
   content: '';
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: 6px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--moss) 0px,     var(--moss) 12px,
-    var(--swamp-green) 12px, var(--swamp-green) 28px,
-    #3a6b20 28px,        #3a6b20 40px,
-    var(--swamp-dark) 40px, var(--swamp-dark) 55px
-  );
-  opacity: 0.6;
+  height: 90px;
+  background: linear-gradient(to top, #080f04 0%, transparent 100%);
   pointer-events: none;
-  z-index: 9999;
+  z-index: 4;
 }
 
 /* Контент поверх псевдоэлементов */
@@ -512,16 +506,6 @@ a:hover {
   100% { opacity: 0.15; transform: translateY(0px)   scale(1); }
 }
 
-@keyframes sway-left {
-  0%, 100% { transform: rotate(-4deg) scaleY(1); }
-  50%       { transform: rotate(2deg) scaleY(1.04); }
-}
-
-@keyframes sway-right {
-  0%, 100% { transform: rotate(4deg) scaleY(1); }
-  50%       { transform: rotate(-2deg) scaleY(1.04); }
-}
-
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 6px rgba(122, 156, 69, 0.3); }
   50%       { box-shadow: 0 0 22px rgba(180, 220, 50, 0.55), 0 0 44px rgba(122, 156, 69, 0.2); }
@@ -532,22 +516,21 @@ a:hover {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
   animation: float-orb ease-in-out infinite;
 }
 
-/* ── Тростник по краям ───────────────────────────────────────────── */
-.swamp-reed {
+/* ── Силуэт травы внизу ──────────────────────────────────────────── */
+#swamp-grass-strip {
   position: fixed;
   bottom: 0;
-  width: 28px;
+  left: 0;
+  right: 0;
+  height: 90px;
+  z-index: 5;
   pointer-events: none;
-  z-index: 2;
-  transform-origin: bottom center;
+  overflow: hidden;
 }
-
-.swamp-reed.left  { left: 0; animation: sway-left  3.5s ease-in-out infinite; }
-.swamp-reed.right { right: 0; animation: sway-right 4.2s ease-in-out infinite; }
 
 /* ── Подвал-цитата ───────────────────────────────────────────────── */
 #swamp-footer {

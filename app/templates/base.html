@@ -6,7 +6,7 @@
   <title>{% block title %}CallReview{% endblock %}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="/static/css/main.css?v=shrek1" rel="stylesheet">
+  <link href="/static/css/main.css?v=shrek2" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   {% block styles %}{% endblock %}
@@ -93,77 +93,100 @@
 <script>
 (function() {
   'use strict';
-  var scene = document.getElementById('swamp-scene');
-  if (!scene) return;
 
-  /* ── Болотные огоньки ── */
-  var orbDefs = [
-    { w: 9,  h: 9,  left: '8%',  top: '22%', dur: 7.2,  delay: 0,    color: 'rgba(160,210,40,0.55)' },
-    { w: 6,  h: 6,  left: '3%',  top: '55%', dur: 5.8,  delay: 1.3,  color: 'rgba(122,190,50,0.45)' },
-    { w: 11, h: 11, left: '91%', top: '30%', dur: 8.5,  delay: 0.7,  color: 'rgba(180,220,50,0.5)'  },
-    { w: 7,  h: 7,  left: '95%', top: '65%', dur: 6.1,  delay: 2.1,  color: 'rgba(140,200,40,0.4)'  },
-    { w: 5,  h: 5,  left: '14%', top: '78%', dur: 9.3,  delay: 3.4,  color: 'rgba(194,149,59,0.4)'  },
-    { w: 8,  h: 8,  left: '87%', top: '80%', dur: 7.7,  delay: 1.8,  color: 'rgba(160,210,40,0.45)' },
-    { w: 4,  h: 4,  left: '50%', top: '12%', dur: 10.1, delay: 4.0,  color: 'rgba(122,156,69,0.35)' },
+  /* ══════════════════════════════════════════════
+     1. БОЛОТНЫЕ ОГОНЬКИ — большие, с blur
+     ══════════════════════════════════════════════ */
+  var orbs = [
+    { size: 80,  left: '4%',   top: '25%', dur: 8.2,  delay: 0,   color: '140,200,40',  opacity: 0.28, blur: 16 },
+    { size: 55,  left: '1%',   top: '58%', dur: 6.5,  delay: 1.5, color: '100,175,30',  opacity: 0.22, blur: 12 },
+    { size: 95,  left: '86%',  top: '20%', dur: 9.8,  delay: 0.6, color: '160,215,45',  opacity: 0.25, blur: 20 },
+    { size: 60,  left: '91%',  top: '55%', dur: 7.1,  delay: 2.3, color: '120,185,35',  opacity: 0.2,  blur: 14 },
+    { size: 42,  left: '47%',  top: '8%',  dur: 11.5, delay: 3.8, color: '190,225,60',  opacity: 0.18, blur: 10 },
+    { size: 68,  left: '70%',  top: '68%', dur: 7.9,  delay: 4.5, color: '194,149,59',  opacity: 0.2,  blur: 15 },
+    { size: 36,  left: '16%',  top: '80%', dur: 9.3,  delay: 2.0, color: '140,200,40',  opacity: 0.18, blur: 9  },
   ];
 
-  orbDefs.forEach(function(o) {
+  orbs.forEach(function(o) {
     var el = document.createElement('div');
     el.className = 'swamp-orb';
     el.style.cssText = [
-      'width:'  + o.w + 'px',
-      'height:' + o.h + 'px',
-      'left:'   + o.left,
-      'top:'    + o.top,
-      'background:radial-gradient(circle,' + o.color + ',transparent 70%)',
+      'width:'      + o.size + 'px',
+      'height:'     + o.size + 'px',
+      'left:'       + o.left,
+      'top:'        + o.top,
+      'margin-left:' + (-o.size/2) + 'px',
+      'margin-top:'  + (-o.size/2) + 'px',
+      'background:radial-gradient(circle at 40% 40%,rgba(' + o.color + ',' + o.opacity + ') 0%,rgba(' + o.color + ',0.08) 50%,transparent 75%)',
+      'filter:blur(' + o.blur + 'px)',
       'animation-duration:' + o.dur + 's',
       'animation-delay:-'   + o.delay + 's',
     ].join(';');
     document.body.appendChild(el);
   });
 
-  /* ── Тростник по краям ── */
-  function makeReed(side, x, height, delay) {
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '22');
-    svg.setAttribute('height', height);
-    svg.setAttribute('viewBox', '0 0 22 ' + height);
-    svg.style.cssText = [
-      'position:fixed',
-      'bottom:0',
-      side + ':' + x + 'px',
-      'z-index:2',
-      'pointer-events:none',
-      'opacity:0.55',
-      'transform-origin:bottom center',
-      'animation:' + (side === 'left' ? 'sway-left' : 'sway-right') + ' ' + (3.5 + delay) + 's ease-in-out infinite',
-      'animation-delay:-' + delay + 's',
-    ].join(';');
+  /* ══════════════════════════════════════════════
+     2. БОЛОТНАЯ ТРАВА — SVG силуэт во всю ширину
+     ══════════════════════════════════════════════ */
+  var strip = document.createElement('div');
+  strip.id = 'swamp-grass-strip';
+  strip.setAttribute('aria-hidden', 'true');
 
-    var stemH = height - 14;
-    var stem = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    stem.setAttribute('x', '9'); stem.setAttribute('y', '14');
-    stem.setAttribute('width', '3'); stem.setAttribute('height', stemH);
-    stem.setAttribute('fill', '#5c8c30'); stem.setAttribute('rx', '1');
+  var ns  = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(ns, 'svg');
+  var W   = window.innerWidth + 40;
+  var H   = 90;
+  svg.setAttribute('width',  W);
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.style.cssText = 'display:block;position:absolute;bottom:0;left:-20px';
 
-    var head = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    head.setAttribute('cx', '11'); head.setAttribute('cy', '10');
-    head.setAttribute('rx', '5'); head.setAttribute('ry', '10');
-    head.setAttribute('fill', '#3a5c20');
+  /* Земля */
+  var ground = document.createElementNS(ns, 'rect');
+  ground.setAttribute('x', 0); ground.setAttribute('y', H - 14);
+  ground.setAttribute('width', W); ground.setAttribute('height', 14);
+  ground.setAttribute('fill', '#080f04');
+  svg.appendChild(ground);
 
-    svg.appendChild(stem); svg.appendChild(head);
-    document.body.appendChild(svg);
+  /* Генерируем травинки */
+  var colors  = ['#1a3a0c','#234d12','#1e4510','#2a5618','#163008','#264e14'];
+  var spacing = 14; // px между центрами травинок
+  var count   = Math.ceil(W / spacing) + 2;
+
+  for (var i = 0; i < count; i++) {
+    var cx   = i * spacing + (Math.random() - 0.5) * 10;
+    var bH   = 28 + Math.random() * 52;          // высота травинки
+    var lean = (Math.random() - 0.5) * 18;        // наклон
+    var bW   = 3  + Math.random() * 7;            // ширина у основания
+    var col  = colors[Math.floor(Math.random() * colors.length)];
+    var op   = (0.65 + Math.random() * 0.35).toFixed(2);
+
+    /* Кривая Безье: основание → верхушка → основание */
+    var x1  = cx - bW / 2,  x2 = cx + bW / 2;
+    var tip = cx + lean,     ty = H - 14 - bH;
+    var cp1x = x1 - 2,      cp1y = H - 14 - bH * 0.42;
+    var cp2x = tip - 3,     cp2y = ty + bH * 0.18;
+    var cp3x = tip + 3,     cp3y = ty + bH * 0.18;
+    var cp4x = x2 + 2,      cp4y = H - 14 - bH * 0.42;
+
+    var d = [
+      'M', x1.toFixed(1), (H - 14),
+      'C', cp1x.toFixed(1), cp1y.toFixed(1), cp2x.toFixed(1), cp2y.toFixed(1),
+           tip.toFixed(1),  ty.toFixed(1),
+      'C', cp3x.toFixed(1), cp3y.toFixed(1), cp4x.toFixed(1), cp4y.toFixed(1),
+           x2.toFixed(1), (H - 14),
+      'Z'
+    ].join(' ');
+
+    var path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', col);
+    path.setAttribute('opacity', op);
+    svg.appendChild(path);
   }
 
-  var reedConfigs = [
-    ['left',  0,  90, 0],
-    ['left',  18, 75, 0.6],
-    ['left',  36, 110, 1.2],
-    ['right', 0,  95, 0.3],
-    ['right', 18, 80, 0.9],
-    ['right', 36, 105, 1.5],
-  ];
-  reedConfigs.forEach(function(r) { makeReed(r[0], r[1], r[2], r[3]); });
+  strip.appendChild(svg);
+  document.body.appendChild(strip);
 
 })();
 </script>
