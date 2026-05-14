@@ -44,9 +44,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── Навбар ─────────────────────────────────────────────── */
 .navbar {
-  background-color: #173D7A !important;
+  background-color: #00B583 !important;
   padding: 0 0 !important;
-  box-shadow: 0 2px 12px rgba(23, 61, 122, 0.22) !important;
+  box-shadow: 0 2px 12px rgba(0, 181, 131, 0.30) !important;
   border-bottom: none !important;
   position: sticky !important;
   top: 3px !important;
@@ -106,7 +106,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .navbar .nav-link.active {
   color: #FFFFFF !important;
-  border-bottom-color: #00B583 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.85) !important;
   font-weight: 600 !important;
 }
 .navbar .nav-link i { opacity: 0.75; }
