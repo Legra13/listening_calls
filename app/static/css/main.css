@@ -1,27 +1,397 @@
+/* ============================================================
+   Entera CallReview — дизайн-система
+   Шрифт: Open Sans | Палитра: пастельный синий (Entera brand)
+   ============================================================ */
+
+/* ─── Переменные ─────────────────────────────────────────── */
+:root {
+  /* Основные цвета бренда */
+  --brand-primary:      #3A5FC4;   /* синий — кнопки, ссылки */
+  --brand-primary-dark: #2B4AA8;   /* hover кнопок */
+  --brand-primary-pale: #EAF0FF;   /* пастельный синий фон */
+  --brand-navy:         #1C2E6B;   /* навигация */
+  --brand-navy-hover:   #243A85;   /* hover в навигации */
+
+  /* Фоны */
+  --bg-page:  #F4F6FB;
+  --bg-card:  #FFFFFF;
+  --bg-thead: #EEF3FF;
+
+  /* Текст */
+  --text-primary:   #1A2340;
+  --text-secondary: #5C6A85;
+  --text-muted:     #8E9BB5;
+
+  /* Границы */
+  --border:      #DDE4F3;
+  --border-card: #E5EAF7;
+
+  /* Семантические — пастельные */
+  --success-bg:   #E3F8ED;
+  --success-text: #1A7B50;
+  --success-border: #A8E4C1;
+
+  --danger-bg:   #FDE8E8;
+  --danger-text: #B83232;
+  --danger-border: #F5B8B8;
+
+  --warning-bg:   #FFF6E0;
+  --warning-text: #8C6000;
+  --warning-border: #FFDFA0;
+
+  --info-bg:   #E6F3FF;
+  --info-text: #1A5FA0;
+
+  --secondary-bg:   #F0F2F7;
+  --secondary-text: #5C6A85;
+
+  /* Тени */
+  --shadow-sm: 0 1px 4px rgba(30, 50, 110, 0.07);
+  --shadow-md: 0 3px 12px rgba(30, 50, 110, 0.10);
+}
+
+/* ─── Base ───────────────────────────────────────────────── */
 body {
-  background-color: #f8f9fa;
+  font-family: 'Open Sans', sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  -webkit-font-smoothing: antialiased;
 }
 
+a {
+  color: var(--brand-primary);
+}
+
+a:hover {
+  color: var(--brand-primary-dark);
+}
+
+/* ─── Navbar ─────────────────────────────────────────────── */
 .navbar {
-  border-bottom: 1px solid #333;
+  background-color: var(--brand-navy) !important;
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(28, 46, 107, 0.18);
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
-.table th {
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: #FFFFFF !important;
+}
+
+.navbar .nav-link {
+  color: rgba(255, 255, 255, 0.75) !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.navbar .nav-link:hover {
+  color: #FFFFFF !important;
+  background-color: var(--brand-navy-hover);
+}
+
+.navbar .nav-link.active {
+  color: #FFFFFF !important;
+  background-color: var(--brand-primary);
+}
+
+.navbar .text-secondary {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-size: 0.825rem;
+}
+
+.navbar .btn-outline-secondary {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 0.8rem;
+}
+
+.navbar .btn-outline-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #FFF;
+}
+
+/* ─── Карточки ───────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  background-color: var(--bg-card);
+}
+
+.card-header {
+  background-color: var(--bg-thead);
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0 !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+/* ─── Таблицы ────────────────────────────────────────────── */
+.table th {
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #6c757d;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background-color: var(--bg-thead);
+  border-bottom: 2px solid var(--border);
+  padding: 0.65rem 0.75rem;
 }
 
-.card {
-  border: 1px solid #e9ecef;
+.table td {
+  vertical-align: middle;
+  border-color: var(--border);
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
 }
 
-.badge.bg-success-subtle {
-  background-color: #d1e7dd !important;
+.table-hover tbody tr:hover {
+  background-color: var(--brand-primary-pale);
 }
 
-.badge.bg-secondary-subtle {
-  background-color: #e2e3e5 !important;
+.table-light {
+  --bs-table-bg: var(--bg-thead);
+  --bs-table-border-color: var(--border);
+}
+
+/* ─── Кнопки ─────────────────────────────────────────────── */
+.btn-dark,
+.btn-primary {
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 7px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.btn-dark:hover,
+.btn-primary:hover {
+  background-color: var(--brand-primary-dark) !important;
+  border-color: var(--brand-primary-dark) !important;
+  box-shadow: 0 2px 8px rgba(58, 95, 196, 0.25);
+}
+
+.btn-outline-secondary {
+  border-color: var(--border);
+  color: var(--text-secondary);
+  border-radius: 7px;
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--bg-thead);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.btn-outline-primary {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  border-radius: 7px;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--brand-primary);
+  color: #fff;
+}
+
+.btn-outline-success {
+  border-radius: 7px;
+}
+
+.btn-outline-danger {
+  border-radius: 7px;
+}
+
+.btn-link {
+  color: var(--text-muted);
+}
+
+.btn-link:hover {
+  color: var(--brand-primary);
+}
+
+/* ─── Формы ──────────────────────────────────────────────── */
+.form-control,
+.form-select {
+  border-color: var(--border);
+  border-radius: 7px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background-color: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(58, 95, 196, 0.12);
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.form-control-sm,
+.form-select-sm {
+  border-radius: 6px;
+  font-size: 0.825rem;
+}
+
+/* ─── Бейджи ─────────────────────────────────────────────── */
+.badge {
+  border-radius: 5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* success subtle */
+.badge.bg-success-subtle,
+.bg-success-subtle {
+  background-color: var(--success-bg) !important;
+  color: var(--success-text) !important;
+}
+
+/* danger subtle */
+.badge.bg-danger-subtle,
+.bg-danger-subtle {
+  background-color: var(--danger-bg) !important;
+  color: var(--danger-text) !important;
+}
+
+/* warning subtle */
+.badge.bg-warning-subtle,
+.bg-warning-subtle {
+  background-color: var(--warning-bg) !important;
+  color: var(--warning-text) !important;
+}
+
+/* secondary subtle */
+.badge.bg-secondary-subtle,
+.bg-secondary-subtle {
+  background-color: var(--secondary-bg) !important;
+  color: var(--secondary-text) !important;
+}
+
+/* info subtle */
+.badge.bg-info-subtle,
+.bg-info-subtle {
+  background-color: var(--info-bg) !important;
+  color: var(--info-text) !important;
+}
+
+/* ─── Алерты ─────────────────────────────────────────────── */
+.alert-success {
+  background-color: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+
+.alert-danger {
+  background-color: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.alert-warning {
+  background-color: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.alert-info {
+  background-color: var(--info-bg);
+  border-color: #B3D7FF;
+  color: var(--info-text);
+}
+
+/* ─── Заголовки страниц ──────────────────────────────────── */
+h5.mb-0,
+h5.fw-semibold {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ─── Пагинация / Nav pills / Tabs ───────────────────────── */
+.nav-pills .nav-link {
+  color: var(--text-secondary);
+  border-radius: 7px;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.nav-pills .nav-link.active {
+  background-color: var(--brand-primary);
+}
+
+.nav-tabs .nav-link {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: 7px 7px 0 0;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--brand-primary);
+  border-bottom-color: transparent;
+  font-weight: 600;
+}
+
+/* ─── Утилиты текста ─────────────────────────────────────── */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.text-primary {
+  color: var(--brand-primary) !important;
+}
+
+/* ─── Drag-n-drop колонок ────────────────────────────────── */
+thead th[data-col-key]:hover {
+  background-color: var(--brand-primary-pale);
+}
+
+/* ─── Переопределения Bootstrap-dark ─────────────────────── */
+.badge.bg-dark {
+  background-color: var(--brand-primary) !important;
+  color: #fff !important;
+}
+
+/* Черновик badge — пастельный янтарный вместо bg-warning */
+.badge.bg-warning {
+  background-color: var(--warning-bg) !important;
+  color: var(--warning-text) !important;
+  border: 1px solid var(--warning-border);
+}
+
+/* Сортировочные ссылки в заголовках таблицы */
+thead th a.text-decoration-none.text-dark {
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+}
+
+thead th a.text-decoration-none.text-dark:hover {
+  color: var(--brand-primary) !important;
+}
+
+/* ─── Page header ─────────────────────────────────────────── */
+.container-fluid.px-4.py-3 {
+  max-width: 1600px;
 }
