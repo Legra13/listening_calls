@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git add app/ CLAUDE.md requirements.txt scripts/ thoughts/ 2>/dev/null; git diff --cached --quiet || (git commit -m \"авто-коммит: изменения кода\" && git push origin main) 2>&1 || true",
+            "timeout": 30,
+            "statusMessage": "Коммит изменений в GitHub..."
+          }
+        ]
+      }
+    ]
+  }
+}
