@@ -1,380 +1,568 @@
 /* ============================================================
-   Entera CallReview — дизайн-система
-   Цвета: брендбук Entera (#00B583, #173D7A, #356ABB)
-   Шрифт: Open Sans
+   Entera CallReview — фирменный стиль
+   Шрифт: Open Sans | Основной цвет: #00B583 (Entera Green)
    ============================================================ */
 
-/* ─── Переменные — точные цвета из брендбука ─────────────── */
+/* ─── CSS-переменные ─────────────────────────────────────── */
 :root {
-  /* Entera brand palette */
-  --green:        #00B583;   /* основной зелёный */
-  --green-light:  #0EDA93;   /* светлый зелёный */
-  --navy:         #173D7A;   /* тёмно-синий (навбар, хедеры) */
-  --blue:         #356ABB;   /* синий (кнопки, ссылки, акцент) */
-  --brand-bg:     #F1F1F1;   /* фирменный серый фон */
+  /* Бренд — зелёный ГЛАВНЫЙ */
+  --green:       #00B583;
+  --green-dark:  #009A70;
+  --green-light: #0EDA93;
+  --green-pale:  #E8F8F3;
+  --green-pale2: #F2FCF8;
 
-  /* Пастельные версии для фонов */
-  --green-pale:   #E3FAF3;   /* пастельный зелёный */
-  --blue-pale:    #EAF1FB;   /* пастельный синий */
-  --navy-pale:    #E8EDF5;   /* пастельный navy */
+  /* Вторичный — navy */
+  --navy:        #173D7A;
+  --navy-dark:   #112D5E;
+  --navy-pale:   #EEF3FA;
+  --blue:        #356ABB;
 
-  /* Страница */
-  --bg-page:   #F4F7FA;
-  --bg-card:   #FFFFFF;
-  --bg-thead:  #EEF4FF;      /* шапки таблиц */
+  /* Фоны */
+  --bg:          #FFFFFF;
+  --bg-page:     #F7FAF9;  /* чуть зеленоватый, как у Entera */
+  --bg-surface:  #FFFFFF;
+  --bg-thead:    #EDF7F3;
 
   /* Текст */
-  --text-primary:   #1A2D4A;
-  --text-secondary: #5A6A82;
-  --text-muted:     #8C9BB2;
+  --text-dark:   #1A2B3C;
+  --text-body:   #374B5C;
+  --text-muted:  #7A8CA0;
+  --text-light:  #A8B8C8;
 
   /* Границы */
-  --border:      #DDE5EF;
-  --border-card: #E4EBF5;
+  --border:      #D8E8E2;
+  --border-card: #E2EDE9;
 
-  /* Семантические — пастельные */
-  --success-bg:     #E3FAF3;
-  --success-text:   #007A5A;
-  --success-border: #9EE5D0;
-
-  --danger-bg:     #FDE8E8;
-  --danger-text:   #B83030;
-  --danger-border: #F5B5B5;
-
-  --warning-bg:     #FFF5DC;
-  --warning-text:   #8C5E00;
-  --warning-border: #FFDA8A;
-
-  --info-bg:   #EAF1FB;
-  --info-text: #1A5AA0;
-
-  --secondary-bg:   #EEF0F5;
-  --secondary-text: #5A6A82;
+  /* Семантика — пастельная */
+  --ok-bg:    #E8F8F3;  --ok-text:   #007A5A;  --ok-border:  #9ADFC4;
+  --err-bg:   #FDE8E8;  --err-text:  #B03030;  --err-border: #F5AEAE;
+  --warn-bg:  #FFF5DE;  --warn-text: #886000;  --warn-border:#FFCF7A;
+  --info-bg:  #EEF3FA;  --info-text: #1A5090;  --info-border:#B0CAEA;
+  --grey-bg:  #EEF2F6;  --grey-text: #58687A;
 
   /* Тени */
-  --shadow-sm: 0 1px 4px rgba(23, 61, 122, 0.08);
-  --shadow-md: 0 3px 14px rgba(23, 61, 122, 0.12);
+  --shadow-xs: 0 1px 3px rgba(0,150,100,.06);
+  --shadow-sm: 0 2px 8px rgba(0,150,100,.09);
+  --shadow-md: 0 4px 20px rgba(0,150,100,.12);
+  --shadow-hover: 0 6px 24px rgba(0,150,100,.16);
+
+  /* Скругления */
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
 }
 
-/* ─── Base ───────────────────────────────────────────────── */
+/* ─── Reset & Base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
 body {
-  font-family: 'Open Sans', sans-serif;
+  font-family: 'Open Sans', -apple-system, sans-serif;
   background-color: var(--bg-page);
-  color: var(--text-primary);
+  color: var(--text-body);
   font-size: 0.9rem;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  padding-top: 3px; /* для зелёной полоски */
 }
 
-a {
-  color: var(--blue);
-}
-a:hover {
-  color: var(--navy);
+/* Тонкая зелёная полоска сверху — фирменная деталь */
+body::before {
+  content: '';
+  display: block;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green) 0%, var(--green-light) 100%);
+  z-index: 9999;
 }
 
-/* ─── Navbar ─────────────────────────────────────────────── */
+a { color: var(--green-dark); text-decoration: none; }
+a:hover { color: var(--navy); }
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+
+/* ─── Навбар ─────────────────────────────────────────────── */
 .navbar {
   background-color: var(--navy) !important;
+  padding: 0 0;
+  box-shadow: 0 2px 12px rgba(23,61,122,.22);
   border-bottom: none;
-  box-shadow: 0 2px 10px rgba(23, 61, 122, 0.22);
-  padding-top: 0.55rem;
-  padding-bottom: 0.55rem;
+  position: sticky;
+  top: 3px;
+  z-index: 1030;
+}
+
+.navbar .container-fluid {
+  height: 56px;
 }
 
 .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: #FFFFFF !important;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
+  padding: 0;
+  text-decoration: none;
 }
 
-/* Зелёная полоска-акцент под навбаром */
-.navbar::after {
-  content: '';
-  display: block;
-  height: 3px;
+/* Шестигранник Entera в навбаре */
+.nav-hex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   background: var(--green);
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  clip-path: polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  transition: transform 0.2s;
 }
-.navbar {
-  position: relative;
-}
+.navbar-brand:hover .nav-hex { transform: scale(1.08); }
+
+.navbar-nav { height: 56px; }
 
 .navbar .nav-link {
-  color: rgba(255, 255, 255, 0.72) !important;
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 1rem !important;
+  color: rgba(255,255,255,.68) !important;
+  font-size: 0.865rem;
   font-weight: 500;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  transition: background 0.15s, color 0.15s;
+  border-bottom: 3px solid transparent;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
 }
 .navbar .nav-link:hover {
-  color: #FFFFFF !important;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255,255,255,.95) !important;
+  border-bottom-color: rgba(255,255,255,.3);
 }
 .navbar .nav-link.active {
   color: #FFFFFF !important;
-  background-color: var(--blue);
+  border-bottom-color: var(--green);
+  font-weight: 600;
+}
+.navbar .nav-link i { opacity: .75; }
+.navbar .nav-link.active i { opacity: 1; }
+
+.navbar-toggler { border-color: rgba(255,255,255,.25); }
+
+.navbar-user {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,.55) !important;
+}
+.navbar-btn-exit {
+  border: 1px solid rgba(255,255,255,.22) !important;
+  color: rgba(255,255,255,.7) !important;
+  background: transparent !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.8rem !important;
+  padding: 4px 12px !important;
+  transition: background .15s, border-color .15s !important;
+}
+.navbar-btn-exit:hover {
+  background: rgba(255,255,255,.1) !important;
+  border-color: rgba(255,255,255,.45) !important;
+  color: #fff !important;
 }
 
-.navbar .text-secondary {
-  color: rgba(255, 255, 255, 0.55) !important;
-  font-size: 0.82rem;
+/* ─── Основной контент ───────────────────────────────────── */
+.container-fluid.px-4.py-3 {
+  max-width: 1680px;
+  padding-top: 1.5rem !important;
 }
-.navbar .btn-outline-secondary {
-  border-color: rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.8rem;
-  border-radius: 6px;
+
+/* ─── Заголовки страниц ──────────────────────────────────── */
+.page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
 }
-.navbar .btn-outline-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #FFF;
+.page-title i { color: var(--green); font-size: 1.2rem; }
+
+/* Inline h5 в d-flex — делаем их жирнее */
+h5.mb-0 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
 }
+h5.mb-0 i { color: var(--green); }
 
 /* ─── Карточки ───────────────────────────────────────────── */
 .card {
+  background: var(--bg-surface);
   border: 1px solid var(--border-card);
-  border-radius: 10px;
-  box-shadow: var(--shadow-sm);
-  background-color: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow .2s, transform .2s;
 }
+
 .card-header {
   background-color: var(--bg-thead);
   border-bottom: 1px solid var(--border);
-  border-radius: 10px 10px 0 0 !important;
+  border-radius: var(--radius) var(--radius) 0 0 !important;
+  padding: 0.75rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: var(--text-primary);
+  color: var(--text-dark);
+}
+
+/* Карточки KPI (числа в отчётах) */
+.card.kpi-card {
+  border-top: 3px solid var(--green);
+  text-align: center;
+}
+.card.kpi-card .kpi-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.1;
+}
+.card.kpi-card .kpi-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 /* ─── Таблицы ────────────────────────────────────────────── */
+.table {
+  margin-bottom: 0;
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--border);
+}
+
 .table th {
-  font-size: 0.77rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
+  letter-spacing: .055em;
+  color: var(--green-dark);
   background-color: var(--bg-thead);
   border-bottom: 2px solid var(--border);
-  padding: 0.65rem 0.75rem;
+  padding: 0.65rem 0.85rem;
+  white-space: nowrap;
 }
+
 .table td {
-  vertical-align: middle;
+  padding: 0.65rem 0.85rem;
   border-color: var(--border);
-  padding: 0.6rem 0.75rem;
-  color: var(--text-primary);
+  color: var(--text-body);
+  vertical-align: middle;
+}
+
+.table-hover tbody tr {
+  transition: background .12s;
 }
 .table-hover tbody tr:hover {
-  background-color: var(--green-pale);
+  background-color: var(--green-pale2) !important;
+  --bs-table-accent-bg: var(--green-pale2);
 }
+
 .table-light {
   --bs-table-bg: var(--bg-thead);
   --bs-table-border-color: var(--border);
 }
 
-/* ─── Кнопки ─────────────────────────────────────────────── */
-.btn-dark,
-.btn-primary {
-  background-color: var(--blue) !important;
-  border-color: var(--blue) !important;
-  color: #fff !important;
-  font-weight: 600;
-  border-radius: 7px;
-  transition: background 0.15s, box-shadow 0.15s;
+/* Сортировочные ссылки */
+thead th a.text-decoration-none,
+thead th a.text-decoration-none.text-dark {
+  color: var(--green-dark) !important;
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: .055em;
 }
-.btn-dark:hover,
-.btn-primary:hover {
-  background-color: var(--navy) !important;
-  border-color: var(--navy) !important;
-  box-shadow: 0 2px 10px rgba(23, 61, 122, 0.28);
+thead th a.text-decoration-none:hover,
+thead th a.text-decoration-none.text-dark:hover {
+  color: var(--navy) !important;
 }
+thead th[data-col-key] { cursor: grab; }
+thead th[data-col-key]:hover { background-color: var(--green-pale); }
 
+/* ─── Кнопки ─────────────────────────────────────────────── */
+
+/* Основная CTA — зелёная */
+.btn-dark,
+.btn-primary,
 .btn-success {
   background-color: var(--green) !important;
   border-color: var(--green) !important;
   color: #fff !important;
   font-weight: 600;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
+  transition: background .15s, box-shadow .15s, transform .1s;
 }
+.btn-dark:hover,
+.btn-primary:hover,
 .btn-success:hover {
-  background-color: #009E73 !important;
-  border-color: #009E73 !important;
+  background-color: var(--green-dark) !important;
+  border-color: var(--green-dark) !important;
+  box-shadow: 0 3px 12px rgba(0,181,131,.3);
+  transform: translateY(-1px);
+}
+.btn-dark:active,
+.btn-primary:active,
+.btn-success:active { transform: none; }
+
+/* Outline вторичные */
+.btn-outline-secondary {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  transition: all .15s;
+}
+.btn-outline-secondary:hover {
+  background-color: var(--green-pale);
+  border-color: var(--green);
+  color: var(--green-dark);
 }
 
 .btn-outline-primary {
-  border-color: var(--blue);
-  color: var(--blue);
-  border-radius: 7px;
+  border-color: var(--green);
+  color: var(--green-dark);
+  border-radius: var(--radius-sm);
 }
 .btn-outline-primary:hover {
-  background-color: var(--blue);
+  background-color: var(--green);
   color: #fff;
 }
 
 .btn-outline-success {
   border-color: var(--green);
-  color: var(--green);
-  border-radius: 7px;
+  color: var(--green-dark);
+  border-radius: var(--radius-sm);
 }
 .btn-outline-success:hover {
   background-color: var(--green);
   color: #fff;
 }
 
-.btn-outline-secondary {
-  border-color: var(--border);
-  color: var(--text-secondary);
-  border-radius: 7px;
-}
-.btn-outline-secondary:hover {
-  background-color: var(--navy-pale);
-  border-color: var(--blue);
-  color: var(--blue);
-}
-
 .btn-outline-danger {
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-link {
   color: var(--text-muted);
+  font-weight: 500;
 }
-.btn-link:hover {
-  color: var(--blue);
-}
+.btn-link:hover { color: var(--green); }
 
 /* ─── Формы ──────────────────────────────────────────────── */
 .form-control,
 .form-select {
-  border-color: var(--border);
-  border-radius: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  color: var(--text-primary);
+  color: var(--text-dark);
   background-color: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: 'Open Sans', sans-serif;
 }
 .form-control:focus,
 .form-select:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(0, 181, 131, 0.15);
+  box-shadow: 0 0 0 3px rgba(0,181,131,.14);
+  outline: none;
 }
+
 .form-label {
   font-weight: 600;
   font-size: 0.82rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.3rem;
+  color: var(--text-muted);
+  margin-bottom: .3rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
 }
+
 .form-control-sm,
-.form-select-sm {
-  border-radius: 6px;
-  font-size: 0.82rem;
+.form-select-sm { border-radius: 5px; font-size: 0.82rem; }
+
+.form-check-input:checked {
+  background-color: var(--green);
+  border-color: var(--green);
 }
 
 /* ─── Бейджи ─────────────────────────────────────────────── */
 .badge {
   border-radius: 5px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 0.75rem;
+  padding: .3em .55em;
+  letter-spacing: .01em;
 }
 
 .badge.bg-success-subtle, .bg-success-subtle {
-  background-color: var(--success-bg) !important;
-  color: var(--success-text) !important;
+  background-color: var(--ok-bg) !important;
+  color: var(--ok-text) !important;
 }
 .badge.bg-danger-subtle, .bg-danger-subtle {
-  background-color: var(--danger-bg) !important;
-  color: var(--danger-text) !important;
+  background-color: var(--err-bg) !important;
+  color: var(--err-text) !important;
 }
 .badge.bg-warning-subtle, .bg-warning-subtle {
-  background-color: var(--warning-bg) !important;
-  color: var(--warning-text) !important;
+  background-color: var(--warn-bg) !important;
+  color: var(--warn-text) !important;
 }
 .badge.bg-secondary-subtle, .bg-secondary-subtle {
-  background-color: var(--secondary-bg) !important;
-  color: var(--secondary-text) !important;
+  background-color: var(--grey-bg) !important;
+  color: var(--grey-text) !important;
 }
 .badge.bg-info-subtle, .bg-info-subtle {
   background-color: var(--info-bg) !important;
   color: var(--info-text) !important;
 }
-
-/* bg-dark badge → brand blue */
 .badge.bg-dark {
+  background-color: var(--navy) !important;
+  color: #fff !important;
+}
+.badge.bg-warning {
+  background-color: var(--warn-bg) !important;
+  color: var(--warn-text) !important;
+  border: 1px solid var(--warn-border);
+}
+/* Зелёный бейдж «активен» */
+.badge.bg-success {
+  background-color: var(--green) !important;
+  color: #fff !important;
+}
+/* Синий бейдж primary */
+.badge.bg-primary {
   background-color: var(--blue) !important;
   color: #fff !important;
 }
-/* bg-warning badge → пастельный янтарь */
-.badge.bg-warning {
-  background-color: var(--warning-bg) !important;
-  color: var(--warning-text) !important;
-  border: 1px solid var(--warning-border);
-}
 
 /* ─── Алерты ─────────────────────────────────────────────── */
+.alert {
+  border-radius: var(--radius-sm);
+  border-width: 1px;
+  font-size: 0.875rem;
+}
 .alert-success {
-  background-color: var(--success-bg);
-  border-color: var(--success-border);
-  color: var(--success-text);
+  background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-text);
 }
 .alert-danger {
-  background-color: var(--danger-bg);
-  border-color: var(--danger-border);
-  color: var(--danger-text);
+  background: var(--err-bg); border-color: var(--err-border); color: var(--err-text);
 }
 .alert-warning {
-  background-color: var(--warning-bg);
-  border-color: var(--warning-border);
-  color: var(--warning-text);
+  background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text);
 }
 .alert-info {
-  background-color: var(--info-bg);
-  border-color: #B3D0F5;
-  color: var(--info-text);
+  background: var(--info-bg); border-color: var(--info-border); color: var(--info-text);
 }
 
-/* ─── Вкладки и пилюли ───────────────────────────────────── */
+/* ─── Текст утилиты ──────────────────────────────────────── */
+.text-muted     { color: var(--text-muted) !important; }
+.text-secondary { color: var(--text-muted) !important; }
+.text-primary   { color: var(--green) !important; }
+.text-success   { color: var(--ok-text) !important; }
+.text-danger    { color: var(--err-text) !important; }
+.text-warning   { color: var(--warn-text) !important; }
+.text-dark      { color: var(--text-dark) !important; }
+
+/* ─── Навигация (вкладки и пилюли) ──────────────────────── */
 .nav-pills .nav-link {
-  color: var(--text-secondary);
-  border-radius: 7px;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
   font-weight: 500;
   font-size: 0.875rem;
+  transition: all .15s;
 }
 .nav-pills .nav-link.active {
-  background-color: var(--blue);
+  background-color: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+.nav-pills .nav-link:hover:not(.active) {
+  background-color: var(--green-pale);
+  color: var(--green-dark);
 }
 
+.nav-tabs { border-bottom-color: var(--border); }
 .nav-tabs .nav-link {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-weight: 500;
   font-size: 0.875rem;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid transparent;
+  transition: color .15s;
 }
+.nav-tabs .nav-link:hover { color: var(--green); }
 .nav-tabs .nav-link.active {
   color: var(--navy);
   font-weight: 700;
-  border-bottom-color: var(--green) !important;
-  border-bottom-width: 2px;
+  border-color: var(--border) var(--border) #fff;
+  border-bottom: 2px solid var(--green) !important;
 }
 
-/* ─── Утилиты текста ─────────────────────────────────────── */
-.text-muted    { color: var(--text-muted) !important; }
-.text-secondary { color: var(--text-secondary) !important; }
-.text-primary  { color: var(--blue) !important; }
+/* ─── Хлебные крошки ─────────────────────────────────────── */
+.breadcrumb {
+  font-size: 0.82rem;
+}
+.breadcrumb-item a {
+  color: var(--green-dark);
+}
+.breadcrumb-item.active { color: var(--text-muted); }
 
-/* ─── Сортировочные ссылки в таблицах ───────────────────── */
-thead th a.text-decoration-none.text-dark {
-  color: var(--text-secondary) !important;
-  font-weight: 700;
-  font-size: 0.77rem;
+/* ─── Модалки ────────────────────────────────────────────── */
+.modal-content {
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
-thead th a.text-decoration-none.text-dark:hover {
-  color: var(--blue) !important;
+.modal-header {
+  border-bottom-color: var(--border);
+  padding: 1rem 1.25rem 0.75rem;
 }
-thead th[data-col-key]:hover {
-  background-color: var(--green-pale);
-  cursor: grab;
+.modal-footer { border-top-color: var(--border); }
+.modal-title { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+
+/* ─── Прогресс ───────────────────────────────────────────── */
+.progress { border-radius: 99px; }
+.progress-bar { background-color: var(--green); }
+
+/* ─── Скролл внутри элементов ────────────────────────────── */
+#opList { border-color: var(--border) !important; border-radius: var(--radius-sm) !important; }
+#opList:focus-within { border-color: var(--green) !important; }
+
+/* ─── Таблица-результат в оценках ───────────────────────── */
+.table-success {
+  --bs-table-bg: #eaf7f1 !important;
+  --bs-table-accent-bg: #eaf7f1;
+}
+.table-danger {
+  --bs-table-bg: #fdf0f0 !important;
+  --bs-table-accent-bg: #fdf0f0;
+}
+
+/* ─── Пустые состояния ───────────────────────────────────── */
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state .bi {
+  font-size: 2.5rem;
+  color: var(--green-pale);
+  margin-bottom: .75rem;
+  display: block;
 }

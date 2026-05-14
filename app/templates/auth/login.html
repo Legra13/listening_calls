@@ -6,233 +6,260 @@
   <title>Вход — CallReview · Entera</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
       --green:      #00B583;
+      --green-dark: #009A70;
       --green-light:#0EDA93;
       --navy:       #173D7A;
-      --blue:       #356ABB;
+      --navy-dark:  #112D5E;
     }
-    * { box-sizing: border-box; }
+
     body {
       font-family: 'Open Sans', sans-serif;
-      margin: 0;
       min-height: 100vh;
       display: flex;
+      background: #F7FAF9;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Левая зелёная колонка */
-    .login-side {
-      width: 380px;
+    /* Тонкая зелёная полоска */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--green), var(--green-light));
+      z-index: 999;
+    }
+
+    /* ── Левая колонка ─────────────────────────────────────── */
+    .left-panel {
+      width: 420px;
       flex-shrink: 0;
       background: var(--navy);
       display: flex;
       flex-direction: column;
       justify-content: center;
-      align-items: center;
-      padding: 2.5rem 2rem;
+      padding: 3rem 2.5rem;
       position: relative;
       overflow: hidden;
     }
-    .login-side::before {
+
+    /* Декоративные круги */
+    .left-panel::before {
       content: '';
       position: absolute;
-      bottom: -60px;
-      right: -60px;
-      width: 220px;
-      height: 220px;
-      background: rgba(0, 181, 131, 0.15);
+      bottom: -80px; right: -80px;
+      width: 280px; height: 280px;
+      background: rgba(0,181,131,.12);
       border-radius: 50%;
     }
-    .login-side::after {
+    .left-panel::after {
       content: '';
       position: absolute;
-      top: -40px;
-      left: -40px;
-      width: 160px;
-      height: 160px;
-      background: rgba(14, 218, 147, 0.10);
+      top: -50px; left: -50px;
+      width: 200px; height: 200px;
+      background: rgba(14,218,147,.07);
       border-radius: 50%;
     }
 
-    /* Лого-иконка: шестигранник Entera */
-    .logo-hex {
-      width: 70px;
-      height: 70px;
+    /* Шестигранник */
+    .hex-logo {
+      width: 64px; height: 64px;
       background: var(--green);
-      clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+      clip-path: polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 800; color: #fff;
+      margin-bottom: 1.5rem;
+      position: relative; z-index: 1;
+    }
+
+    .brand-name {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.02em;
+      position: relative; z-index: 1;
+      margin-bottom: .25rem;
+    }
+
+    .brand-desc {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,.55);
+      position: relative; z-index: 1;
+      line-height: 1.5;
+      margin-bottom: 2.5rem;
+    }
+
+    .left-divider {
+      width: 36px; height: 3px;
+      background: var(--green);
+      border-radius: 2px;
+      margin-bottom: 2rem;
+      position: relative; z-index: 1;
+    }
+
+    .feature-list {
+      list-style: none;
+      position: relative; z-index: 1;
+    }
+    .feature-list li {
       display: flex;
       align-items: center;
-      justify-content: center;
-      margin-bottom: 1.25rem;
-      position: relative;
-      z-index: 1;
-      font-size: 1.9rem;
-      color: #fff;
-      font-weight: 800;
+      gap: 10px;
+      color: rgba(255,255,255,.65);
+      font-size: 0.85rem;
+      margin-bottom: .85rem;
     }
-    .logo-brand {
-      font-size: 1.7rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.01em;
-      position: relative;
-      z-index: 1;
-      margin-bottom: 0.3rem;
-    }
-    .logo-sub {
-      font-size: 0.8rem;
-      color: rgba(255,255,255,0.6);
-      text-align: center;
-      position: relative;
-      z-index: 1;
-    }
-    .side-divider {
-      width: 40px;
-      height: 2px;
+    .feature-list li::before {
+      content: '';
+      width: 8px; height: 8px;
       background: var(--green);
-      margin: 1.25rem 0;
-      position: relative;
-      z-index: 1;
-    }
-    .side-tagline {
-      font-size: 0.78rem;
-      color: rgba(255,255,255,0.5);
-      text-align: center;
-      position: relative;
-      z-index: 1;
-      line-height: 1.5;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
-    /* Правая белая колонка с формой */
-    .login-main {
+    /* ── Правая колонка ─────────────────────────────────────── */
+    .right-panel {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #F4F7FA;
       padding: 2rem;
     }
-    .login-form-card {
+
+    .login-box {
       width: 100%;
-      max-width: 380px;
-      background: #fff;
-      border-radius: 14px;
-      padding: 2.25rem 2rem;
-      box-shadow: 0 4px 24px rgba(23, 61, 122, 0.10);
-      border: 1px solid #E4EBF5;
+      max-width: 400px;
     }
-    .form-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 0.2rem;
+
+    .login-greeting {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #1A2B3C;
+      margin-bottom: .3rem;
     }
-    .form-subtitle {
-      font-size: 0.8rem;
-      color: #8C9BB2;
-      margin-bottom: 1.75rem;
-    }
-    .form-label {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #5A6A82;
-      margin-bottom: 0.3rem;
-      display: block;
-    }
-    .form-control {
-      border: 1px solid #DDE5EF;
-      border-radius: 8px;
+    .login-sub {
       font-size: 0.875rem;
-      padding: 0.55rem 0.85rem;
+      color: #7A8CA0;
+      margin-bottom: 2rem;
+    }
+
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7A8CA0;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .4rem;
+    }
+    .form-group input {
       width: 100%;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      padding: .65rem .9rem;
+      border: 1.5px solid #D8E8E2;
+      border-radius: 8px;
       font-family: 'Open Sans', sans-serif;
+      font-size: .9rem;
+      color: #1A2B3C;
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
     }
-    .form-control:focus {
+    .form-group input:focus {
       border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(0, 181, 131, 0.15);
+      box-shadow: 0 0 0 3px rgba(0,181,131,.14);
     }
-    .btn-login {
+
+    .btn-enter {
       width: 100%;
-      padding: 0.6rem;
-      background: var(--blue);
+      padding: .7rem;
+      background: var(--green);
       border: none;
       border-radius: 8px;
       color: #fff;
-      font-size: 0.9rem;
-      font-weight: 700;
       font-family: 'Open Sans', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.15s, box-shadow 0.15s;
       margin-top: 1.5rem;
+      transition: background .15s, box-shadow .15s, transform .1s;
     }
-    .btn-login:hover {
-      background: var(--navy);
-      box-shadow: 0 3px 12px rgba(23, 61, 122, 0.28);
+    .btn-enter:hover {
+      background: var(--green-dark);
+      box-shadow: 0 4px 16px rgba(0,181,131,.3);
+      transform: translateY(-1px);
     }
+    .btn-enter:active { transform: none; }
+
     .alert-box {
-      padding: 0.6rem 0.85rem;
+      padding: .65rem 1rem;
       border-radius: 8px;
-      font-size: 0.82rem;
-      margin-bottom: 1rem;
+      font-size: .84rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .alert-danger-custom {
-      background: #FDE8E8;
-      border: 1px solid #F5B5B5;
-      color: #B83030;
+    .alert-error   { background: #FDE8E8; border: 1px solid #F5AEAE; color: #B03030; }
+    .alert-success { background: #E8F8F3; border: 1px solid #9ADFC4; color: #007A5A; }
+
+    .login-footer {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #A8B8C8;
+      text-align: center;
     }
-    .alert-success-custom {
-      background: #E3FAF3;
-      border: 1px solid #9EE5D0;
-      color: #007A5A;
-    }
-    .mb-3 { margin-bottom: 1rem; }
-    .mb-4 { margin-bottom: 1.25rem; }
   </style>
 </head>
 <body>
 
-<!-- Левая брендовая колонка -->
-<div class="login-side">
-  <div class="logo-hex">e</div>
-  <div class="logo-brand">Entera</div>
-  <div class="logo-sub">Инструмент оценки звонков</div>
-  <div class="side-divider"></div>
-  <div class="side-tagline">Внутренний сервис<br>для анализа и оценки звонков</div>
+<!-- Левая брендовая панель -->
+<div class="left-panel">
+  <div class="hex-logo">e</div>
+  <div class="brand-name">Entera</div>
+  <div class="brand-desc">Внутренний инструмент<br>оценки звонков</div>
+  <div class="left-divider"></div>
+  <ul class="feature-list">
+    <li>Оценка звонков по чек-листам</li>
+    <li>Интеграция с Битрикс24</li>
+    <li>Аналитика по сотрудникам</li>
+    <li>Экспорт отчётов в Excel</li>
+  </ul>
 </div>
 
-<!-- Правая колонка с формой -->
-<div class="login-main">
-  <div class="login-form-card">
-    <div class="form-title">Добро пожаловать</div>
-    <div class="form-subtitle">Войдите, чтобы продолжить работу</div>
+<!-- Правая панель с формой -->
+<div class="right-panel">
+  <div class="login-box">
+    <div class="login-greeting">Добро пожаловать</div>
+    <div class="login-sub">Войдите в свой аккаунт, чтобы продолжить</div>
 
     {% if flash %}
-      <div class="alert-box {% if flash.category == 'danger' %}alert-danger-custom{% else %}alert-success-custom{% endif %}">
+      <div class="alert-box {% if flash.category == 'danger' %}alert-error{% else %}alert-success{% endif %}">
+        {% if flash.category == 'danger' %}⚠{% else %}✓{% endif %}
         {{ flash.message }}
       </div>
     {% endif %}
 
     <form action="/login" method="post">
-      <div class="mb-3">
-        <label class="form-label">Логин</label>
-        <input type="text" name="username" class="form-control" autofocus required placeholder="Введите логин">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" name="username" autofocus required placeholder="Введите логин">
       </div>
-      <div class="mb-4">
-        <label class="form-label">Пароль</label>
-        <input type="password" name="password" class="form-control" required placeholder="Введите пароль">
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" name="password" required placeholder="Введите пароль">
       </div>
-      <button type="submit" class="btn-login">Войти</button>
+      <button type="submit" class="btn-enter">Войти</button>
     </form>
+
+    <div class="login-footer">© Entera · Только для внутреннего использования</div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
