@@ -406,6 +406,171 @@ def _rpt_sheet_tab3(wb, tab3: dict):
         ws.column_dimensions[get_column_letter(i)].width = 26
 
 
+# ── Qolio-совместимый экспорт ─────────────────────────────────────────────────
+
+def _fmt_date_qolio(dt: datetime | None) -> str:
+    if dt is None:
+        return ""
+    return dt.strftime("%d/%m/%Y, %H:%M")
+
+
+def _qolio_sheet_by_call(wb, evs, selected_cl):
+    """По звонкам: строка = оценка, столбцы = метаданные + блоки (0–1) + итог + комм. Формат export(24)."""
+    ws = wb.create_sheet("По звонкам")
+    blocks = list(selected_cl.blocks)
+    block_names = [b.display_name or b.name for b in blocks]
+
+    headers = ["Оператор", "Отдел", "Сделка", "Дата звонка", "Дата оценки"] + \
+              block_names + ["Итог", "Комментарий"]
+    _write_header(ws, headers)
+
+    BLOCK_START = 6
+    TOTAL_COL = BLOCK_START + len(blocks)
+
+    for ev in evs:
+        _, bscores = calculate_scores(ev.items, ev.checklist) if ev.checklist else (None, {})
+        block_fracs = [round(bscores[b.id] / 100, 3) if bscores.get(b.id) is not None else None for b in blocks]
+        total_frac = round(ev.total_score / 100, 3) if ev.total_score is not None else None
+
+        ws.append([
+            ev.operator_name,
+            ev.department or "",
+            ev.deal_id or "",
+            _fmt_date_qolio(ev.eval_date),
+            _fmt_date_qolio(ev.updated_at or ev.created_at),
+        ] + block_fracs + [total_frac, ev.general_comment or ""])
+
+        ri = ws.max_row
+        ws.cell(ri, TOTAL_COL).fill = _score_fill(ev.total_score)
+        ws.cell(ri, TOTAL_COL).alignment = _CENTER
+        for i, b in enumerate(blocks):
+            pct = bscores.get(b.id)
+            c = ws.cell(ri, BLOCK_START + i)
+            c.fill = _score_fill(pct)
+            c.alignment = _CENTER
+
+    _autowidth(ws)
+    ws.column_dimensions[get_column_letter(len(headers))].width = 42
+
+
+def _qolio_sheet_by_operator(wb, evs, selected_cl):
+    """По сотрудникам: строка = оператор, столбцы = блоки (%), последняя строка = Среднее. Формат export(22)."""
+    ws = wb.create_sheet("По сотрудникам")
+    blocks = list(selected_cl.blocks)
+    block_names = [b.display_name or b.name for b in blocks]
+
+    _write_header(ws, ["Сотрудник", "Отдел", "Пров-ки"] + block_names + ["Итог"])
+
+    BLOCK_START = 4
+    TOTAL_COL = BLOCK_START + len(blocks)
+
+    emp: dict = defaultdict(lambda: {"dept": "", "scores": [], "bscores": defaultdict(list)})
+    all_scores_g: list[float] = []
+    all_bscores_g: dict = defaultdict(list)
+
+    for ev in evs:
+        if ev.total_score is None or not ev.checklist:
+            continue
+        k = ev.operator_name
+        emp[k]["dept"] = ev.department or ""
+        emp[k]["scores"].append(float(ev.total_score))
+        _, bscores = calculate_scores(ev.items, ev.checklist)
+        for b in blocks:
+            s = bscores.get(b.id)
+            if s is not None:
+                emp[k]["bscores"][b.id].append(s)
+                all_bscores_g[b.id].append(s)
+        all_scores_g.append(float(ev.total_score))
+
+    for name in sorted(emp):
+        d = emp[name]
+        sc = d["scores"]
+        n = len(sc)
+        avg = round(sum(sc) / n, 1) if n else None
+        bavgs = [round(sum(d["bscores"].get(b.id, [])) / len(d["bscores"][b.id]), 1)
+                 if d["bscores"].get(b.id) else None for b in blocks]
+        ws.append([name, d["dept"], n] + bavgs + [avg])
+        ri = ws.max_row
+        ws.cell(ri, TOTAL_COL).fill = _score_fill(avg)
+        ws.cell(ri, TOTAL_COL).alignment = _CENTER
+        for i, bv in enumerate(bavgs):
+            c = ws.cell(ri, BLOCK_START + i)
+            c.fill = _score_fill(bv)
+            c.alignment = _CENTER
+
+    n_all = len(all_scores_g)
+    all_avg = round(sum(all_scores_g) / n_all, 1) if n_all else None
+    all_bavgs = [round(sum(all_bscores_g[b.id]) / len(all_bscores_g[b.id]), 1)
+                 if all_bscores_g.get(b.id) else None for b in blocks]
+    ws.append(["Среднее", "", n_all] + all_bavgs + [all_avg])
+    ri = ws.max_row
+    for cell in ws[ri]:
+        cell.font = Font(bold=True)
+    ws.cell(ri, TOTAL_COL).fill = _score_fill(all_avg)
+    ws.cell(ri, TOTAL_COL).alignment = _CENTER
+    for i, bv in enumerate(all_bavgs):
+        c = ws.cell(ri, BLOCK_START + i)
+        c.fill = _score_fill(bv)
+        c.alignment = _CENTER
+
+    _autowidth(ws)
+
+
+def _qolio_sheet_detailed(wb, evs, selected_cl):
+    """По критериям: строка = оценка, пара столбцов на критерий (1/0/пусто + комментарий). Формат export(23)."""
+    ws = wb.create_sheet("По критериям")
+    blocks = list(selected_cl.blocks)
+    all_criteria = [crit for b in blocks for crit in b.criteria]
+
+    meta_h = ["Оператор", "Отдел", "Сделка", "Дата звонка", "Дата оценки"]
+    crit_h = [col for crit in all_criteria for col in (crit.text, "Комментарий")]
+    tail_h = ["Итог", "Общий комментарий"]
+
+    _write_header(ws, meta_h + crit_h + tail_h)
+    ws.row_dimensions[1].height = 60
+
+    CRIT_START = len(meta_h) + 1
+    TOTAL_COL = CRIT_START + len(crit_h)
+
+    for ev in evs:
+        item_map = {it.criterion_id: it for it in ev.items}
+        row: list = [
+            ev.operator_name,
+            ev.department or "",
+            ev.deal_id or "",
+            _fmt_date_qolio(ev.eval_date),
+            _fmt_date_qolio(ev.updated_at or ev.created_at),
+        ]
+        for crit in all_criteria:
+            item = item_map.get(crit.id)
+            if item is None or item.value == "na":
+                row.extend([None, (item.comment if item else "") or ""])
+            elif item.value == "yes":
+                row.extend([1, item.comment or ""])
+            else:
+                row.extend([0, item.comment or ""])
+        total_frac = round(ev.total_score / 100, 3) if ev.total_score is not None else None
+        row.extend([total_frac, ev.general_comment or ""])
+        ws.append(row)
+
+        ri = ws.max_row
+        for i, crit in enumerate(all_criteria):
+            item = item_map.get(crit.id)
+            c = ws.cell(ri, CRIT_START + i * 2)
+            c.alignment = _CENTER
+            if item:
+                if item.value == "yes":  c.fill = _FILL_YES
+                elif item.value == "no": c.fill = _FILL_NO
+                else:                    c.fill = _FILL_NA
+        ws.cell(ri, TOTAL_COL).fill = _score_fill(ev.total_score)
+        ws.cell(ri, TOTAL_COL).alignment = _CENTER
+
+    _autowidth(ws)
+    for i in range(len(all_criteria)):
+        ws.column_dimensions[get_column_letter(CRIT_START + i * 2 + 1)].width = 30
+    ws.column_dimensions[get_column_letter(TOTAL_COL + 1)].width = 42
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("")
@@ -522,6 +687,83 @@ def export_reports_xlsx(
     buf.seek(0)
 
     fname = f"callreview_reports_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get("/qolio")
+def export_qolio_xlsx(
+    checklist_id: str = "",
+    department: str = "",
+    operators: list[str] = QueryParam(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import date as date_type
+    from collections import Counter
+
+    filters = Filters(
+        department=department,
+        operators=operators,
+        date_from=date_type.fromisoformat(date_from) if date_from else None,
+        date_to=date_type.fromisoformat(date_to) if date_to else None,
+        checklist_id=int(checklist_id) if checklist_id else None,
+    )
+
+    evaluations = fetch_evaluations(db, filters)
+
+    def _empty_response(msg: str):
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Нет данных"
+        ws["A1"] = msg
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="qolio_export_empty.xlsx"'},
+        )
+
+    if not evaluations:
+        return _empty_response("Нет данных по выбранным фильтрам")
+
+    cl_counter = Counter(ev.checklist_id for ev in evaluations if ev.checklist_id)
+    selected_cl = None
+    if filters.checklist_id:
+        selected_cl = next(
+            (ev.checklist for ev in evaluations
+             if ev.checklist_id == filters.checklist_id and ev.checklist), None
+        )
+    if not selected_cl and cl_counter:
+        top_id = cl_counter.most_common(1)[0][0]
+        selected_cl = next(
+            (ev.checklist for ev in evaluations
+             if ev.checklist_id == top_id and ev.checklist), None
+        )
+
+    if not selected_cl:
+        return _empty_response("Не удалось определить чек-лист")
+
+    evs_for_cl = [ev for ev in evaluations if ev.checklist_id == selected_cl.id]
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    _qolio_sheet_by_call(wb, evs_for_cl, selected_cl)
+    _qolio_sheet_by_operator(wb, evs_for_cl, selected_cl)
+    _qolio_sheet_detailed(wb, evs_for_cl, selected_cl)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    fname = f"qolio_export_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

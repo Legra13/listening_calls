@@ -77,9 +77,23 @@
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-funnel me-1"></i>Применить
           </button>
-          <a id="export-reports-btn" href="#" class="btn btn-outline-success btn-sm">
-            <i class="bi bi-file-earmark-excel me-1"></i>Скачать xlsx
-          </a>
+          <div class="dropdown">
+            <button class="btn btn-outline-success btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-file-earmark-excel me-1"></i>Скачать xlsx
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a id="export-qolio-btn" href="#" class="dropdown-item small">
+                  <i class="bi bi-file-earmark-excel me-1 text-success"></i>Формат Qolio
+                </a>
+              </li>
+              <li>
+                <a id="export-reports-btn" href="#" class="dropdown-item small">
+                  <i class="bi bi-file-earmark-bar-graph me-1"></i>Аналитика (CallReview)
+                </a>
+              </li>
+            </ul>
+          </div>
           <a href="/reports" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-x-lg me-1"></i>Сбросить
           </a>
@@ -650,23 +664,27 @@ if (corrCtx && tab2Data.length > 0) {
   });
 }
 
-// Кнопка экспорта отчётов — передаём текущие фильтры включая множественных операторов
+// Кнопки экспорта — передаём текущие фильтры включая множественных операторов
 (function() {
-  function buildExportUrl() {
+  function buildExportUrl(path) {
     const form = document.getElementById('filterForm');
-    if (!form) return '/export/reports';
+    if (!form) return path;
     const params = new URLSearchParams();
     new FormData(form).forEach((v, k) => { if (v) params.append(k, v); });
-    return '/export/reports?' + params.toString();
+    return path + '?' + params.toString();
   }
 
-  const btn = document.getElementById('export-reports-btn');
-  if (btn) {
-    // Обновляем href при изменении любого фильтра
-    function updateHref() { btn.href = buildExportUrl(); }
-    updateHref();
-    document.getElementById('filterForm').addEventListener('change', updateHref);
-    document.getElementById('filterForm').addEventListener('input', updateHref);
+  function updateHrefs() {
+    const qolioBtn = document.getElementById('export-qolio-btn');
+    const reportsBtn = document.getElementById('export-reports-btn');
+    if (qolioBtn) qolioBtn.href = buildExportUrl('/export/qolio');
+    if (reportsBtn) reportsBtn.href = buildExportUrl('/export/reports');
+  }
+  updateHrefs();
+  const filterForm = document.getElementById('filterForm');
+  if (filterForm) {
+    filterForm.addEventListener('change', updateHrefs);
+    filterForm.addEventListener('input', updateHrefs);
   }
 })();
 </script>
