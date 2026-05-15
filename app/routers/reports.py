@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
-from app.models import Checklist, User
+from app.models import Block, Checklist, Criterion, User
 from app.deps import get_current_user, pop_flash
 from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
@@ -155,7 +155,7 @@ def reports_employee(
         selected_cl = (
             db.query(Checklist)
             .options(
-                joinedload(Checklist.blocks).joinedload("criteria")
+                joinedload(Checklist.blocks).joinedload(Block.criteria)
             )
             .filter(Checklist.id == filters.checklist_id)
             .first()
