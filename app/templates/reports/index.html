@@ -2,8 +2,18 @@
 {% block title %}Отчёты — Оценка звонков{% endblock %}
 
 {% block content %}
-<div class="mb-3">
+<div class="d-flex align-items-center justify-content-between mb-3">
   <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h5>
+</div>
+
+{# ── Выбор вида отчёта ────────────────────────────────────────────────────── #}
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <a href="/reports" class="btn btn-sm btn-primary">
+    <i class="bi bi-grid-3x3 me-1"></i>Общие показатели
+  </a>
+  <a href="/reports/employee" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-people me-1"></i>Результаты сотрудников
+  </a>
 </div>
 
 {# ── Фильтры ─────────────────────────────────────────────────────────────── #}

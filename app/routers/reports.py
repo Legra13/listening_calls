@@ -11,6 +11,8 @@ from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
     prep_rows, compute_kpi, compute_tab1, compute_tab2, compute_tab3,
     heat_style, delta_style,
+    EmployeeFilters, get_employee_report_options, fetch_evaluations_employee,
+    compute_employee_report,
 )
 
 router = APIRouter(prefix="/reports")
@@ -108,4 +110,77 @@ def reports_index(
         "tab2_json": tab2_json,
         "heat_style": heat_style,
         "delta_style": delta_style,
+    })
+
+
+@router.get("/employee")
+def reports_employee(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    call_date_from: str = "",
+    call_date_to: str = "",
+    rated_date_from: str = "",
+    rated_date_to: str = "",
+    evaluator_id: str = "",
+    stage: str = "",
+    display_mode: str = "pct",
+    group_mode: str = "groups",
+    show_comments: str = "on",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    options = get_employee_report_options(db)
+
+    filters = EmployeeFilters(
+        departments=departments,
+        operators=operators,
+        call_date_from=date.fromisoformat(call_date_from) if call_date_from else None,
+        call_date_to=date.fromisoformat(call_date_to) if call_date_to else None,
+        rated_date_from=date.fromisoformat(rated_date_from) if rated_date_from else None,
+        rated_date_to=date.fromisoformat(rated_date_to) if rated_date_to else None,
+        checklist_id=int(checklist_id) if checklist_id else None,
+        evaluator_id=int(evaluator_id) if evaluator_id else None,
+        stage=stage or None,
+        display_mode=display_mode if display_mode in ("pct", "pts") else "pct",
+        group_mode=group_mode if group_mode in ("groups", "criteria") else "groups",
+        show_comments=(show_comments == "on"),
+    )
+
+    report = None
+    selected_cl = None
+
+    if filters.checklist_id:
+        selected_cl = (
+            db.query(Checklist)
+            .options(
+                joinedload(Checklist.blocks).joinedload("criteria")
+            )
+            .filter(Checklist.id == filters.checklist_id)
+            .first()
+        )
+
+    applied = bool(
+        filters.checklist_id or filters.operators or filters.departments
+        or filters.call_date_from or filters.call_date_to
+        or filters.rated_date_from or filters.rated_date_to
+    )
+
+    if applied and selected_cl:
+        evaluations = fetch_evaluations_employee(db, filters)
+        if evaluations:
+            report = compute_employee_report(evaluations, selected_cl, filters.group_mode)
+
+    return templates.TemplateResponse("reports/employee.html", {
+        "request": request,
+        "current_user": current_user,
+        "flash": pop_flash(request),
+        "options": options,
+        "filters": filters,
+        "selected_cl": selected_cl,
+        "report": report,
+        "applied": applied,
+        "heat_style": heat_style,
+        "BITRIX_BASE_URL": "https://entera.bitrix24.ru",
     })

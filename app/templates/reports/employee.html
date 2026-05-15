@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+{% block title %}Результаты сотрудников — Отчёты{% endblock %}
+
+{% block styles %}
+<style>
+  .crit-yes  { background: #dcfce7; color: #166534; }
+  .crit-no   { background: #fee2e2; color: #991b1b; }
+  .crit-na   { background: #f1f5f9; color: #94a3b8; }
+  .hm-th-group { background: #f8fafc; font-size: 0.72rem; text-align: center; border-bottom: 1px solid #dee2e6; }
+  .sticky-col { position: sticky; left: 0; background: #fff; z-index: 2; }
+  .sticky-col-light { position: sticky; left: 0; background: #f8f9fa; z-index: 2; }
+  .val-pct { }
+  .val-pts { display: none; }
+  .pts-mode .val-pct { display: none; }
+  .pts-mode .val-pts { display: inline; }
+  .filter-badge { font-size: 0.72rem; }
+  .deal-link { font-size: 0.75rem; white-space: nowrap; }
+  .comment-cell { max-width: 180px; font-size: 0.73rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h5>
+</div>
+
+{# ── Выбор вида отчёта ────────────────────────────────────────────────────── #}
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <a href="/reports" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-grid-3x3 me-1"></i>Общие показатели
+  </a>
+  <a href="/reports/employee" class="btn btn-sm btn-primary">
+    <i class="bi bi-people me-1"></i>Результаты сотрудников
+  </a>
+</div>
+
+{# ── Фильтры ─────────────────────────────────────────────────────────────── #}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-2 d-flex align-items-center justify-content-between"
+       style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+    <span class="fw-semibold small"><i class="bi bi-sliders me-2"></i>Настройки отчёта</span>
+    <i class="bi bi-chevron-down text-muted" id="filterChevron"></i>
+  </div>
+  <div class="collapse show" id="filterCollapse">
+    <div class="card-body py-3">
+      <form method="get" id="empFilterForm">
+
+        {# Строка 1: Чек-лист + Период звонка + Период оценки #}
+        <div class="row g-2 align-items-end mb-2">
+
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">
+              Форма оценки (чек-лист) <span class="text-danger">*</span>
+            </label>
+            <select name="checklist_id" class="form-select form-select-sm" required>
+              <option value="">— Выберите чек-лист —</option>
+              {% for cl in options.checklists %}
+              <option value="{{ cl.id }}"
+                {% if filters.checklist_id and filters.checklist_id == cl.id %}selected{% endif %}>
+                {{ cl.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Период звонка — с</label>
+            <input type="date" name="call_date_from" class="form-control form-control-sm"
+                   value="{{ filters.call_date_from.isoformat() if filters.call_date_from else '' }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">По</label>
+            <input type="date" name="call_date_to" class="form-control form-control-sm"
+                   value="{{ filters.call_date_to.isoformat() if filters.call_date_to else '' }}">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Период оценки — с</label>
+            <input type="date" name="rated_date_from" class="form-control form-control-sm"
+                   value="{{ filters.rated_date_from.isoformat() if filters.rated_date_from else '' }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">По</label>
+            <input type="date" name="rated_date_to" class="form-control form-control-sm"
+                   value="{{ filters.rated_date_to.isoformat() if filters.rated_date_to else '' }}">
+          </div>
+
+        </div>
+
+        {# Строка 2: Отдел + Сотрудники + Оценивал + Стадия #}
+        <div class="row g-2 align-items-start mb-2">
+
+          {# Отдел — чекбоксы #}
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Отдел</label>
+            <div style="max-height:110px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+              {% for dept in options.departments %}
+              <div class="form-check py-0">
+                <input class="form-check-input" type="checkbox" name="departments"
+                       value="{{ dept }}" id="dept_{{ loop.index }}"
+                       {% if dept in filters.departments %}checked{% endif %}>
+                <label class="form-check-label" for="dept_{{ loop.index }}">{{ dept }}</label>
+              </div>
+              {% endfor %}
+              {% if not options.departments %}
+              <div class="text-muted small py-1">Нет данных</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Сотрудники #}
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">
+              Оцениваемые сотрудники
+              <span id="empOpCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+            </label>
+            <div id="empOpList"
+                 style="max-height:110px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+              {% for op in options.operators %}
+              <div class="form-check py-0 emp-op-item" data-dept="{{ op.dept }}">
+                <input class="form-check-input emp-op-cb" type="checkbox" name="operators"
+                       value="{{ op.name }}" id="emp_op_{{ loop.index }}"
+                       {% if op.name in filters.operators %}checked{% endif %}>
+                <label class="form-check-label" for="emp_op_{{ loop.index }}">
+                  {{ op.name }} <span class="text-muted">({{ op.count }})</span>
+                </label>
+              </div>
+              {% endfor %}
+              {% if not options.operators %}
+              <div class="text-muted small py-1">Нет данных</div>
+              {% endif %}
+            </div>
+            <div class="form-text" style="font-size:0.7rem">Можно выбрать несколько</div>
+          </div>
+
+          {# Оценивал #}
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Оценивал</label>
+            <select name="evaluator_id" class="form-select form-select-sm">
+              <option value="">— Все —</option>
+              {% for ev_user in options.evaluators %}
+              <option value="{{ ev_user.id }}"
+                {% if filters.evaluator_id and filters.evaluator_id == ev_user.id %}selected{% endif %}>
+                {{ ev_user.full_name or ev_user.username }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Стадия сделки #}
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Стадия сделки</label>
+            <select name="stage" class="form-select form-select-sm">
+              <option value="">— Все стадии —</option>
+              {% for s in options.stages %}
+              <option value="{{ s }}" {% if filters.stage == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+        </div>
+
+        {# Строка 3: Отображение + Разрез + Комментарии + Кнопки #}
+        <div class="row g-2 align-items-end">
+
+          <div class="col-auto">
+            <label class="form-label small fw-semibold mb-1">Отображение</label>
+            <div class="btn-group btn-group-sm d-flex" role="group">
+              <input type="radio" class="btn-check" name="display_mode" id="dm_pct" value="pct"
+                     {% if filters.display_mode == 'pct' %}checked{% endif %}>
+              <label class="btn btn-outline-secondary" for="dm_pct">%</label>
+              <input type="radio" class="btn-check" name="display_mode" id="dm_pts" value="pts"
+                     {% if filters.display_mode == 'pts' %}checked{% endif %}>
+              <label class="btn btn-outline-secondary" for="dm_pts">Баллы</label>
+            </div>
+          </div>
+
+          <div class="col-auto">
+            <label class="form-label small fw-semibold mb-1">Критерии</label>
+            <div class="btn-group btn-group-sm d-flex" role="group">
+              <input type="radio" class="btn-check" name="group_mode" id="gm_groups" value="groups"
+                     {% if filters.group_mode == 'groups' %}checked{% endif %}>
+              <label class="btn btn-outline-secondary" for="gm_groups">Группы</label>
+              <input type="radio" class="btn-check" name="group_mode" id="gm_crit" value="criteria"
+                     {% if filters.group_mode == 'criteria' %}checked{% endif %}>
+              <label class="btn btn-outline-secondary" for="gm_crit">Детально</label>
+            </div>
+          </div>
+
+          <div class="col-auto d-flex align-items-end">
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" name="show_comments" id="showComments"
+                     value="on" {% if filters.show_comments %}checked{% endif %}>
+              <label class="form-check-label small" for="showComments">Показывать комментарии</label>
+            </div>
+          </div>
+
+          <div class="col d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-funnel me-1"></i>Применить
+            </button>
+            <a href="/reports/employee" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-x-lg me-1"></i>Сбросить
+            </a>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Результаты ───────────────────────────────────────────────────────────── #}
+
+{% if not applied %}
+<div class="card shadow-sm">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-people display-6 mb-2 d-block"></i>
+    <p class="mb-1">Выберите <strong>чек-лист</strong> и нажмите <strong>Применить</strong></p>
+    <p class="small mb-0">Можно дополнительно задать период, отдел, сотрудников.</p>
+  </div>
+</div>
+
+{% elif not selected_cl %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle me-2"></i>Чек-лист не найден или не активен. Выберите другой.
+</div>
+
+{% elif not report %}
+<div class="alert alert-secondary">
+  <i class="bi bi-search me-2"></i>Нет оценок по выбранным фильтрам.
+</div>
+
+{% else %}
+
+{# Чип с именем чек-листа + счётчик оценок #}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+  <span class="badge bg-primary">{{ selected_cl.name }}</span>
+  <span class="badge bg-secondary">{{ report.team_count }} оценок</span>
+  {% if report.team_won_pct is not none %}
+  <span class="badge bg-success">{{ report.team_won_pct }}% успешных</span>
+  {% endif %}
+  {% if filters.stage %}
+  <span class="badge bg-info text-dark">Стадия: {{ filters.stage }}</span>
+  {% endif %}
+</div>
+
+{# ── 1. Сводная тепловая карта по сотрудникам ─────────────────────────────── #}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-2 d-flex align-items-center justify-content-between">
+    <span class="fw-semibold small"><i class="bi bi-grid-3x3 me-2"></i>Средние значения по сотрудникам</span>
+    <div class="btn-group btn-group-sm" role="group" id="summaryToggle">
+      <button type="button" class="btn btn-outline-secondary {% if filters.display_mode == 'pct' %}active{% endif %}" data-mode="pct">%</button>
+      <button type="button" class="btn btn-outline-secondary {% if filters.display_mode == 'pts' %}active{% endif %}" data-mode="pts">Баллы</button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive" id="summaryTable">
+      <table class="table table-bordered table-sm mb-0 text-center align-middle {% if filters.display_mode == 'pts' %}pts-mode{% endif %}"
+             id="summaryHeatmap" style="font-size:0.8rem">
+        <thead class="table-light">
+          {% if report.column_groups %}
+          {# Строка групп (для режима «детально») #}
+          <tr>
+            <th class="hm-th-group text-start" style="min-width:140px"></th>
+            {% for grp in report.column_groups %}
+            <th class="hm-th-group" colspan="{{ grp.count }}" title="{{ grp.name }}">
+              {{ grp.name | truncate(24, True, '…') }}
+              <br><span class="text-muted fw-normal" style="font-size:0.65rem">вес {{ grp.weight }}</span>
+            </th>
+            {% endfor %}
+            <th class="hm-th-group" rowspan="1">Итог</th>
+            <th class="hm-th-group" rowspan="1">N</th>
+            <th class="hm-th-group" rowspan="1">% успех</th>
+          </tr>
+          {% endif %}
+          <tr>
+            <th class="text-start" style="min-width:140px;white-space:nowrap">Сотрудник</th>
+            {% for col in report.columns %}
+            <th style="min-width:{% if report.column_groups %}65{% else %}85{% endif %}px;white-space:normal;line-height:1.2"
+                title="{{ col.label }}">
+              {{ col.label_short }}
+              {% if not report.column_groups %}
+              <br><span class="text-muted fw-normal" style="font-size:0.7rem">вес {{ col.weight }}</span>
+              {% endif %}
+            </th>
+            {% endfor %}
+            {% if not report.column_groups %}
+            <th style="min-width:60px">Итог</th>
+            <th style="min-width:40px">N</th>
+            <th style="min-width:70px">% успех</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.summary_rows %}
+          <tr>
+            <td class="text-start fw-semibold sticky-col">{{ row.name }}</td>
+            {% for cell in row.cells %}
+            <td style="{{ heat_style(cell.pct) | safe }}">
+              <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
+              <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
+            </td>
+            {% endfor %}
+            <td class="fw-semibold">
+              {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-muted">{{ row.count }}</td>
+            <td class="fw-semibold text-success">
+              {% if row.won_pct is not none %}{{ "%.1f"|format(row.won_pct) }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {# Команда #}
+          <tr class="table-light">
+            <td class="text-start fw-bold sticky-col-light">Команда</td>
+            {% for cell in report.team_cells %}
+            <td style="{{ heat_style(cell.pct) | safe }};font-weight:600">
+              <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
+              <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
+            </td>
+            {% endfor %}
+            <td class="fw-bold">
+              {% if report.team_total is not none %}{{ "%.1f"|format(report.team_total) }}%{% else %}—{% endif %}
+            </td>
+            <td class="text-muted fw-semibold">{{ report.team_count }}</td>
+            <td class="fw-bold text-success">
+              {% if report.team_won_pct is not none %}{{ "%.1f"|format(report.team_won_pct) }}%{% else %}—{% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── 2. Детальная таблица (по каждой оценке) ────────────────────────────────── #}
+<div class="card shadow-sm">
+  <div class="card-header py-2 d-flex align-items-center justify-content-between">
+    <span class="fw-semibold small"><i class="bi bi-table me-2"></i>Детализация по оценкам</span>
+    <span class="text-muted small">{{ report.team_count }} записей</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm table-hover mb-0 align-middle {% if filters.display_mode == 'pts' %}pts-mode{% endif %}"
+             id="detailTable" style="font-size:0.78rem">
+        <thead class="table-light">
+          {% if report.column_groups %}
+          <tr>
+            <th class="hm-th-group" colspan="6"></th>
+            {% for grp in report.column_groups %}
+            <th class="hm-th-group" colspan="{{ grp.count }}" title="{{ grp.name }}">
+              {{ grp.name | truncate(20, True, '…') }}
+            </th>
+            {% endfor %}
+            <th class="hm-th-group" colspan="{% if filters.show_comments %}4{% else %}3{% endif %}"></th>
+          </tr>
+          {% endif %}
+          <tr>
+            <th style="min-width:35px">#</th>
+            <th style="min-width:130px;white-space:nowrap">Сотрудник</th>
+            <th style="min-width:90px">Отдел</th>
+            <th style="min-width:90px;white-space:nowrap">Дата звонка</th>
+            <th style="min-width:90px;white-space:nowrap">Дата оценки</th>
+            <th style="min-width:100px;white-space:nowrap">Оценивал</th>
+            {% for col in report.columns %}
+            <th style="min-width:{% if report.column_groups %}60{% else %}80{% endif %}px;white-space:normal;line-height:1.2"
+                title="{{ col.label }}">
+              {{ col.label_short }}
+            </th>
+            {% endfor %}
+            <th style="min-width:60px">Итог</th>
+            <th style="min-width:110px">Сделка</th>
+            <th style="min-width:100px;white-space:nowrap">Стадия</th>
+            {% if filters.show_comments %}
+            <th style="min-width:160px">Комментарий</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.detail_rows %}
+          {% set ev = row.ev %}
+          <tr>
+            <td class="text-muted">{{ loop.index }}</td>
+            <td class="fw-semibold sticky-col">
+              <a href="/evaluations/{{ ev.id }}" class="text-decoration-none text-dark">{{ ev.operator_name }}</a>
+            </td>
+            <td class="text-muted small">{{ ev.department or '—' }}</td>
+            <td class="text-muted small">
+              {{ ev.eval_date.strftime('%d.%m.%Y') if ev.eval_date else '—' }}
+            </td>
+            <td class="text-muted small">
+              {{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y') if (ev.updated_at or ev.created_at) else '—' }}
+            </td>
+            <td class="text-muted small">
+              {{ ev.evaluator.full_name if ev.evaluator and ev.evaluator.full_name
+                 else (ev.evaluator.username if ev.evaluator else '—') }}
+            </td>
+
+            {# Ячейки по блокам или критериям #}
+            {% if report.group_mode == 'criteria' %}
+              {% for cell in row.cells %}
+              <td class="text-center p-1
+                {% if cell.value == 'yes' %}crit-yes
+                {% elif cell.value == 'no' %}crit-no
+                {% else %}crit-na{% endif %}"
+                {% if cell.comment %}title="{{ cell.comment }}"{% endif %}>
+                {% if cell.value == 'yes' %}<i class="bi bi-check2"></i>
+                {% elif cell.value == 'no' %}<i class="bi bi-x"></i>
+                {% else %}<span style="font-size:0.65rem">н/п</span>{% endif %}
+              </td>
+              {% endfor %}
+            {% else %}
+              {% for cell in row.cells %}
+              <td class="text-center" style="{{ heat_style(cell.pct) | safe }}">
+                <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
+                <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
+              </td>
+              {% endfor %}
+            {% endif %}
+
+            <td class="text-center fw-semibold" style="{{ heat_style(row.total) | safe }}">
+              {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
+            </td>
+
+            {# Ссылка на сделку #}
+            <td>
+              {% if ev.deal_id %}
+              <a href="{{ BITRIX_BASE_URL }}/crm/deal/details/{{ ev.deal_id }}/" target="_blank"
+                 class="deal-link text-decoration-none">
+                <i class="bi bi-box-arrow-up-right me-1"></i>#{{ ev.deal_id }}
+              </a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            {# Стадия #}
+            <td class="small">
+              {% if ev.stage == 'сделка успешна' %}
+                <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Успех</span>
+              {% elif ev.stage == 'не смог продать' %}
+                <span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i>Провал</span>
+              {% elif ev.stage %}
+                <span class="text-muted">{{ ev.stage }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            {# Комментарий #}
+            {% if filters.show_comments %}
+            <td class="comment-cell text-muted" title="{{ ev.general_comment or '' }}">
+              {{ ev.general_comment or '—' }}
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}{# /report #}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Фильтр по отделу — скрываем сотрудников других отделов */
+document.querySelectorAll('input[name="departments"]').forEach(cb => {
+  cb.addEventListener('change', filterOpsByDept);
+});
+function filterOpsByDept() {
+  const checked = Array.from(document.querySelectorAll('input[name="departments"]:checked')).map(c => c.value);
+  document.querySelectorAll('.emp-op-item').forEach(item => {
+    const match = !checked.length || checked.includes(item.dataset.dept);
+    item.style.display = match ? '' : 'none';
+    if (!match) item.querySelector('input').checked = false;
+  });
+  updateOpCount();
+}
+function updateOpCount() {
+  const n = document.querySelectorAll('.emp-op-cb:checked').length;
+  const el = document.getElementById('empOpCount');
+  if (el) el.textContent = n > 0 ? `(выбрано: ${n})` : '';
+}
+document.querySelectorAll('.emp-op-cb').forEach(cb => cb.addEventListener('change', updateOpCount));
+updateOpCount();
+
+/* Переключатель % / Баллы в сводной таблице */
+document.querySelectorAll('#summaryToggle button').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const mode = this.dataset.mode;
+    document.querySelectorAll('#summaryToggle button').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    const tbl = document.getElementById('summaryHeatmap');
+    if (tbl) tbl.classList.toggle('pts-mode', mode === 'pts');
+    const det = document.getElementById('detailTable');
+    if (det) det.classList.toggle('pts-mode', mode === 'pts');
+  });
+});
+
+/* Свернуть / развернуть фильтры */
+const filterCollapse = document.getElementById('filterCollapse');
+const filterChevron = document.getElementById('filterChevron');
+if (filterCollapse && filterChevron) {
+  filterCollapse.addEventListener('hide.bs.collapse', () => filterChevron.style.transform = 'rotate(-90deg)');
+  filterCollapse.addEventListener('show.bs.collapse', () => filterChevron.style.transform = '');
+}
+</script>
+{% endblock %}
