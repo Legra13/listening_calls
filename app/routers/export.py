@@ -962,13 +962,9 @@ def export_employee_xlsx(
     wb.save(buf)
     buf.seek(0)
 
-    from urllib.parse import quote
-    cl_name = selected_cl.name.replace(" ", "_")[:30]
-    fname = f"employees_{cl_name}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
-    fname_ascii = f"employees_report_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
-    encoded = quote(fname, safe="")
+    fname = f"employees_report_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=\"{fname_ascii}\"; filename*=UTF-8''{encoded}"},
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
