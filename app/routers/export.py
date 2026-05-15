@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
     prep_rows, compute_kpi, compute_tab1, compute_tab2, compute_tab3,
+    EmployeeFilters, fetch_evaluations_employee, compute_employee_report,
 )
 from app.database import get_db
 from app.deps import get_current_user
@@ -768,4 +769,206 @@ def export_qolio_xlsx(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+# ── Экспорт отчёта «Результаты сотрудников» ──────────────────────────────────
+
+def _emp_sheet_summary(wb, report: dict, display_mode: str):
+    ws = wb.create_sheet("Сводная по сотрудникам")
+    cols = report["columns"]
+    col_labels = [c["label"] for c in cols]
+    _write_header(ws, ["Сотрудник"] + col_labels + ["Итог %", "N", "% успех"])
+
+    DATA_START = 2
+    TOTAL_COL = len(cols) + 2
+
+    use_pts = display_mode == "pts"
+
+    for row in report["summary_rows"]:
+        vals = [
+            (c["pts"] if use_pts else c["pct"])
+            for c in row["cells"]
+        ]
+        ws.append([row["name"]] + vals + [row["total"], row["count"], row["won_pct"]])
+        ri = ws.max_row
+        ws.cell(ri, TOTAL_COL).fill = _score_fill(row["total"])
+        ws.cell(ri, TOTAL_COL).alignment = _CENTER
+        for i, c in enumerate(row["cells"]):
+            cell = ws.cell(ri, DATA_START + i)
+            cell.fill = _score_fill(c["pct"])
+            cell.alignment = _CENTER
+
+    # Строка команды
+    team_vals = [
+        (c["pts"] if use_pts else c["pct"])
+        for c in report["team_cells"]
+    ]
+    ws.append(["Команда"] + team_vals + [report["team_total"], report["team_count"], report["team_won_pct"]])
+    ri = ws.max_row
+    for cell in ws[ri]:
+        cell.font = Font(bold=True)
+    ws.cell(ri, TOTAL_COL).fill = _score_fill(report["team_total"])
+    ws.cell(ri, TOTAL_COL).alignment = _CENTER
+    for i, c in enumerate(report["team_cells"]):
+        cell = ws.cell(ri, DATA_START + i)
+        cell.fill = _score_fill(c["pct"])
+        cell.alignment = _CENTER
+
+    _autowidth(ws)
+
+
+def _emp_sheet_detail(wb, report: dict, display_mode: str):
+    ws = wb.create_sheet("По оценкам")
+    cols = report["columns"]
+    group_mode = report["group_mode"]
+    use_pts = display_mode == "pts"
+
+    if group_mode == "criteria":
+        col_labels = [f"{c['label']}" for c in cols]
+    else:
+        col_labels = [c["label"] for c in cols]
+
+    headers = [
+        "Сотрудник", "Отдел", "Дата звонка", "Дата оценки",
+        "Оценивал",
+    ] + col_labels + ["Итог %", "Сделка", "Стадия", "Комментарий"]
+    _write_header(ws, headers)
+    ws.row_dimensions[1].height = 40
+
+    TOTAL_COL = len(col_labels) + 6
+    COL_START = 6
+
+    for row in report["detail_rows"]:
+        ev = row["ev"]
+        evaluator_name = ""
+        if ev.evaluator:
+            evaluator_name = ev.evaluator.full_name or ev.evaluator.username
+
+        if group_mode == "criteria":
+            cell_vals = []
+            for cell in row["cells"]:
+                v = cell["value"]
+                cell_vals.append(
+                    "Да" if v == "yes" else ("Нет" if v == "no" else ("Н/П" if v == "na" else "—"))
+                )
+        else:
+            cell_vals = [
+                (c["pts"] if use_pts else c["pct"])
+                for c in row["cells"]
+            ]
+
+        ws.append([
+            ev.operator_name,
+            ev.department or "—",
+            ev.eval_date.strftime("%d.%m.%Y") if ev.eval_date else "—",
+            (ev.updated_at or ev.created_at).strftime("%d.%m.%Y") if (ev.updated_at or ev.created_at) else "—",
+            evaluator_name or "—",
+        ] + cell_vals + [
+            row["total"],
+            f"#{ev.deal_id}" if ev.deal_id else "—",
+            _result_label(ev.stage),
+            ev.general_comment or "",
+        ])
+
+        ri = ws.max_row
+        ws.cell(ri, TOTAL_COL).fill = _score_fill(row["total"])
+        ws.cell(ri, TOTAL_COL).alignment = _CENTER
+
+        for i, (cell_data, raw_cell) in enumerate(zip(row["cells"], row["cells"])):
+            c = ws.cell(ri, COL_START + i)
+            c.alignment = _CENTER
+            if group_mode == "criteria":
+                v = cell_data["value"]
+                if v == "yes":   c.fill = _FILL_YES
+                elif v == "no":  c.fill = _FILL_NO
+                elif v == "na":  c.fill = _FILL_NA
+            else:
+                c.fill = _score_fill(cell_data["pct"])
+
+    _autowidth(ws)
+    ws.column_dimensions[get_column_letter(len(headers))].width = 42
+
+
+@router.get("/employee")
+def export_employee_xlsx(
+    checklist_id: str = "",
+    departments: list[str] = QueryParam(default=[]),
+    operators: list[str] = QueryParam(default=[]),
+    call_date_from: str = "",
+    call_date_to: str = "",
+    rated_date_from: str = "",
+    rated_date_to: str = "",
+    evaluator_id: str = "",
+    stage: str = "",
+    display_mode: str = "pct",
+    group_mode: str = "groups",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import date as date_type
+
+    def _empty(msg: str):
+        wb2 = openpyxl.Workbook()
+        wb2.active.title = "Нет данных"
+        wb2.active["A1"] = msg
+        buf2 = io.BytesIO()
+        wb2.save(buf2)
+        buf2.seek(0)
+        return StreamingResponse(
+            buf2,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="employee_report_empty.xlsx"'},
+        )
+
+    if not checklist_id:
+        return _empty("Чек-лист не выбран")
+
+    selected_cl = (
+        db.query(Checklist)
+        .options(joinedload(Checklist.blocks).joinedload(BlockModel.criteria))
+        .filter(Checklist.id == int(checklist_id))
+        .first()
+    )
+    if not selected_cl:
+        return _empty("Чек-лист не найден")
+
+    filters = EmployeeFilters(
+        departments=departments,
+        operators=operators,
+        call_date_from=date_type.fromisoformat(call_date_from) if call_date_from else None,
+        call_date_to=date_type.fromisoformat(call_date_to) if call_date_to else None,
+        rated_date_from=date_type.fromisoformat(rated_date_from) if rated_date_from else None,
+        rated_date_to=date_type.fromisoformat(rated_date_to) if rated_date_to else None,
+        checklist_id=int(checklist_id),
+        evaluator_id=int(evaluator_id) if evaluator_id else None,
+        stage=stage or None,
+        group_mode=group_mode if group_mode in ("groups", "criteria") else "groups",
+        display_mode=display_mode if display_mode in ("pct", "pts") else "pct",
+    )
+
+    evaluations = fetch_evaluations_employee(db, filters)
+    if not evaluations:
+        return _empty("Нет данных по выбранным фильтрам")
+
+    report = compute_employee_report(evaluations, selected_cl, filters.group_mode)
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    _emp_sheet_summary(wb, report, display_mode)
+    _emp_sheet_detail(wb, report, display_mode)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    from urllib.parse import quote
+    cl_name = selected_cl.name.replace(" ", "_")[:30]
+    fname = f"employees_{cl_name}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    fname_ascii = f"employees_report_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    encoded = quote(fname, safe="")
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=\"{fname_ascii}\"; filename*=UTF-8''{encoded}"},
     )

@@ -337,130 +337,133 @@
   </div>
 </div>
 
-{# ── 2. Детальная таблица (по каждой оценке) ────────────────────────────────── #}
+{# ── 2. Скачать / Предпросмотр ────────────────────────────────────────────── #}
 <div class="card shadow-sm">
-  <div class="card-header py-2 d-flex align-items-center justify-content-between">
-    <span class="fw-semibold small"><i class="bi bi-table me-2"></i>Детализация по оценкам</span>
-    <span class="text-muted small">{{ report.team_count }} записей</span>
-  </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-bordered table-sm table-hover mb-0 align-middle {% if filters.display_mode == 'pts' %}pts-mode{% endif %}"
-             id="detailTable" style="font-size:0.78rem">
-        <thead class="table-light">
-          {% if report.column_groups %}
-          <tr>
-            <th class="hm-th-group" colspan="6"></th>
-            {% for grp in report.column_groups %}
-            <th class="hm-th-group" colspan="{{ grp.count }}" title="{{ grp.name }}">
-              {{ grp.name | truncate(20, True, '…') }}
-            </th>
-            {% endfor %}
-            <th class="hm-th-group" colspan="{% if filters.show_comments %}4{% else %}3{% endif %}"></th>
-          </tr>
-          {% endif %}
-          <tr>
-            <th style="min-width:35px">#</th>
-            <th style="min-width:130px;white-space:nowrap">Сотрудник</th>
-            <th style="min-width:90px">Отдел</th>
-            <th style="min-width:90px;white-space:nowrap">Дата звонка</th>
-            <th style="min-width:90px;white-space:nowrap">Дата оценки</th>
-            <th style="min-width:100px;white-space:nowrap">Оценивал</th>
-            {% for col in report.columns %}
-            <th style="min-width:{% if report.column_groups %}60{% else %}80{% endif %}px;white-space:normal;line-height:1.2"
-                title="{{ col.label }}">
-              {{ col.label_short }}
-            </th>
-            {% endfor %}
-            <th style="min-width:60px">Итог</th>
-            <th style="min-width:110px">Сделка</th>
-            <th style="min-width:100px;white-space:nowrap">Стадия</th>
-            {% if filters.show_comments %}
-            <th style="min-width:160px">Комментарий</th>
-            {% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in report.detail_rows %}
-          {% set ev = row.ev %}
-          <tr>
-            <td class="text-muted">{{ loop.index }}</td>
-            <td class="fw-semibold sticky-col">
-              <a href="/evaluations/{{ ev.id }}" class="text-decoration-none text-dark">{{ ev.operator_name }}</a>
-            </td>
-            <td class="text-muted small">{{ ev.department or '—' }}</td>
-            <td class="text-muted small">
-              {{ ev.eval_date.strftime('%d.%m.%Y') if ev.eval_date else '—' }}
-            </td>
-            <td class="text-muted small">
-              {{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y') if (ev.updated_at or ev.created_at) else '—' }}
-            </td>
-            <td class="text-muted small">
-              {{ ev.evaluator.full_name if ev.evaluator and ev.evaluator.full_name
-                 else (ev.evaluator.username if ev.evaluator else '—') }}
-            </td>
+  <div class="card-body py-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <div class="fw-semibold mb-1"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Детализация по оценкам</div>
+        <div class="text-muted small">{{ report.team_count }} записей · 2 листа: «Сводная по сотрудникам» и «По оценкам»</div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                data-bs-toggle="collapse" data-bs-target="#previewCollapse" id="previewToggle">
+          <i class="bi bi-eye me-1"></i>Предпросмотр
+        </button>
+        <a id="downloadBtn" href="#" class="btn btn-success btn-sm">
+          <i class="bi bi-download me-1"></i>Скачать xlsx
+        </a>
+      </div>
+    </div>
 
-            {# Ячейки по блокам или критериям #}
-            {% if report.group_mode == 'criteria' %}
-              {% for cell in row.cells %}
-              <td class="text-center p-1
-                {% if cell.value == 'yes' %}crit-yes
-                {% elif cell.value == 'no' %}crit-no
-                {% else %}crit-na{% endif %}"
-                {% if cell.comment %}title="{{ cell.comment }}"{% endif %}>
-                {% if cell.value == 'yes' %}<i class="bi bi-check2"></i>
-                {% elif cell.value == 'no' %}<i class="bi bi-x"></i>
-                {% else %}<span style="font-size:0.65rem">н/п</span>{% endif %}
-              </td>
+    {# Предпросмотр — первые 10 строк #}
+    <div class="collapse mt-3" id="previewCollapse">
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm table-hover mb-0 align-middle {% if filters.display_mode == 'pts' %}pts-mode{% endif %}"
+               id="detailTable" style="font-size:0.78rem">
+          <thead class="table-light">
+            {% if report.column_groups %}
+            <tr>
+              <th class="hm-th-group" colspan="6"></th>
+              {% for grp in report.column_groups %}
+              <th class="hm-th-group" colspan="{{ grp.count }}" title="{{ grp.name }}">
+                {{ grp.name | truncate(20, True, '…') }}
+              </th>
               {% endfor %}
-            {% else %}
-              {% for cell in row.cells %}
-              <td class="text-center" style="{{ heat_style(cell.pct) | safe }}">
-                <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
-                <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
-              </td>
+              <th class="hm-th-group" colspan="{% if filters.show_comments %}4{% else %}3{% endif %}"></th>
+            </tr>
+            {% endif %}
+            <tr>
+              <th style="min-width:35px">#</th>
+              <th style="min-width:130px;white-space:nowrap">Сотрудник</th>
+              <th style="min-width:90px">Отдел</th>
+              <th style="min-width:90px;white-space:nowrap">Дата звонка</th>
+              <th style="min-width:90px;white-space:nowrap">Дата оценки</th>
+              <th style="min-width:100px;white-space:nowrap">Оценивал</th>
+              {% for col in report.columns %}
+              <th style="min-width:{% if report.column_groups %}60{% else %}80{% endif %}px;white-space:normal;line-height:1.2"
+                  title="{{ col.label }}">{{ col.label_short }}</th>
               {% endfor %}
-            {% endif %}
-
-            <td class="text-center fw-semibold" style="{{ heat_style(row.total) | safe }}">
-              {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
-            </td>
-
-            {# Ссылка на сделку #}
-            <td>
-              {% if ev.deal_id %}
-              <a href="{{ BITRIX_BASE_URL }}/crm/deal/details/{{ ev.deal_id }}/" target="_blank"
-                 class="deal-link text-decoration-none">
-                <i class="bi bi-box-arrow-up-right me-1"></i>#{{ ev.deal_id }}
-              </a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <th style="min-width:60px">Итог</th>
+              <th style="min-width:110px">Сделка</th>
+              <th style="min-width:100px;white-space:nowrap">Стадия</th>
+              {% if filters.show_comments %}
+              <th style="min-width:160px">Комментарий</th>
               {% endif %}
-            </td>
-
-            {# Стадия #}
-            <td class="small">
-              {% if ev.stage == 'сделка успешна' %}
-                <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Успех</span>
-              {% elif ev.stage == 'не смог продать' %}
-                <span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i>Провал</span>
-              {% elif ev.stage %}
-                <span class="text-muted">{{ ev.stage }}</span>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.detail_rows[:10] %}
+            {% set ev = row.ev %}
+            <tr>
+              <td class="text-muted">{{ loop.index }}</td>
+              <td class="fw-semibold sticky-col">
+                <a href="/evaluations/{{ ev.id }}" class="text-decoration-none text-dark">{{ ev.operator_name }}</a>
+              </td>
+              <td class="text-muted small">{{ ev.department or '—' }}</td>
+              <td class="text-muted small">{{ ev.eval_date.strftime('%d.%m.%Y') if ev.eval_date else '—' }}</td>
+              <td class="text-muted small">
+                {{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y') if (ev.updated_at or ev.created_at) else '—' }}
+              </td>
+              <td class="text-muted small">
+                {{ ev.evaluator.full_name if ev.evaluator and ev.evaluator.full_name
+                   else (ev.evaluator.username if ev.evaluator else '—') }}
+              </td>
+              {% if report.group_mode == 'criteria' %}
+                {% for cell in row.cells %}
+                <td class="text-center p-1
+                  {% if cell.value == 'yes' %}crit-yes
+                  {% elif cell.value == 'no' %}crit-no
+                  {% else %}crit-na{% endif %}"
+                  {% if cell.comment %}title="{{ cell.comment }}"{% endif %}>
+                  {% if cell.value == 'yes' %}<i class="bi bi-check2"></i>
+                  {% elif cell.value == 'no' %}<i class="bi bi-x"></i>
+                  {% else %}<span style="font-size:0.65rem">н/п</span>{% endif %}
+                </td>
+                {% endfor %}
               {% else %}
-                <span class="text-muted">—</span>
+                {% for cell in row.cells %}
+                <td class="text-center" style="{{ heat_style(cell.pct) | safe }}">
+                  <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
+                  <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
+                </td>
+                {% endfor %}
               {% endif %}
-            </td>
-
-            {# Комментарий #}
-            {% if filters.show_comments %}
-            <td class="comment-cell text-muted" title="{{ ev.general_comment or '' }}">
-              {{ ev.general_comment or '—' }}
-            </td>
-            {% endif %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              <td class="text-center fw-semibold" style="{{ heat_style(row.total) | safe }}">
+                {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
+              </td>
+              <td>
+                {% if ev.deal_id %}
+                <a href="{{ BITRIX_BASE_URL }}/crm/deal/details/{{ ev.deal_id }}/" target="_blank"
+                   class="deal-link text-decoration-none">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>#{{ ev.deal_id }}
+                </a>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td class="small">
+                {% if ev.stage == 'сделка успешна' %}
+                  <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Успех</span>
+                {% elif ev.stage == 'не смог продать' %}
+                  <span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i>Провал</span>
+                {% elif ev.stage %}<span class="text-muted">{{ ev.stage }}</span>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              {% if filters.show_comments %}
+              <td class="comment-cell text-muted" title="{{ ev.general_comment or '' }}">
+                {{ ev.general_comment or '—' }}
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if report.team_count > 10 %}
+      <div class="text-muted small mt-2 text-center">
+        <i class="bi bi-info-circle me-1"></i>
+        Показаны первые 10 из {{ report.team_count }} записей. Скачайте xlsx для полного списка.
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -511,6 +514,39 @@ const filterChevron = document.getElementById('filterChevron');
 if (filterCollapse && filterChevron) {
   filterCollapse.addEventListener('hide.bs.collapse', () => filterChevron.style.transform = 'rotate(-90deg)');
   filterCollapse.addEventListener('show.bs.collapse', () => filterChevron.style.transform = '');
+}
+
+/* Кнопка скачать — собираем параметры из формы */
+(function () {
+  function buildDownloadUrl() {
+    const form = document.getElementById('empFilterForm');
+    if (!form) return '/export/employee';
+    const params = new URLSearchParams();
+    new FormData(form).forEach((v, k) => { if (v) params.append(k, v); });
+    return '/export/employee?' + params.toString();
+  }
+  function updateDownload() {
+    const btn = document.getElementById('downloadBtn');
+    if (btn) btn.href = buildDownloadUrl();
+  }
+  updateDownload();
+  const form = document.getElementById('empFilterForm');
+  if (form) {
+    form.addEventListener('change', updateDownload);
+    form.addEventListener('input', updateDownload);
+  }
+})();
+
+/* Текст кнопки предпросмотра */
+const previewCollapse = document.getElementById('previewCollapse');
+const previewToggle = document.getElementById('previewToggle');
+if (previewCollapse && previewToggle) {
+  previewCollapse.addEventListener('show.bs.collapse', () => {
+    previewToggle.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Скрыть';
+  });
+  previewCollapse.addEventListener('hide.bs.collapse', () => {
+    previewToggle.innerHTML = '<i class="bi bi-eye me-1"></i>Предпросмотр';
+  });
 }
 </script>
 {% endblock %}
