@@ -260,37 +260,40 @@
              id="summaryHeatmap" style="font-size:0.8rem">
         <thead class="table-light">
           {% if report.column_groups %}
-          {# Строка групп (для режима «детально») #}
+          {# Строка групп (режим «детально»): Сотрудник + Итог/N/% rowspan=2 #}
           <tr>
-            <th class="hm-th-group text-start" style="min-width:140px"></th>
+            <th class="hm-th-group text-start" style="min-width:140px" rowspan="2">Сотрудник</th>
             {% for grp in report.column_groups %}
             <th class="hm-th-group" colspan="{{ grp.count }}" title="{{ grp.name }}">
               {{ grp.name | truncate(24, True, '…') }}
               <br><span class="text-muted fw-normal" style="font-size:0.65rem">вес {{ grp.weight }}</span>
             </th>
             {% endfor %}
-            <th class="hm-th-group" rowspan="1">Итог</th>
-            <th class="hm-th-group" rowspan="1">N</th>
-            <th class="hm-th-group" rowspan="1">% успех</th>
+            <th class="hm-th-group" rowspan="2" style="min-width:60px">Итог</th>
+            <th class="hm-th-group" rowspan="2" style="min-width:40px">N</th>
+            <th class="hm-th-group" rowspan="2" style="min-width:70px">% успех</th>
           </tr>
-          {% endif %}
+          <tr>
+            {% for col in report.columns %}
+            <th style="min-width:65px;white-space:normal;line-height:1.2" title="{{ col.label }}">
+              {{ col.label_short }}
+            </th>
+            {% endfor %}
+          </tr>
+          {% else %}
           <tr>
             <th class="text-start" style="min-width:140px;white-space:nowrap">Сотрудник</th>
             {% for col in report.columns %}
-            <th style="min-width:{% if report.column_groups %}65{% else %}85{% endif %}px;white-space:normal;line-height:1.2"
-                title="{{ col.label }}">
+            <th style="min-width:85px;white-space:normal;line-height:1.2" title="{{ col.label }}">
               {{ col.label_short }}
-              {% if not report.column_groups %}
               <br><span class="text-muted fw-normal" style="font-size:0.7rem">вес {{ col.weight }}</span>
-              {% endif %}
             </th>
             {% endfor %}
-            {% if not report.column_groups %}
             <th style="min-width:60px">Итог</th>
             <th style="min-width:40px">N</th>
             <th style="min-width:70px">% успех</th>
-            {% endif %}
           </tr>
+          {% endif %}
         </thead>
         <tbody>
           {% for row in report.summary_rows %}
