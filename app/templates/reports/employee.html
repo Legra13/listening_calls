@@ -113,6 +113,7 @@
             <label class="form-label small fw-semibold mb-1">
               Оцениваемые сотрудники
               <span id="empOpCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+              <button type="button" id="selectAllOps" class="btn btn-link btn-sm p-0 ms-2 fw-normal" style="font-size:0.7rem">Выбрать всех</button>
             </label>
             <div id="empOpList"
                  style="max-height:110px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
@@ -494,6 +495,14 @@ function updateOpCount() {
 }
 document.querySelectorAll('.emp-op-cb').forEach(cb => cb.addEventListener('change', updateOpCount));
 updateOpCount();
+
+document.getElementById('selectAllOps')?.addEventListener('click', function () {
+  const visible = document.querySelectorAll('.emp-op-item:not([style*="display: none"]):not([style*="display:none"]) .emp-op-cb');
+  const allChecked = Array.from(visible).every(cb => cb.checked);
+  visible.forEach(cb => cb.checked = !allChecked);
+  this.textContent = allChecked ? 'Выбрать всех' : 'Снять всех';
+  updateOpCount();
+});
 
 /* Переключатель % / Баллы в сводной таблице */
 document.querySelectorAll('#summaryToggle button').forEach(btn => {
