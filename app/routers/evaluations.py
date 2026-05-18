@@ -186,6 +186,9 @@ async def evaluations_create(
 
     checklist_id = int(form.get("checklist_id", 0))
     deal_id = (form.get("deal_id") or "").strip()
+    m = re.search(r'/deal/details/(\d+)', deal_id)
+    if m:
+        deal_id = m.group(1)
     operator_name = (form.get("operator_name") or "").strip()
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
@@ -379,6 +382,9 @@ async def evaluations_update(
 
     form = await request.form()
     deal_id = (form.get("deal_id") or "").strip()
+    m = re.search(r'/deal/details/(\d+)', deal_id)
+    if m:
+        deal_id = m.group(1)
     operator_name = (form.get("operator_name") or "").strip()
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
