@@ -115,7 +115,7 @@
 
 {% block scripts %}
 <script>
-const SELECTED_DEPTS = {{ selected_depts | tojson }};
+const SELECTED_DEPTS = {{ (selected_depts if selected_depts is defined else []) | tojson }};
 
 fetch('/api/departments', {credentials: 'same-origin'})
   .then(r => r.json())

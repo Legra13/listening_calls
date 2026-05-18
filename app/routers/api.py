@@ -170,9 +170,10 @@ def deploy(request: Request):
         raise HTTPException(status_code=403)
 
     def run():
-        import time
-        time.sleep(1)  # дать время отправить ответ
-        subprocess.run(["git", "-C", "/var/www/call-eval", "pull", "origin", "main"],
+        import time, os
+        time.sleep(1)
+        app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        subprocess.run(["git", "-C", app_dir, "pull", "origin", "main"],
                        capture_output=True)
         subprocess.run(["sudo", "systemctl", "restart", "call-eval"],
                        capture_output=True)

@@ -38,12 +38,23 @@ def startup():
 
 def _run_migrations():
     from app.database import engine
+    from sqlalchemy import text
     with engine.connect() as conn:
-        cols = [r[1] for r in conn.execute(
-            __import__("sqlalchemy").text("PRAGMA table_info(checklists)")
-        ).fetchall()]
-        if "departments" not in cols:
-            conn.execute(__import__("sqlalchemy").text(
-                "ALTER TABLE checklists ADD COLUMN departments VARCHAR(500)"
-            ))
-            conn.commit()
+        def _cols(table):
+            return [r[1] for r in conn.execute(text(f"PRAGMA table_info({table})")).fetchall()]
+
+        cl_cols = _cols("checklists")
+        if "departments" not in cl_cols:
+            conn.execute(text("ALTER TABLE checklists ADD COLUMN departments VARCHAR(500)"))
+
+        usr_cols = _cols("users")
+        if "full_name" not in usr_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN full_name VARCHAR(200)"))
+
+        ev_cols = _cols("evaluations")
+        if "status" not in ev_cols:
+            conn.execute(text("ALTER TABLE evaluations ADD COLUMN status VARCHAR(20) DEFAULT 'published'"))
+        if "updated_at" not in ev_cols:
+            conn.execute(text("ALTER TABLE evaluations ADD COLUMN updated_at DATETIME"))
+
+        conn.commit()
