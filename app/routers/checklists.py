@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, User
 from app.deps import get_current_user, flash, pop_flash
-from app.bitrix import get_departments
 
 router = APIRouter(prefix="/checklists")
 templates = Jinja2Templates(directory="app/templates")
@@ -109,7 +108,6 @@ def checklists_settings(
         "request": request,
         "current_user": current_user,
         "cl": cl,
-        "all_departments": get_departments(),
         "selected_depts": selected_depts,
         "flash": pop_flash(request),
     })

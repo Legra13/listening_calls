@@ -80,25 +80,10 @@
 
       <hr class="my-4">
       <p class="fw-semibold mb-3">Привязка к отделам</p>
-      <p class="text-muted small mb-2">Если выбраны отделы, форма будет доступна только сотрудникам этих отделов. Оставьте пустым — доступна всем.</p>
+      <p class="text-muted small mb-2">Оставьте пустым — чек-лист доступен для всех отделов.</p>
 
-      <div class="mb-4">
-        {% if all_departments %}
-          <div class="row g-1">
-          {% for dept in all_departments %}
-            <div class="col-md-6">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="departments"
-                       id="dept_{{ loop.index }}" value="{{ dept.name }}"
-                       {% if dept.name in selected_depts %}checked{% endif %}>
-                <label class="form-check-label small" for="dept_{{ loop.index }}">{{ dept.name }}</label>
-              </div>
-            </div>
-          {% endfor %}
-          </div>
-        {% else %}
-          <p class="text-muted small fst-italic">Отделы не загружены (нет подключения к Битрикс24)</p>
-        {% endif %}
+      <div class="mb-4" id="dept-checkboxes">
+        <span class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>Загрузка отделов...</span>
       </div>
 
       <hr class="my-4">
@@ -127,4 +112,37 @@
     </form>
   </div>
 </div>
+
+{% block scripts %}
+<script>
+const SELECTED_DEPTS = {{ selected_depts | tojson }};
+
+fetch('/api/departments', {credentials: 'same-origin'})
+  .then(r => r.json())
+  .then(depts => {
+    const container = document.getElementById('dept-checkboxes');
+    if (!depts.length) {
+      container.innerHTML = '<p class="text-muted small fst-italic">Отделы не загружены</p>';
+      return;
+    }
+    let html = '<div class="row g-1">';
+    depts.forEach((d, i) => {
+      const checked = SELECTED_DEPTS.includes(d.name) ? 'checked' : '';
+      html += `<div class="col-md-6">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="departments"
+                 id="dept_${i}" value="${d.name}" ${checked}>
+          <label class="form-check-label small" for="dept_${i}">${d.name}</label>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  })
+  .catch(() => {
+    document.getElementById('dept-checkboxes').innerHTML =
+      '<p class="text-muted small fst-italic">Ошибка загрузки отделов</p>';
+  });
+</script>
+{% endblock %}
 {% endblock %}
