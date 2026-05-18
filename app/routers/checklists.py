@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, User
 from app.deps import get_current_user, flash, pop_flash
+from app.bitrix import get_departments
 
 router = APIRouter(prefix="/checklists")
 templates = Jinja2Templates(directory="app/templates")
@@ -103,16 +104,19 @@ def checklists_settings(
     current_user: User = Depends(get_current_user),
 ):
     cl = _get_checklist_or_404(db, checklist_id)
+    selected_depts = [d.strip() for d in (cl.departments or "").split(",") if d.strip()]
     return templates.TemplateResponse("checklists/settings.html", {
         "request": request,
         "current_user": current_user,
         "cl": cl,
+        "all_departments": get_departments(),
+        "selected_depts": selected_depts,
         "flash": pop_flash(request),
     })
 
 
 @router.post("/{checklist_id}/settings")
-def checklists_settings_update(
+async def checklists_settings_update(
     checklist_id: int,
     request: Request,
     name: str = Form(...),
@@ -123,6 +127,8 @@ def checklists_settings_update(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    form = await request.form()
+    dept_values = form.getlist("departments")
     cl = _get_checklist_or_404(db, checklist_id)
     cl.name = name
     cl.description = description or None
@@ -130,6 +136,7 @@ def checklists_settings_update(
     cl.is_active = (cl.status == "active")
     cl.autofail_enabled = bool(autofail_enabled)
     cl.calculation = calculation if calculation in ("weighted", "average") else "average"
+    cl.departments = ",".join(dept_values) if dept_values else None
     db.commit()
     flash(request, "Настройки сохранены")
     return RedirectResponse(f"/checklists/{checklist_id}/edit", status_code=302)

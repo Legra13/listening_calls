@@ -32,6 +32,8 @@ class Checklist(Base):
     autofail_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     # calculation: "weighted" | "average"
     calculation: Mapped[str] = mapped_column(String(20), default="weighted")
+    # departments: comma-separated department names this checklist is assigned to
+    departments: Mapped[str | None] = mapped_column(String(500))
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
