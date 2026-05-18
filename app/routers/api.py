@@ -1,6 +1,9 @@
 """
 Внутреннее API для HTMX-запросов.
 """
+import os
+import subprocess
+import threading
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -155,3 +158,24 @@ def _deal_response(
         "stage_label": badge_label,
         "from_cache": from_cache,
     })
+
+
+DEPLOY_SECRET = os.getenv("DEPLOY_SECRET", "entera-deploy-2025")
+
+@router.post("/deploy")
+def deploy(request: Request):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+
+    def run():
+        import time
+        time.sleep(1)  # дать время отправить ответ
+        subprocess.run(["git", "-C", "/var/www/call-eval", "pull", "origin", "main"],
+                       capture_output=True)
+        subprocess.run(["sudo", "systemctl", "restart", "call-eval"],
+                       capture_output=True)
+
+    threading.Thread(target=run, daemon=True).start()
+    return {"status": "deploying"}
