@@ -37,14 +37,13 @@ def startup():
 
 
 def _run_migrations():
-    import sqlite3
-    from app.database import DATABASE_URL
-    db_path = DATABASE_URL.replace("sqlite:///", "")
-    conn = sqlite3.connect(db_path)
-    try:
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(checklists)").fetchall()]
+    from app.database import engine
+    with engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(
+            __import__("sqlalchemy").text("PRAGMA table_info(checklists)")
+        ).fetchall()]
         if "departments" not in cols:
-            conn.execute("ALTER TABLE checklists ADD COLUMN departments VARCHAR(500)")
+            conn.execute(__import__("sqlalchemy").text(
+                "ALTER TABLE checklists ADD COLUMN departments VARCHAR(500)"
+            ))
             conn.commit()
-    finally:
-        conn.close()
