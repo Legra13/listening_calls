@@ -33,3 +33,18 @@ def root():
 @app.on_event("startup")
 def startup():
     create_tables()
+    _run_migrations()
+
+
+def _run_migrations():
+    import sqlite3
+    from app.database import DATABASE_URL
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(checklists)").fetchall()]
+        if "departments" not in cols:
+            conn.execute("ALTER TABLE checklists ADD COLUMN departments VARCHAR(500)")
+            conn.commit()
+    finally:
+        conn.close()
