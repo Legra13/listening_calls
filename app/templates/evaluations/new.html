@@ -531,7 +531,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const dateEl = document.getElementById('eval_date');
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
 
-  loadDepartments('').then(() => loadEmployees('', ''));
+  const clDept = {{ (selected_cl.departments.split(',')[0].strip() if selected_cl.departments else '')|tojson }};
+  loadDepartments(clDept).then(() => loadEmployees(clDept, ''));
 
   document.getElementById('dept_select').addEventListener('change', function() {
     loadEmployees(this.value, '');
