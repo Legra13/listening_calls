@@ -78,6 +78,8 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
 .toggle-comment { background: none; border: none; padding: 2px 5px; cursor: pointer; color: #adb5bd; border-radius: 4px; line-height: 1; transition: color 0.1s; }
 .toggle-comment:hover { color: #6c757d; }
 .toggle-comment.has-comments { color: #374151; }
+/* Auto-resize comment textarea */
+.comment-ta { resize: none; overflow: hidden; min-height: 31px; line-height: 1.45; padding-top: 5px; padding-bottom: 5px; }
 .flag-dot-sm { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-left: 1px; }
 
 /* ── Block ─────────────────────────────────────────────── */
@@ -261,8 +263,9 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
               <input type="text" id="comment-time-{{ crit.id }}"
                      class="form-control form-control-sm" style="width:70px" placeholder="0:00"
                      title="Тайминг (мм:сс)">
-              <input type="text" id="comment-input-{{ crit.id }}"
-                     class="form-control form-control-sm flex-grow-1" placeholder="Комментарий...">
+              <textarea id="comment-input-{{ crit.id }}"
+                        class="form-control form-control-sm flex-grow-1 comment-ta"
+                        rows="1" placeholder="Комментарий..."></textarea>
               <button type="button" class="btn btn-sm btn-outline-secondary" style="white-space:nowrap"
                       id="comment-add-btn-{{ crit.id }}"
                       onclick="addOrUpdateComment({{ crit.id }})">+ Добавить</button>
@@ -374,6 +377,7 @@ function addOrUpdateComment(critId) {
     comments[critId].push({text, flag, time});
   }
   textEl.value = '';
+  textEl.style.height = 'auto';
   if (timeEl) timeEl.value = '';
   document.querySelectorAll(`#flag-selector-${critId} .flag-btn-sel`).forEach(b => b.classList.remove('active'));
   document.querySelector(`#flag-selector-${critId} .flag-btn-sel[data-flag=""]`)?.classList.add('active');
@@ -596,16 +600,25 @@ document.addEventListener('DOMContentLoaded', function() {
   // Tooltips
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
-  // Enter in time/text inputs → add comment
-  document.querySelectorAll('[id^="comment-input-"]').forEach(inp => {
-    inp.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
+  // Enter in comment textarea → add comment; auto-resize on input
+  document.querySelectorAll('[id^="comment-input-"]').forEach(ta => {
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const critId = parseInt(this.id.replace('comment-input-', ''));
         addOrUpdateComment(critId);
       }
     });
+    ta.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
   });
+
+  function resetCommentTa(critId) {
+    const ta = document.getElementById('comment-input-' + critId);
+    if (ta) { ta.style.height = 'auto'; }
+  }
 
   updateProgress();
 
