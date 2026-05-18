@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
@@ -61,11 +62,18 @@ def evaluations_index(
     department: str = "",
     date_from: str = "",
     date_to: str = "",
+    deal_id: str = "",
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Extract deal ID from Bitrix24 URL if pasted
+    if deal_id:
+        m = re.search(r'/deal/details/(\d+)', deal_id)
+        if m:
+            deal_id = m.group(1)
+
     q = (
         db.query(Evaluation)
         .options(joinedload(Evaluation.checklist), joinedload(Evaluation.evaluator))
@@ -80,6 +88,8 @@ def evaluations_index(
         q = q.filter(Evaluation.stage == stage)
     if department:
         q = q.filter(Evaluation.department == department)
+    if deal_id:
+        q = q.filter(Evaluation.deal_id == deal_id)
     if date_from:
         try:
             q = q.filter(Evaluation.eval_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
@@ -130,6 +140,7 @@ def evaluations_index(
             "department": department,
             "date_from": date_from,
             "date_to": date_to,
+            "deal_id": deal_id,
         },
         "sort": sort,
         "dir": dir,

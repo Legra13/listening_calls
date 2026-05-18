@@ -66,6 +66,12 @@
     </select>
   </div>
   <div class="col-auto">
+    <label class="form-label form-label-sm mb-1 text-muted">Сделка</label>
+    <input type="text" name="deal_id" class="form-control form-control-sm"
+           placeholder="ID или ссылка"
+           value="{{ filters.deal_id }}" style="width:160px">
+  </div>
+  <div class="col-auto">
     <label class="form-label form-label-sm mb-1 text-muted">Дата с</label>
     <input type="date" name="date_from" class="form-control form-control-sm"
            value="{{ filters.date_from }}" style="width:140px">
@@ -85,7 +91,7 @@
 
 {% macro sort_url(col) %}
   {% set new_dir = "asc" if (sort == col and dir == "desc") else "desc" %}
-  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&eval_status={{ filters.eval_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}
+  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&eval_status={{ filters.eval_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&deal_id={{ filters.deal_id }}
 {%- endmacro %}
 
 {% macro sort_icon(col) %}
