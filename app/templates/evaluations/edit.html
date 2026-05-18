@@ -450,9 +450,17 @@ async function loadEmployees(department, preselectEmp) {
   } catch(e) {}
 }
 
+function extractDealId(raw) {
+  const m = raw.match(/\/deal\/details\/(\d+)/);
+  if (m) return m[1];
+  return raw;
+}
+
 function lookupDeal() {
-  const id = document.getElementById('deal_id_input').value.trim();
-  if (!id) return;
+  const raw = document.getElementById('deal_id_input').value.trim();
+  if (!raw) return;
+  const id = extractDealId(raw);
+  if (id !== raw) document.getElementById('deal_id_input').value = id;
   const status = document.getElementById('deal-lookup-status');
   status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Ищу...</span>';
   fetch('/api/deal/' + encodeURIComponent(id), {credentials:'same-origin'})

@@ -170,7 +170,7 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
           <div class="col-md-3">
             <label class="form-label small fw-semibold mb-1">ID сделки Битрикс</label>
             <div class="input-group input-group-sm">
-              <input type="text" id="deal_id_input" name="deal_id" class="form-control" placeholder="12345">
+              <input type="text" id="deal_id_input" name="deal_id" class="form-control" placeholder="12345 или ссылка на сделку">
               <button type="button" class="btn btn-outline-secondary" onclick="lookupDeal()">
                 <i class="bi bi-search"></i>
               </button>
@@ -500,9 +500,19 @@ async function loadEmployees(department, preselectEmp) {
 }
 
 // ── Bitrix lookup ───────────────────────────────────────────
+function extractDealId(raw) {
+  const m = raw.match(/\/deal\/details\/(\d+)/);
+  if (m) return m[1];
+  const digits = raw.match(/^\d+$/);
+  if (digits) return raw;
+  return raw;
+}
+
 function lookupDeal() {
-  const id = document.getElementById('deal_id_input').value.trim();
-  if (!id) return;
+  const raw = document.getElementById('deal_id_input').value.trim();
+  if (!raw) return;
+  const id = extractDealId(raw);
+  if (id !== raw) document.getElementById('deal_id_input').value = id;
   const status = document.getElementById('deal-lookup-status');
   status.innerHTML = '<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Ищу...</span>';
   fetch('/api/deal/' + encodeURIComponent(id), {credentials:'same-origin'})
