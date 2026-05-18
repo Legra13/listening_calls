@@ -104,7 +104,8 @@
               </li>
             </ul>
           </div>
-          <a href="/reports" class="btn btn-outline-secondary btn-sm">
+          <a href="/reports" class="btn btn-outline-secondary btn-sm"
+             onclick="sessionStorage.removeItem('general_report_qs')">
             <i class="bi bi-x-lg me-1"></i>Сбросить
           </a>
         </div>
@@ -695,6 +696,17 @@ if (corrCtx && tab2Data.length > 0) {
   if (filterForm) {
     filterForm.addEventListener('change', updateHrefs);
     filterForm.addEventListener('input', updateHrefs);
+  }
+})();
+
+// Сохраняем фильтры в sessionStorage и восстанавливаем при переходе без параметров
+(function() {
+  const KEY = 'general_report_qs';
+  if (window.location.search) {
+    sessionStorage.setItem(KEY, window.location.search);
+  } else {
+    const saved = sessionStorage.getItem(KEY);
+    if (saved) { window.location.replace(window.location.pathname + saved); }
   }
 })();
 </script>

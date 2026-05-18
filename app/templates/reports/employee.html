@@ -200,7 +200,8 @@
             <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-funnel me-1"></i>Применить
             </button>
-            <a href="/reports/employee" class="btn btn-outline-secondary btn-sm">
+            <a href="/reports/employee" class="btn btn-outline-secondary btn-sm"
+               onclick="sessionStorage.removeItem('employee_report_qs')">
               <i class="bi bi-x-lg me-1"></i>Сбросить
             </a>
           </div>
@@ -557,5 +558,16 @@ if (previewCollapse && previewToggle) {
     previewToggle.innerHTML = '<i class="bi bi-eye me-1"></i>Предпросмотр';
   });
 }
+
+// Сохраняем фильтры в sessionStorage и восстанавливаем при переходе без параметров
+(function() {
+  const KEY = 'employee_report_qs';
+  if (window.location.search) {
+    sessionStorage.setItem(KEY, window.location.search);
+  } else {
+    const saved = sessionStorage.getItem(KEY);
+    if (saved) { window.location.replace(window.location.pathname + saved); }
+  }
+})();
 </script>
 {% endblock %}
