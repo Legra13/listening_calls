@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -135,6 +136,7 @@ async def checklists_settings_update(
     cl.autofail_enabled = bool(autofail_enabled)
     cl.calculation = calculation if calculation in ("weighted", "average") else "average"
     cl.departments = ",".join(dept_values) if dept_values else None
+    cl.updated_at = datetime.utcnow()
     db.commit()
     flash(request, "Настройки сохранены")
     return RedirectResponse(f"/checklists/{checklist_id}/edit", status_code=302)
@@ -168,6 +170,7 @@ def checklists_update(
     cl = _get_checklist_or_404(db, checklist_id)
     cl.name = name
     cl.description = description or None
+    cl.updated_at = datetime.utcnow()
     db.commit()
     flash(request, "Сохранено")
     return _redirect_edit(checklist_id)
@@ -183,6 +186,7 @@ def checklists_publish(
     cl = _get_checklist_or_404(db, checklist_id)
     cl.status = "active"
     cl.is_active = True
+    cl.updated_at = datetime.utcnow()
     db.commit()
     flash(request, f"Форма оценки «{cl.name}» опубликована")
     return _redirect_edit(checklist_id)
@@ -224,6 +228,7 @@ def checklists_archive(
         cl.status = "archived"
         cl.is_active = False
         msg = f"Форма оценки «{cl.name}» архивирована"
+    cl.updated_at = datetime.utcnow()
     db.commit()
     flash(request, msg)
     return RedirectResponse("/checklists", status_code=302)

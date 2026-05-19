@@ -13,7 +13,22 @@
 </nav>
 
 <h5 class="mb-1">Настройки формы оценки</h5>
-<p class="text-muted small mb-4">Вы сможете изменить данные настройки в любое время.</p>
+<p class="text-muted small mb-3">Вы сможете изменить данные настройки в любое время.</p>
+
+<div class="text-muted small mb-4 d-flex flex-wrap gap-3">
+  <span>
+    <i class="bi bi-person me-1"></i>Создал:
+    <strong class="text-body">{{ cl.created_by_user.full_name or cl.created_by_user.username if cl.created_by_user else "—" }}</strong>
+  </span>
+  <span>
+    <i class="bi bi-calendar me-1"></i>Создано:
+    <strong class="text-body">{{ cl.created_at.strftime("%d.%m.%Y %H:%M") if cl.created_at else "—" }}</strong>
+  </span>
+  <span>
+    <i class="bi bi-pencil me-1"></i>Изменено:
+    <strong class="text-body">{{ cl.updated_at.strftime("%d.%m.%Y %H:%M") if cl.updated_at else "—" }}</strong>
+  </span>
+</div>
 
 <div class="row">
   <div class="col-lg-6">

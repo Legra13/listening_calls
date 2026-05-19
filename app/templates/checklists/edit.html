@@ -32,6 +32,13 @@
         · <span class="text-danger fw-semibold">Автофейл включён</span>
       {% endif %}
     </div>
+    <div class="text-muted small mt-1">
+      Создал: <strong class="text-body">{{ cl.created_by_user.full_name or cl.created_by_user.username if cl.created_by_user else "—" }}</strong>
+      · Создано: <strong class="text-body">{{ cl.created_at.strftime("%d.%m.%Y %H:%M") if cl.created_at else "—" }}</strong>
+      {% if cl.updated_at %}
+        · Изменено: <strong class="text-body">{{ cl.updated_at.strftime("%d.%m.%Y %H:%M") }}</strong>
+      {% endif %}
+    </div>
   </div>
 
   <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3">
