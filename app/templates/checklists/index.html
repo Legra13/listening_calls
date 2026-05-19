@@ -11,19 +11,26 @@
 
 {% if checklists %}
 <div class="card shadow-sm">
-  <table class="table table-hover mb-0">
+  <table class="table table-hover mb-0" id="checklistsTable">
     <thead class="table-light">
       <tr>
+        <th style="width:32px"></th>
         <th>Название</th>
         <th>Блоков</th>
         <th>Критериев</th>
         <th>Статус</th>
+        <th>Создал</th>
+        <th>Создано</th>
+        <th>Изменено</th>
         <th></th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="checklistsBody">
       {% for cl in checklists %}
-      <tr class="{% if cl.status != 'active' %}text-muted{% endif %}">
+      <tr class="{% if cl.status != 'active' %}text-muted{% endif %}" data-id="{{ cl.id }}">
+        <td class="drag-handle text-muted" style="cursor:grab;user-select:none" title="Перетащить для изменения порядка">
+          <i class="bi bi-grip-vertical"></i>
+        </td>
         <td>
           <a href="/checklists/{{ cl.id }}/edit" class="text-decoration-none fw-semibold
              {% if cl.status != 'active' %}text-muted{% endif %}">
@@ -37,13 +44,6 @@
               <i class="bi bi-x-circle me-1"></i>Автофейл
             </span>
           {% endif %}
-          <div class="small text-muted mt-1">
-            <i class="bi bi-person me-1"></i>{{ cl.created_by_user.full_name or cl.created_by_user.username if cl.created_by_user else "—" }}
-            · <i class="bi bi-calendar me-1"></i>{{ cl.created_at.strftime("%d.%m.%Y") if cl.created_at else "—" }}
-            {% if cl.updated_at %}
-              · <i class="bi bi-pencil me-1"></i>{{ cl.updated_at.strftime("%d.%m.%Y") }}
-            {% endif %}
-          </div>
         </td>
         <td class="small">{{ cl.blocks | length }}</td>
         <td class="small">
@@ -58,7 +58,16 @@
             <span class="badge bg-warning-subtle text-warning">архив</span>
           {% endif %}
         </td>
-        <td class="text-end">
+        <td class="small text-muted">
+          {{ cl.created_by_user.full_name or cl.created_by_user.username if cl.created_by_user else "—" }}
+        </td>
+        <td class="small text-muted text-nowrap">
+          {{ cl.created_at.strftime("%d.%m.%Y") if cl.created_at else "—" }}
+        </td>
+        <td class="small text-muted text-nowrap">
+          {{ cl.updated_at.strftime("%d.%m.%Y") if cl.updated_at else "—" }}
+        </td>
+        <td class="text-end text-nowrap">
           <a href="/checklists/{{ cl.id }}/settings" class="btn btn-sm btn-outline-secondary"
              title="Настройки">
             <i class="bi bi-gear"></i>
@@ -93,4 +102,28 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+const tbody = document.getElementById('checklistsBody');
+if (tbody) {
+  Sortable.create(tbody, {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'table-active',
+    onEnd: function() {
+      const ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                       .map(tr => parseInt(tr.dataset.id));
+      fetch('/api/checklists/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({ids}),
+      });
+    }
+  });
+}
+</script>
 {% endblock %}

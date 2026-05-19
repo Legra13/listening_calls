@@ -7,6 +7,7 @@ import threading
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, DealCache, User
@@ -158,6 +159,22 @@ def _deal_response(
         "stage_label": badge_label,
         "from_cache": from_cache,
     })
+
+
+class ReorderPayload(BaseModel):
+    ids: list[int]
+
+
+@router.post("/checklists/reorder")
+def checklists_reorder(
+    payload: ReorderPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    for idx, cl_id in enumerate(payload.ids):
+        db.query(Checklist).filter(Checklist.id == cl_id).update({"order_index": idx})
+    db.commit()
+    return {"ok": True}
 
 
 DEPLOY_SECRET = os.getenv("DEPLOY_SECRET", "entera-deploy-2025")

@@ -48,7 +48,7 @@ def checklists_index(
 ):
     checklists = (
         db.query(Checklist)
-        .order_by(Checklist.created_at.desc())
+        .order_by(Checklist.order_index.asc(), Checklist.created_at.desc())
         .all()
     )
     return templates.TemplateResponse("checklists/index.html", {

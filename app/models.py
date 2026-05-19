@@ -37,6 +37,7 @@ class Checklist(Base):
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
 
     created_by_user: Mapped["User | None"] = relationship(back_populates="checklists")
     blocks: Mapped[list["Block"]] = relationship(
