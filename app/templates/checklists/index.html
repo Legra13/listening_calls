@@ -37,6 +37,13 @@
               <i class="bi bi-x-circle me-1"></i>Автофейл
             </span>
           {% endif %}
+          <div class="small text-muted mt-1">
+            <i class="bi bi-person me-1"></i>{{ cl.created_by_user.full_name or cl.created_by_user.username if cl.created_by_user else "—" }}
+            · <i class="bi bi-calendar me-1"></i>{{ cl.created_at.strftime("%d.%m.%Y") if cl.created_at else "—" }}
+            {% if cl.updated_at %}
+              · <i class="bi bi-pencil me-1"></i>{{ cl.updated_at.strftime("%d.%m.%Y") }}
+            {% endif %}
+          </div>
         </td>
         <td class="small">{{ cl.blocks | length }}</td>
         <td class="small">
