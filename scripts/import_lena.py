@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import html
 import re
 import sys
 import zipfile
@@ -66,7 +67,7 @@ def _read_xlsx(path: Path) -> list[dict[int, str]]:
         shared: list[str] = []
         for si in ss_root.findall(f"{{{NS_SS}}}si"):
             t_els = si.findall(f".//{{{NS_SS}}}t")
-            shared.append("".join(t.text or "" for t in t_els))
+            shared.append(html.unescape("".join(t.text or "" for t in t_els)))
 
         ws_root = ET.fromstring(z.read("xl/worksheets/sheet1.xml"))
         rows: list[dict[int, str]] = []

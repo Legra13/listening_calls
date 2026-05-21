@@ -252,6 +252,34 @@ def eval_detail(
     return evals
 
 
+@router.post("/admin/fix-quotes")
+def fix_quotes(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Заменяет &quot; на " в комментариях оценок чек-листа 9."""
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    import html as _html
+    from sqlalchemy import text
+    items = db.execute(text(
+        "SELECT ei.id, ei.comment FROM evaluation_items ei "
+        "JOIN evaluations e ON e.id = ei.evaluation_id "
+        "WHERE e.checklist_id = 9 AND ei.comment LIKE '%&quot;%'"
+    )).fetchall()
+    fixed = 0
+    for item_id, comment in items:
+        new_comment = _html.unescape(comment)
+        if new_comment != comment:
+            db.execute(text("UPDATE evaluation_items SET comment=:c WHERE id=:i"),
+                       {"c": new_comment, "i": item_id})
+            fixed += 1
+    db.commit()
+    return {"fixed": fixed}
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
