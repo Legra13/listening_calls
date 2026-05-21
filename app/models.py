@@ -130,5 +130,6 @@ class DealCache(Base):
     operator_name: Mapped[str | None] = mapped_column(String(200))
     department: Mapped[str | None] = mapped_column(String(200))
     deal_date: Mapped[datetime | None] = mapped_column(DateTime)
+    presentation_date: Mapped[datetime | None] = mapped_column(DateTime)
     stage: Mapped[str | None] = mapped_column(String(200))
     last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

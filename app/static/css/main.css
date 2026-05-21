@@ -69,22 +69,15 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none !important;
 }
 
-/* Шестигранник Entera в навбаре */
-.nav-hex {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #00B583;
-  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 800;
+/* Логотип Entera в навбаре */
+.nav-logo {
+  height: 34px;
+  width: auto;
+  display: block;
   flex-shrink: 0;
-  transition: transform 0.2s;
+  transition: opacity 0.2s;
 }
-.navbar-brand:hover .nav-hex { transform: scale(1.08); }
+.navbar-brand:hover .nav-logo { opacity: 0.85; }
 
 .navbar-nav { height: 56px; }
 

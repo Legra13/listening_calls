@@ -44,6 +44,7 @@ def deal_lookup(
             deal_date=cached.deal_date,
             stage=cached.stage or "в работе",
             from_cache=True,
+            presentation_date=cached.presentation_date,
         )
 
     # Битрикс
@@ -61,6 +62,7 @@ def deal_lookup(
         operator_name=info.operator_name,
         department=info.department,
         deal_date=info.deal_date,
+        presentation_date=info.presentation_date,
         stage=info.stage,
         last_synced_at=datetime.utcnow(),
     )
