@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models import Block, Checklist, Criterion, Evaluation, EvaluationItem, User
@@ -64,6 +65,8 @@ def evaluations_index(
     date_to: str = "",
     deal_id: str = "",
     evaluator_id: str = "",
+    rated_from: str = "",
+    rated_to: str = "",
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
@@ -94,6 +97,17 @@ def evaluations_index(
     if evaluator_id:
         try:
             q = q.filter(Evaluation.evaluator_id == int(evaluator_id))
+        except ValueError:
+            pass
+    rated_col = func.coalesce(Evaluation.updated_at, Evaluation.created_at)
+    if rated_from:
+        try:
+            q = q.filter(rated_col >= datetime.strptime(rated_from, "%Y-%m-%d").date())
+        except ValueError:
+            pass
+    if rated_to:
+        try:
+            q = q.filter(rated_col <= datetime.strptime(rated_to, "%Y-%m-%d").date())
         except ValueError:
             pass
     if date_from:
@@ -162,6 +176,8 @@ def evaluations_index(
             "date_to": date_to,
             "deal_id": deal_id,
             "evaluator_id": evaluator_id,
+            "rated_from": rated_from,
+            "rated_to": rated_to,
         },
         "sort": sort,
         "dir": dir,
