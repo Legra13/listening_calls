@@ -219,6 +219,23 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
+@router.get("/admin/db-check")
+def db_check(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    from sqlalchemy import text
+    rows = db.execute(text(
+        "SELECT checklist_id, status, COUNT(*) as cnt "
+        "FROM evaluations GROUP BY checklist_id, status ORDER BY checklist_id"
+    )).fetchall()
+    return [{"checklist_id": r[0], "status": r[1], "count": r[2]} for r in rows]
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
