@@ -57,7 +57,7 @@ def delta_style(d: float | None) -> str:
 @dataclass
 class Filters:
     operators: list[str] = field(default_factory=list)
-    department: str = ""
+    departments: list[str] = field(default_factory=list)
     date_from: date | None = None
     date_to: date | None = None
     checklist_id: int | None = None
@@ -75,8 +75,8 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
               .selectinload(Block.criteria),
         )
     )
-    if filters.department:
-        q = q.filter(Evaluation.department == filters.department)
+    if filters.departments:
+        q = q.filter(Evaluation.department.in_(filters.departments))
     if filters.operators:
         q = q.filter(Evaluation.operator_name.in_(filters.operators))
     if filters.date_from:

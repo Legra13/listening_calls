@@ -36,15 +36,27 @@
           </select>
         </div>
 
-        {# Отдел #}
+        {# Отделы (мульти) #}
         <div class="col-md-2">
-          <label class="form-label small fw-semibold mb-1">Отдел</label>
-          <select name="department" id="deptSelect" class="form-select form-select-sm">
-            <option value="">— Все отделы —</option>
+          <label class="form-label small fw-semibold mb-1">
+            Отделы
+            <span id="deptSelectedCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+          </label>
+          <div id="deptList"
+               style="max-height:120px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
             {% for d in options.departments %}
-            <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+            <div class="form-check py-0">
+              <input class="form-check-input dept-cb" type="checkbox" name="departments"
+                     value="{{ d }}" id="dept_{{ loop.index }}"
+                     {% if d in filters.departments %}checked{% endif %}>
+              <label class="form-check-label" for="dept_{{ loop.index }}">{{ d }}</label>
+            </div>
             {% endfor %}
-          </select>
+            {% if not options.departments %}
+            <div class="text-muted small py-1">Нет данных</div>
+            {% endif %}
+          </div>
+          <div class="form-text" style="font-size:0.7rem">Можно выбрать несколько</div>
         </div>
 
         {# Сотрудники — чекбоксы в скроллируемом блоке #}
@@ -167,7 +179,7 @@
     </div>
   </div>
 </div>
-{% elif filters.checklist_id or filters.operators or filters.date_from or filters.date_to %}
+{% elif filters.checklist_id or filters.operators or filters.departments or filters.date_from or filters.date_to %}
 <div class="alert alert-secondary">
   <i class="bi bi-search me-2"></i>Нет данных по выбранным фильтрам.
 </div>
@@ -182,7 +194,7 @@
       <span class="badge bg-primary">{{ cl.name }}</span>
     {% else %}
       {# ссылка на тот же URL, но с другим checklist_id #}
-      <a href="?checklist_id={{ cl.id }}{% if filters.department %}&department={{ filters.department }}{% endif %}{% for op in filters.operators %}&operators={{ op }}{% endfor %}{% if filters.date_from %}&date_from={{ filters.date_from.isoformat() }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to.isoformat() }}{% endif %}"
+      <a href="?checklist_id={{ cl.id }}{% for d in filters.departments %}&departments={{ d }}{% endfor %}{% for op in filters.operators %}&operators={{ op }}{% endfor %}{% if filters.date_from %}&date_from={{ filters.date_from.isoformat() }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to.isoformat() }}{% endif %}"
          class="badge bg-secondary text-decoration-none">{{ cl.name }}</a>
     {% endif %}
   {% endfor %}
@@ -543,16 +555,25 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
-/* Фильтр сотрудников по отделу */
+/* Фильтр сотрудников по выбранным отделам */
+function getCheckedDepts() {
+  return Array.from(document.querySelectorAll('.dept-cb:checked')).map(cb => cb.value);
+}
+
 function updateOpList() {
-  const dept = document.getElementById('deptSelect')?.value || '';
-  const items = document.querySelectorAll('.op-item');
-  items.forEach(item => {
-    const match = !dept || item.dataset.dept === dept;
+  const depts = getCheckedDepts();
+  document.querySelectorAll('.op-item').forEach(item => {
+    const match = depts.length === 0 || depts.includes(item.dataset.dept);
     item.style.display = match ? '' : 'none';
     if (!match) item.querySelector('input').checked = false;
   });
   updateOpCount();
+}
+
+function updateDeptCount() {
+  const n = getCheckedDepts().length;
+  const el = document.getElementById('deptSelectedCount');
+  if (el) el.textContent = n > 0 ? `(выбрано: ${n})` : '';
 }
 
 function updateOpCount() {
@@ -561,8 +582,12 @@ function updateOpCount() {
   if (el) el.textContent = checked > 0 ? `(выбрано: ${checked})` : '';
 }
 
-document.getElementById('deptSelect')?.addEventListener('change', updateOpList);
+document.querySelectorAll('.dept-cb').forEach(cb => cb.addEventListener('change', () => {
+  updateDeptCount();
+  updateOpList();
+}));
 document.querySelectorAll('.op-cb').forEach(cb => cb.addEventListener('change', updateOpCount));
+updateDeptCount();
 updateOpCount();
 
 /* Переключатель % / Баллы (тепловая карта) */
