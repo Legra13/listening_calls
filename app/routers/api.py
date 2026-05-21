@@ -233,7 +233,23 @@ def db_check(
         "SELECT checklist_id, status, COUNT(*) as cnt "
         "FROM evaluations GROUP BY checklist_id, status ORDER BY checklist_id"
     )).fetchall()
-    return [{"checklist_id": r[0], "status": r[1], "count": r[2]} for r in rows]
+    # Дополнительно: статистика по чек-листу 9
+    cl9 = db.execute(text(
+        "SELECT e.id, e.deal_id, e.operator_name, e.status, e.evaluator_id, "
+        "e.total_score, e.created_at, COUNT(ei.id) as items "
+        "FROM evaluations e "
+        "LEFT JOIN evaluation_items ei ON ei.evaluation_id = e.id "
+        "WHERE e.checklist_id = 9 "
+        "GROUP BY e.id ORDER BY e.id"
+    )).fetchall()
+    return {
+        "summary": [{"checklist_id": r[0], "status": r[1], "count": r[2]} for r in rows],
+        "checklist9": [
+            {"id": r[0], "deal_id": r[1], "operator": r[2], "status": r[3],
+             "evaluator_id": r[4], "score": r[5], "created_at": str(r[6]), "items": r[7]}
+            for r in cl9
+        ],
+    }
 
 
 @router.post("/admin/run-import")
