@@ -219,6 +219,19 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
+@router.get("/admin/dirty-names")
+def dirty_names(request: Request, db: Session = Depends(get_db)):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    from sqlalchemy import text
+    rows = db.execute(text(
+        "SELECT DISTINCT operator_name FROM evaluations ORDER BY operator_name"
+    )).fetchall()
+    return [r[0] for r in rows if r[0]]
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
