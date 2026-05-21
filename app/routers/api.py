@@ -219,63 +219,6 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
-@router.get("/admin/db-check")
-def db_check(
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    token = request.headers.get("X-Deploy-Token", "")
-    if token != DEPLOY_SECRET:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403)
-    from sqlalchemy import text
-    rows = db.execute(text(
-        "SELECT checklist_id, status, COUNT(*) as cnt "
-        "FROM evaluations GROUP BY checklist_id, status ORDER BY checklist_id"
-    )).fetchall()
-    # Дополнительно: статистика по чек-листу 9
-    cl9 = db.execute(text(
-        "SELECT e.id, e.deal_id, e.operator_name, e.status, e.evaluator_id, "
-        "e.total_score, e.created_at, COUNT(ei.id) as items "
-        "FROM evaluations e "
-        "LEFT JOIN evaluation_items ei ON ei.evaluation_id = e.id "
-        "WHERE e.checklist_id = 9 "
-        "GROUP BY e.id ORDER BY e.id"
-    )).fetchall()
-    return {
-        "summary": [{"checklist_id": r[0], "status": r[1], "count": r[2]} for r in rows],
-        "checklist9": [
-            {"id": r[0], "deal_id": r[1], "operator": r[2], "status": r[3],
-             "evaluator_id": r[4], "score": r[5], "created_at": str(r[6]), "items": r[7]}
-            for r in cl9
-        ],
-    }
-
-
-@router.post("/admin/delete-import-drafts")
-def delete_import_drafts(
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    """Удаляет черновики из чек-листа 9 начиная с указанного min_id."""
-    token = request.headers.get("X-Deploy-Token", "")
-    if token != DEPLOY_SECRET:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403)
-    from sqlalchemy import text
-    # Черновики с id >= 730 — это новые дубликаты (импорт этой сессии)
-    ids = [r[0] for r in db.execute(text(
-        "SELECT id FROM evaluations WHERE checklist_id=9 AND status='draft' AND id >= 730"
-    )).fetchall()]
-    if not ids:
-        return {"deleted": 0, "message": "Нечего удалять"}
-    placeholders = ",".join(str(i) for i in ids)
-    db.execute(text(f"DELETE FROM evaluation_items WHERE evaluation_id IN ({placeholders})"))
-    db.execute(text(f"DELETE FROM evaluations WHERE id IN ({placeholders})"))
-    db.commit()
-    return {"deleted": len(ids), "ids": ids}
-
-
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
