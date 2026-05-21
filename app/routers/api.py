@@ -219,6 +219,16 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
+@router.get("/admin/cl-depts")
+def cl_depts(request: Request, db: Session = Depends(get_db)):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    cls = db.query(Checklist).all()
+    return [{"id": cl.id, "name": cl.name, "status": cl.status, "departments": cl.departments} for cl in cls]
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
