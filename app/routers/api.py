@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Block, Checklist, Criterion, DealCache, User
+from app.models import Block, Checklist, Criterion, DealCache, Evaluation, User
 from app.deps import get_current_user
 from app.bitrix import get_deal, get_employees, get_departments, DealInfo
 
@@ -87,6 +87,32 @@ def deal_lookup(
         from_cache=False,
         presentation_date=info.presentation_date,
     )
+
+
+@router.get("/check-duplicate")
+def check_duplicate(
+    deal_id: str,
+    checklist_id: int,
+    phone: str = "",
+    exclude_id: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Проверяет, есть ли опубликованная оценка для deal_id + checklist_id + phone."""
+    phone_val = phone.strip() or None
+    q = (
+        db.query(Evaluation.id)
+        .filter(
+            Evaluation.deal_id == deal_id,
+            Evaluation.checklist_id == checklist_id,
+            Evaluation.status == "published",
+            Evaluation.phone == phone_val,
+        )
+    )
+    if exclude_id:
+        q = q.filter(Evaluation.id != exclude_id)
+    dup = q.first()
+    return {"duplicate": bool(dup), "existing_id": dup[0] if dup else None}
 
 
 @router.get("/criteria-library")

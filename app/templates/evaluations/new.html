@@ -541,8 +541,40 @@ function lookupDeal() {
       const dateHint = data.presentation_date ? ' · дата из карточки' : '';
       status.innerHTML = '<span class="text-success"><i class="bi ' + icon + ' me-1"></i>'
         + data.operator_name + ' · <span class="badge bg-' + data.stage_badge + '-subtle text-' + data.stage_badge + '">' + data.stage_label + '</span>' + dateHint + '</span>';
+      // Проверяем дубль после успешного поиска сделки
+      checkDuplicate(id);
     })
     .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
+}
+
+function checkDuplicate(dealId) {
+  const clId = {{ selected_cl.id }};
+  const phone = (document.getElementById('phone_input')?.value || '').trim();
+  fetch(`/api/check-duplicate?deal_id=${encodeURIComponent(dealId)}&checklist_id=${clId}&phone=${encodeURIComponent(phone)}`, {credentials:'same-origin'})
+    .then(r => r.json())
+    .then(data => setPhoneRequired(data.duplicate, data.existing_id));
+}
+
+function setPhoneRequired(isDuplicate, existingId) {
+  const phoneInput = document.getElementById('phone_input');
+  const phoneWrap  = phoneInput?.closest('.col-md-3');
+  const existing = document.getElementById('phone-dup-hint');
+  if (existing) existing.remove();
+  if (isDuplicate) {
+    window._dealHasDuplicate = true;
+    phoneInput.required = true;
+    phoneInput.classList.add('is-invalid');
+    const hint = document.createElement('div');
+    hint.id = 'phone-dup-hint';
+    hint.className = 'invalid-feedback d-block';
+    hint.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>По этой сделке уже есть <a href="/evaluations/${existingId}" target="_blank">оценка #${existingId}</a>. Укажите телефон, чтобы различить звонки.`;
+    phoneWrap.appendChild(hint);
+    phoneInput.focus();
+  } else {
+    window._dealHasDuplicate = false;
+    phoneInput.required = false;
+    phoneInput.classList.remove('is-invalid');
+  }
 }
 
 // ── Init ────────────────────────────────────────────────────
@@ -559,6 +591,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('deal_id_input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { e.preventDefault(); lookupDeal(); }
+  });
+
+  document.getElementById('phone_input')?.addEventListener('input', function() {
+    const dealId = document.getElementById('deal_id_input')?.value.trim();
+    if (dealId) checkDuplicate(dealId);
   });
 
   // Score buttons
@@ -646,7 +683,16 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDraft();
   setInterval(saveDraft, 30000);
 
-  document.getElementById('eval-form').addEventListener('submit', function() {
+  document.getElementById('eval-form').addEventListener('submit', function(e) {
+    const action = document.activeElement?.value;
+    if (action !== 'save_draft' && window._dealHasDuplicate) {
+      const phone = (document.getElementById('phone_input')?.value || '').trim();
+      if (!phone) {
+        e.preventDefault();
+        document.getElementById('phone_input')?.focus();
+        return false;
+      }
+    }
     localStorage.removeItem(DRAFT_KEY);
   });
 });

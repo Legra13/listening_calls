@@ -291,7 +291,7 @@ async def evaluations_create(
     # Duplicate check: same deal_id + checklist + phone (None counts as its own "slot")
     dup_id: int | None = None
     if status == "published" and deal_id:
-        dup_q = (
+        dup = (
             db.query(Evaluation.id)
             .filter(
                 Evaluation.deal_id == deal_id,
@@ -299,11 +299,21 @@ async def evaluations_create(
                 Evaluation.status == "published",
                 Evaluation.phone == phone,
             )
+            .first()
         )
-        dup = dup_q.first()
         if dup:
             dup_id = dup[0]
-            status = "draft"
+            if phone is None:
+                # Дубль без телефона — блокируем, требуем телефон
+                flash(request,
+                      f"По сделке #{deal_id} уже есть оценка #{dup_id}. "
+                      "Укажите номер телефона, чтобы различить звонки.",
+                      "danger")
+                return RedirectResponse(
+                    f"/evaluations/new?checklist_id={checklist_id}", status_code=302
+                )
+            else:
+                status = "draft"
 
     deal_url = f"https://entera.bitrix24.ru/crm/deal/details/{deal_id}/" if deal_id else None
 
@@ -512,7 +522,14 @@ async def evaluations_update(
         )
         if dup:
             dup_id = dup[0]
-            new_status = "draft"
+            if phone is None:
+                flash(request,
+                      f"По сделке #{evaluation.deal_id} уже есть оценка #{dup_id}. "
+                      "Укажите номер телефона, чтобы различить звонки.",
+                      "danger")
+                return RedirectResponse(f"/evaluations/{eval_id}/edit", status_code=302)
+            else:
+                new_status = "draft"
 
     evaluation.status = new_status
 
