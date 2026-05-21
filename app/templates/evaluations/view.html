@@ -23,7 +23,7 @@
         <h5 class="mb-1">{{ ev.operator_name }}</h5>
         <div class="text-muted small">
           {% if ev.deal_id %}
-            Сделка <strong>#{{ ev.deal_id }}</strong> ·
+            Сделка <strong>#{{ ev.deal_id }}</strong>{% if ev.phone %} · <i class="bi bi-telephone"></i> {{ ev.phone }}{% endif %} ·
           {% endif %}
           {% if ev.department %}
             <span class="badge bg-secondary-subtle text-secondary">{{ ev.department }}</span> ·

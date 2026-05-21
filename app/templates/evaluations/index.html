@@ -156,7 +156,10 @@
         <td class="align-middle fw-semibold">{{ ev.operator_name }}</td>
         <td class="align-middle small text-muted">{{ ev.department or '—' }}</td>
         <td class="align-middle small text-muted">
-          {% if ev.deal_id %}#{{ ev.deal_id }}{% else %}—{% endif %}
+          {% if ev.deal_id %}
+            #{{ ev.deal_id }}
+            {% if ev.phone %}<br><span class="text-secondary"><i class="bi bi-telephone"></i> {{ ev.phone }}</span>{% endif %}
+          {% else %}—{% endif %}
         </td>
         <td class="align-middle small">{{ ev.checklist.name if ev.checklist else '—' }}</td>
         <td class="align-middle small text-muted">

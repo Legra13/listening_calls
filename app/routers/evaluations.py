@@ -233,6 +233,7 @@ async def evaluations_create(
     m = re.search(r'/deal/details/(\d+)', deal_id)
     if m:
         deal_id = m.group(1)
+    phone = (form.get("phone") or "").strip() or None
     operator_name = _clean_operator_name(form.get("operator_name") or "")
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
@@ -287,18 +288,19 @@ async def evaluations_create(
     action = (form.get("action") or "publish").strip()
     status = "draft" if action == "save_draft" else "published"
 
-    # Duplicate check: if publishing with a deal_id, warn and fall back to draft
+    # Duplicate check: same deal_id + checklist + phone (None counts as its own "slot")
     dup_id: int | None = None
     if status == "published" and deal_id:
-        dup = (
+        dup_q = (
             db.query(Evaluation.id)
             .filter(
                 Evaluation.deal_id == deal_id,
                 Evaluation.checklist_id == checklist_id,
                 Evaluation.status == "published",
+                Evaluation.phone == phone,
             )
-            .first()
         )
+        dup = dup_q.first()
         if dup:
             dup_id = dup[0]
             status = "draft"
@@ -309,6 +311,7 @@ async def evaluations_create(
         checklist_id=checklist_id,
         deal_id=deal_id or None,
         deal_url=deal_url,
+        phone=phone,
         operator_name=operator_name,
         department=department or None,
         eval_date=eval_date,
@@ -334,7 +337,8 @@ async def evaluations_create(
 
     db.commit()
     if dup_id:
-        flash(request, f"Сделка #{deal_id} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
+        phone_hint = f" · {phone}" if phone else ""
+        flash(request, f"Сделка #{deal_id}{phone_hint} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
     elif status == "draft":
         flash(request, "Черновик сохранён.")
     else:
@@ -432,6 +436,7 @@ async def evaluations_update(
     m = re.search(r'/deal/details/(\d+)', deal_id)
     if m:
         deal_id = m.group(1)
+    phone = (form.get("phone") or "").strip() or None
     operator_name = _clean_operator_name(form.get("operator_name") or "")
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
@@ -447,6 +452,7 @@ async def evaluations_update(
 
     evaluation.deal_id = deal_id or None
     evaluation.deal_url = f"https://entera.bitrix24.ru/crm/deal/details/{deal_id}/" if deal_id else None
+    evaluation.phone = phone
     evaluation.operator_name = operator_name
     evaluation.department = department or None
     evaluation.eval_date = eval_date
@@ -500,6 +506,7 @@ async def evaluations_update(
                 Evaluation.checklist_id == evaluation.checklist_id,
                 Evaluation.status == "published",
                 Evaluation.id != eval_id,
+                Evaluation.phone == phone,
             )
             .first()
         )
@@ -521,7 +528,8 @@ async def evaluations_update(
 
     db.commit()
     if dup_id:
-        flash(request, f"Сделка #{evaluation.deal_id} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
+        phone_hint = f" · {phone}" if phone else ""
+        flash(request, f"Сделка #{evaluation.deal_id}{phone_hint} уже оценена (оценка #{dup_id}). Оценка сохранена как черновик.", "warning")
     elif new_status == "draft":
         flash(request, "Черновик сохранён.")
     else:

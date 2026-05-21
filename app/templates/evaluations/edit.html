@@ -141,6 +141,11 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
             <input type="text" class="form-control form-control-sm bg-light text-muted"
                    value="{{ (ev.updated_at or ev.created_at).strftime('%d.%m.%Y %H:%M') if (ev.updated_at or ev.created_at) else '—' }}" disabled>
           </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Телефон <span class="text-muted fw-normal">(если несколько звонков по сделке)</span></label>
+            <input type="text" name="phone" class="form-control form-control-sm"
+                   placeholder="+7 900 000-00-00" value="{{ ev.phone or '' }}">
+          </div>
         </div>
         <input type="hidden" id="stage" name="stage" value="{{ ev.stage or 'в работе' }}">
       </div>

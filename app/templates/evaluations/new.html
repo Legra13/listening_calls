@@ -190,6 +190,11 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
             <input type="text" class="form-control form-control-sm bg-light text-muted"
                    value="Сохраняется автоматически" disabled>
           </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Телефон <span class="text-muted fw-normal">(если несколько звонков по сделке)</span></label>
+            <input type="text" id="phone_input" name="phone" class="form-control form-control-sm"
+                   placeholder="+7 900 000-00-00">
+          </div>
         </div>
         <input type="hidden" id="stage" name="stage" value="в работе">
       </div>
@@ -655,6 +660,7 @@ function saveDraft() {
     operator_name: document.getElementById('emp_select')?.value || '',
     department: document.getElementById('dept_select')?.value || '',
     deal_id: document.getElementById('deal_id_input')?.value || '',
+    phone: document.getElementById('phone_input')?.value || '',
     eval_date: document.getElementById('eval_date')?.value || '',
     general_comment: document.querySelector('[name="general_comment"]')?.value || '',
     criteria: {},
@@ -700,6 +706,7 @@ async function restoreDraft() {
   await loadEmployees(data.department || '', data.operator_name || '');
 
   if (data.deal_id) document.getElementById('deal_id_input').value = data.deal_id;
+  if (data.phone) document.getElementById('phone_input').value = data.phone;
   if (data.eval_date) document.getElementById('eval_date').value = data.eval_date;
   if (data.general_comment) {
     const ta = document.querySelector('[name="general_comment"]');
