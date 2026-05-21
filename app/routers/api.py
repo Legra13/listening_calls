@@ -252,6 +252,30 @@ def db_check(
     }
 
 
+@router.post("/admin/delete-import-drafts")
+def delete_import_drafts(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Удаляет черновики из чек-листа 9 начиная с указанного min_id."""
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    from sqlalchemy import text
+    # Черновики с id >= 730 — это новые дубликаты (импорт этой сессии)
+    ids = [r[0] for r in db.execute(text(
+        "SELECT id FROM evaluations WHERE checklist_id=9 AND status='draft' AND id >= 730"
+    )).fetchall()]
+    if not ids:
+        return {"deleted": 0, "message": "Нечего удалять"}
+    placeholders = ",".join(str(i) for i in ids)
+    db.execute(text(f"DELETE FROM evaluation_items WHERE evaluation_id IN ({placeholders})"))
+    db.execute(text(f"DELETE FROM evaluations WHERE id IN ({placeholders})"))
+    db.commit()
+    return {"deleted": len(ids), "ids": ids}
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
