@@ -104,5 +104,11 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE evaluations ADD COLUMN status VARCHAR(20) DEFAULT 'published'"))
         if "updated_at" not in ev_cols:
             conn.execute(text("ALTER TABLE evaluations ADD COLUMN updated_at DATETIME"))
+        if "deal_url" not in ev_cols:
+            conn.execute(text("ALTER TABLE evaluations ADD COLUMN deal_url VARCHAR(300)"))
+
+        dc_cols = _cols("deal_cache")
+        if "presentation_date" not in dc_cols:
+            conn.execute(text("ALTER TABLE deal_cache ADD COLUMN presentation_date DATETIME"))
 
         conn.commit()

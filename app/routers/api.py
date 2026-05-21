@@ -217,3 +217,23 @@ def deploy(request: Request):
 
     threading.Thread(target=run, daemon=True).start()
     return {"status": "deploying"}
+
+
+@router.post("/admin/run-import")
+def run_import(request: Request):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+
+    import sys
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.import_lena"],
+        capture_output=True, text=True,
+        cwd=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    )
+    return {
+        "status": "ok" if result.returncode == 0 else "error",
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
