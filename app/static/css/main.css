@@ -71,11 +71,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Логотип Entera в навбаре */
 .nav-logo {
-  height: 34px;
+  height: 40px;
   width: auto;
   display: block;
   flex-shrink: 0;
   transition: opacity 0.2s;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 4px 6px;
 }
 .navbar-brand:hover .nav-logo { opacity: 0.85; }
 
