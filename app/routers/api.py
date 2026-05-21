@@ -219,28 +219,6 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
-@router.get("/admin/no-deal-stats")
-def no_deal_stats(request: Request, db: Session = Depends(get_db)):
-    token = request.headers.get("X-Deploy-Token", "")
-    if token != DEPLOY_SECRET:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403)
-    from sqlalchemy import text
-    rows = db.execute(text(
-        "SELECT c.name, COUNT(e.id) "
-        "FROM evaluations e JOIN checklists c ON c.id = e.checklist_id "
-        "WHERE e.status='published' AND (e.deal_id IS NULL OR e.deal_id='') "
-        "GROUP BY c.id ORDER BY COUNT(e.id) DESC"
-    )).fetchall()
-    total_no_deal = sum(r[1] for r in rows)
-    total_pub = db.execute(text("SELECT COUNT(*) FROM evaluations WHERE status='published'")).scalar()
-    return {
-        "total_published": total_pub,
-        "no_deal": total_no_deal,
-        "by_checklist": [{"checklist": r[0], "count": r[1]} for r in rows],
-    }
-
-
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
