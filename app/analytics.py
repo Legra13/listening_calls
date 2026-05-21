@@ -107,17 +107,18 @@ def get_filter_options(db: Session) -> dict:
             seen[name]["count"] += cnt
     operators = list(seen.values())
 
-    dept_rows = (
-        db.query(Evaluation.department)
-        .filter(Evaluation.department.isnot(None), Evaluation.department != "")
-        .distinct()
-        .order_by(Evaluation.department)
-        .all()
-    )
     checklists = db.query(Checklist).filter(Checklist.status == "active").all()
+    # Только отделы, привязанные хотя бы к одному активному чек-листу
+    dept_set: set[str] = set()
+    for cl in checklists:
+        for d in (cl.departments or "").split(","):
+            d = d.strip()
+            if d:
+                dept_set.add(d)
+    departments = sorted(dept_set)
     return {
         "operators": operators,
-        "departments": [r[0] for r in dept_rows],
+        "departments": departments,
         "checklists": checklists,
     }
 
