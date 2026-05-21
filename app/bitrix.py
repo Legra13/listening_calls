@@ -3,7 +3,7 @@
 Подключается напрямую к реплике MySQL.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, date
 from dataclasses import dataclass, field
 import json
 import pymysql
@@ -30,6 +30,7 @@ class DealInfo:
     stage: str          # "сделка успешна" | "не смог продать" | "в работе"
     title: str | None
     department: str | None = None
+    presentation_date: date | None = None   # UF_CRM_1654694803 — Продление дата "Провели презентацию"
 
 
 def _get_connection() -> pymysql.Connection:
@@ -65,6 +66,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     f"""
                     SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID,
                            d.ASSIGNED_BY_ID, d.DATE_CREATE,
+                           d.UF_CRM_1654694803,
                            u.NAME, u.LAST_NAME, u.UF_DEPARTMENT
                     FROM `{_DEALS_TABLE}` d
                     LEFT JOIN `{_USERS_TABLE}` u ON u.ID = d.ASSIGNED_BY_ID
@@ -100,6 +102,13 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     if dept_row:
                         department = dept_row["NAME"]
 
+            raw_pres = row.get("UF_CRM_1654694803")
+            presentation_date: date | None = None
+            if isinstance(raw_pres, date):
+                presentation_date = raw_pres
+            elif isinstance(raw_pres, datetime):
+                presentation_date = raw_pres.date()
+
             return DealInfo(
                 deal_id=str(row["ID"]),
                 operator_name=operator_name,
@@ -107,6 +116,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                 stage=stage,
                 title=row.get("TITLE"),
                 department=department,
+                presentation_date=presentation_date,
             )
         finally:
             conn.close()

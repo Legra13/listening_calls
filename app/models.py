@@ -85,6 +85,7 @@ class Evaluation(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     checklist_id: Mapped[int] = mapped_column(ForeignKey("checklists.id"), nullable=False)
     deal_id: Mapped[str | None] = mapped_column(String(50))
+    deal_url: Mapped[str | None] = mapped_column(String(300))
     operator_name: Mapped[str] = mapped_column(String(200), nullable=False)
     eval_date: Mapped[datetime | None] = mapped_column(DateTime)
     week_num: Mapped[int | None] = mapped_column(Integer)

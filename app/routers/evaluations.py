@@ -63,6 +63,7 @@ def evaluations_index(
     date_from: str = "",
     date_to: str = "",
     deal_id: str = "",
+    evaluator_id: str = "",
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
@@ -90,6 +91,11 @@ def evaluations_index(
         q = q.filter(Evaluation.department == department)
     if deal_id:
         q = q.filter(Evaluation.deal_id == deal_id)
+    if evaluator_id:
+        try:
+            q = q.filter(Evaluation.evaluator_id == int(evaluator_id))
+        except ValueError:
+            pass
     if date_from:
         try:
             q = q.filter(Evaluation.eval_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
@@ -125,6 +131,19 @@ def evaluations_index(
     )
     known_operators = [r[0] for r in operator_rows]
 
+    evaluator_ids = (
+        db.query(Evaluation.evaluator_id)
+        .filter(Evaluation.evaluator_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    evaluators = (
+        db.query(User)
+        .filter(User.id.in_([r[0] for r in evaluator_ids]))
+        .order_by(User.full_name, User.username)
+        .all()
+    ) if evaluator_ids else []
+
     return templates.TemplateResponse("evaluations/index.html", {
         "request": request,
         "current_user": current_user,
@@ -132,6 +151,7 @@ def evaluations_index(
         "checklists": checklists,
         "departments": departments,
         "known_operators": known_operators,
+        "evaluators": evaluators,
         "filters": {
             "operator": operator,
             "checklist_id": checklist_id,
@@ -141,6 +161,7 @@ def evaluations_index(
             "date_from": date_from,
             "date_to": date_to,
             "deal_id": deal_id,
+            "evaluator_id": evaluator_id,
         },
         "sort": sort,
         "dir": dir,
@@ -259,9 +280,12 @@ async def evaluations_create(
             dup_id = dup[0]
             status = "draft"
 
+    deal_url = f"https://entera.bitrix24.ru/crm/deal/details/{deal_id}/" if deal_id else None
+
     evaluation = Evaluation(
         checklist_id=checklist_id,
         deal_id=deal_id or None,
+        deal_url=deal_url,
         operator_name=operator_name,
         department=department or None,
         eval_date=eval_date,
@@ -399,6 +423,7 @@ async def evaluations_update(
             pass
 
     evaluation.deal_id = deal_id or None
+    evaluation.deal_url = f"https://entera.bitrix24.ru/crm/deal/details/{deal_id}/" if deal_id else None
     evaluation.operator_name = operator_name
     evaluation.department = department or None
     evaluation.eval_date = eval_date

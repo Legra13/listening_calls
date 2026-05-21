@@ -74,6 +74,7 @@ def deal_lookup(
         deal_date=info.deal_date,
         stage=info.stage,
         from_cache=False,
+        presentation_date=info.presentation_date,
     )
 
 
@@ -147,13 +148,21 @@ def _deal_response(
     deal_date: datetime | None,
     stage: str,
     from_cache: bool,
+    presentation_date=None,
 ) -> JSONResponse:
     badge_class, badge_label = STAGE_BADGE.get(stage, ("secondary", stage))
+    pd_str = ""
+    if presentation_date is not None:
+        try:
+            pd_str = presentation_date.strftime("%Y-%m-%d")
+        except AttributeError:
+            pd_str = str(presentation_date)[:10]
     return JSONResponse({
         "deal_id": deal_id,
         "operator_name": operator_name,
         "department": department or "",
         "deal_date": deal_date.strftime("%Y-%m-%d") if deal_date else "",
+        "presentation_date": pd_str,
         "stage": stage,
         "stage_badge": badge_class,
         "stage_label": badge_label,

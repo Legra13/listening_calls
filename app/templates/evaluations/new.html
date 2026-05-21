@@ -528,10 +528,14 @@ function lookupDeal() {
       } else {
         loadEmployees('', data.operator_name);
       }
-      if (data.deal_date) document.getElementById('eval_date').value = data.deal_date;
+      // Дата звонка: сначала "Провели презентацию", иначе дата создания сделки
+      const callDate = data.presentation_date || data.deal_date;
+      if (callDate) document.getElementById('eval_date').value = callDate;
+      document.getElementById('stage').value = data.stage || 'в работе';
       const icon = data.from_cache ? 'bi-database' : 'bi-check-circle';
+      const dateHint = data.presentation_date ? ' · дата из карточки' : '';
       status.innerHTML = '<span class="text-success"><i class="bi ' + icon + ' me-1"></i>'
-        + data.operator_name + ' · <span class="badge bg-' + data.stage_badge + '-subtle text-' + data.stage_badge + '">' + data.stage_label + '</span></span>';
+        + data.operator_name + ' · <span class="badge bg-' + data.stage_badge + '-subtle text-' + data.stage_badge + '">' + data.stage_label + '</span>' + dateHint + '</span>';
     })
     .catch(e => { status.innerHTML = '<span class="text-danger">Ошибка: ' + e.message + '</span>'; });
 }

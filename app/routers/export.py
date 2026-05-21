@@ -74,6 +74,21 @@ def _result_label(stage):
             "в работе": "В работе"}.get(stage or "", stage or "—")
 
 
+_LINK_FONT = Font(color="0563C1", underline="single")
+
+
+def _set_deal_cell(ws, row_idx: int, col_idx: int, ev) -> None:
+    """Заполняет ячейку сделки: ID как текст + гиперссылка если есть URL."""
+    cell = ws.cell(row_idx, col_idx)
+    if ev.deal_id:
+        cell.value = f"#{ev.deal_id}"
+        url = ev.deal_url or f"https://entera.bitrix24.ru/crm/deal/details/{ev.deal_id}/"
+        cell.hyperlink = url
+        cell.font = _LINK_FONT
+    else:
+        cell.value = "—"
+
+
 def _val_label(val):
     return {"yes": "Да", "no": "Нет", "na": "Н/П"}.get(val or "", "—")
 
@@ -167,7 +182,7 @@ def _sheet_detail(wb, evs, blocks):
             (ev.updated_at or ev.created_at).strftime("%d.%m.%Y") if (ev.updated_at or ev.created_at) else "—",
             ev.operator_name,
             ev.department or "—",
-            f"#{ev.deal_id}" if ev.deal_id else "—",
+            None,  # Сделка — заполняется ниже через _set_deal_cell
             ev.checklist.name if ev.checklist else "—",
             (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else "—",
             ev.total_score,
@@ -176,6 +191,7 @@ def _sheet_detail(wb, evs, blocks):
         ] + block_vals)
 
         ri = ws.max_row
+        _set_deal_cell(ws, ri, 6, ev)
         # Красим только ячейки со скором
         ws.cell(ri, SCORE_COL).fill = _score_fill(ev.total_score)
         ws.cell(ri, SCORE_COL).alignment = _CENTER
@@ -210,10 +226,11 @@ def _sheet_criteria(wb, evs):
             (ev.updated_at or ev.created_at).strftime("%d.%m.%Y") if (ev.updated_at or ev.created_at) else "—",
             ev.operator_name,
             ev.department or "—",
-            f"#{ev.deal_id}" if ev.deal_id else "—",
+            None,  # Сделка — заполняется ниже
             ev.checklist.name,
             (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else "—",
         ]
+        first_row = True
         for block in ev.checklist.blocks:
             for crit in block.criteria:
                 item = item_map.get(crit.id)
@@ -226,6 +243,9 @@ def _sheet_criteria(wb, evs):
                     comm or "",
                 ])
                 ri = ws.max_row
+                if first_row:
+                    _set_deal_cell(ws, ri, 6, ev)
+                    first_row = False
                 vc = ws.cell(ri, VAL_COL)
                 vc.alignment = _CENTER
                 if val == "yes":   vc.fill = _FILL_YES
@@ -436,12 +456,13 @@ def _qolio_sheet_by_call(wb, evs, selected_cl):
         ws.append([
             ev.operator_name,
             ev.department or "",
-            ev.deal_id or "",
+            None,  # Сделка — заполняется ниже
             _fmt_date_qolio(ev.eval_date),
             _fmt_date_qolio(ev.updated_at or ev.created_at),
         ] + block_fracs + [total_frac, ev.general_comment or ""])
 
         ri = ws.max_row
+        _set_deal_cell(ws, ri, 3, ev)
         ws.cell(ri, TOTAL_COL).fill = _score_fill(ev.total_score)
         ws.cell(ri, TOTAL_COL).alignment = _CENTER
         for i, b in enumerate(blocks):
@@ -538,7 +559,7 @@ def _qolio_sheet_detailed(wb, evs, selected_cl):
         row: list = [
             ev.operator_name,
             ev.department or "",
-            ev.deal_id or "",
+            None,  # Сделка — заполняется ниже
             _fmt_date_qolio(ev.eval_date),
             _fmt_date_qolio(ev.updated_at or ev.created_at),
         ]
@@ -555,6 +576,7 @@ def _qolio_sheet_detailed(wb, evs, selected_cl):
         ws.append(row)
 
         ri = ws.max_row
+        _set_deal_cell(ws, ri, 3, ev)
         for i, crit in enumerate(all_criteria):
             item = item_map.get(crit.id)
             c = ws.cell(ri, CRIT_START + i * 2)
@@ -866,12 +888,14 @@ def _emp_sheet_detail(wb, report: dict, display_mode: str):
             evaluator_name or "—",
         ] + cell_vals + [
             row["total"],
-            f"#{ev.deal_id}" if ev.deal_id else "—",
+            None,  # Сделка — заполняется ниже
             _result_label(ev.stage),
             ev.general_comment or "",
         ])
 
         ri = ws.max_row
+        # Колонка "Сделка" = TOTAL_COL + 1
+        _set_deal_cell(ws, ri, TOTAL_COL + 1, ev)
         ws.cell(ri, TOTAL_COL).fill = _score_fill(row["total"])
         ws.cell(ri, TOTAL_COL).alignment = _CENTER
 
