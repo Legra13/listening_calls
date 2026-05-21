@@ -18,9 +18,11 @@ from app.deps import get_current_user
 from app.models import Block as BlockModel, Checklist, Evaluation, User
 from app.scoring import calculate_scores
 
+import json
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Side, Border
 from openpyxl.utils import get_column_letter
+from openpyxl.comments import Comment as XlComment
 
 from fastapi import Query as QueryParam
 
@@ -42,6 +44,20 @@ _FILL_NO  = PatternFill("solid", fgColor="FADBD8")
 _FILL_NA  = PatternFill("solid", fgColor="F2F3F4")
 
 _CENTER = Alignment(horizontal="center", vertical="center")
+
+
+def _comment_to_text(raw: str | None) -> str | None:
+    """Извлекает plain-text из JSON-комментария вида [{text, flag, time}, ...]."""
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            texts = [c["text"] for c in data if isinstance(c, dict) and c.get("text")]
+            return "; ".join(texts) if texts else None
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return raw or None
 
 
 def _score_fill(score):
@@ -235,7 +251,7 @@ def _sheet_criteria(wb, evs):
             for crit in block.criteria:
                 item = item_map.get(crit.id)
                 val  = item.value   if item else None
-                comm = item.comment if item else ""
+                comm = _comment_to_text(item.comment if item else None) or ""
                 ws.append(prefix + [
                     block.display_name or block.name,
                     crit.text,
@@ -565,12 +581,13 @@ def _qolio_sheet_detailed(wb, evs, selected_cl):
         ]
         for crit in all_criteria:
             item = item_map.get(crit.id)
+            comm = _comment_to_text(item.comment if item else None) or ""
             if item is None or item.value == "na":
-                row.extend([None, (item.comment if item else "") or ""])
+                row.extend([None, comm])
             elif item.value == "yes":
-                row.extend([1, item.comment or ""])
+                row.extend([1, comm])
             else:
-                row.extend([0, item.comment or ""])
+                row.extend([0, comm])
         total_frac = round(ev.total_score / 100, 3) if ev.total_score is not None else None
         row.extend([total_frac, ev.general_comment or ""])
         ws.append(row)
@@ -899,7 +916,7 @@ def _emp_sheet_detail(wb, report: dict, display_mode: str):
         ws.cell(ri, TOTAL_COL).fill = _score_fill(row["total"])
         ws.cell(ri, TOTAL_COL).alignment = _CENTER
 
-        for i, (cell_data, raw_cell) in enumerate(zip(row["cells"], row["cells"])):
+        for i, cell_data in enumerate(row["cells"]):
             c = ws.cell(ri, COL_START + i)
             c.alignment = _CENTER
             if group_mode == "criteria":
@@ -907,8 +924,13 @@ def _emp_sheet_detail(wb, report: dict, display_mode: str):
                 if v == "yes":   c.fill = _FILL_YES
                 elif v == "no":  c.fill = _FILL_NO
                 elif v == "na":  c.fill = _FILL_NA
+                note = cell_data.get("comment")
             else:
                 c.fill = _score_fill(cell_data["pct"])
+                comments_list = cell_data.get("comments") or []
+                note = "; ".join(comments_list) if comments_list else None
+            if note:
+                c.comment = XlComment(note, "CallReview")
 
     _autowidth(ws)
     ws.column_dimensions[get_column_letter(len(headers))].width = 42
