@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
+import json
 
 from sqlalchemy.orm import Session, selectinload
 
@@ -13,6 +14,20 @@ from app.models import Block, Checklist, Criterion, Evaluation, EvaluationItem, 
 from app.scoring import calculate_scores
 
 WON = "сделка успешна"
+
+
+def _comment_to_text(raw: str | None) -> str | None:
+    """Извлекает plain-text из JSON-комментария ([{text, flag, time}, ...])."""
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            texts = [c["text"] for c in data if isinstance(c, dict) and c.get("text")]
+            return "; ".join(texts) if texts else None
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return raw or None
 LOST = "не смог продать"
 
 
@@ -513,8 +528,9 @@ def compute_employee_report(evaluations: list[Evaluation], checklist: Checklist,
         crit_comments: dict[int, str] = {}
         for item in ev.items:
             crit_values[item.criterion_id] = item.value
-            if item.comment:
-                crit_comments[item.criterion_id] = item.comment
+            text = _comment_to_text(item.comment)
+            if text:
+                crit_comments[item.criterion_id] = text
 
         if group_mode == "criteria":
             cells = [
