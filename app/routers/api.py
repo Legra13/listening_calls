@@ -35,17 +35,26 @@ def deal_lookup(
     Возвращает JSON с данными для автозаполнения формы оценки.
     """
     # Кеш
+    # Порог: записи до этой даты закешированы без presentation_date → нужно обновить
+    _PDATE_MIGRATION = datetime(2026, 5, 21, 12, 0, 0)
+
     cached = db.query(DealCache).filter(DealCache.deal_id == deal_id).first()
     if cached:
-        return _deal_response(
-            deal_id=deal_id,
-            operator_name=cached.operator_name or "",
-            department=cached.department,
-            deal_date=cached.deal_date,
-            stage=cached.stage or "в работе",
-            from_cache=True,
-            presentation_date=cached.presentation_date,
+        pdate_stale = (
+            cached.presentation_date is None
+            and cached.last_synced_at is not None
+            and cached.last_synced_at < _PDATE_MIGRATION
         )
+        if not pdate_stale:
+            return _deal_response(
+                deal_id=deal_id,
+                operator_name=cached.operator_name or "",
+                department=cached.department,
+                deal_date=cached.deal_date,
+                stage=cached.stage or "в работе",
+                from_cache=True,
+                presentation_date=cached.presentation_date,
+            )
 
     # Битрикс
     try:
