@@ -421,6 +421,9 @@
                   {% if cell.value == 'yes' %}<i class="bi bi-check2"></i>
                   {% elif cell.value == 'no' %}<i class="bi bi-x"></i>
                   {% else %}<span style="font-size:0.65rem">н/п</span>{% endif %}
+                  {% if filters.show_comments and cell.comment %}
+                  <div class="text-start text-muted mt-1" style="font-size:0.65rem;white-space:normal;word-break:break-word;line-height:1.2">{{ cell.comment }}</div>
+                  {% endif %}
                 </td>
                 {% endfor %}
               {% else %}
@@ -428,6 +431,11 @@
                 <td class="text-center" style="{{ heat_style(cell.pct) | safe }}">
                   <span class="val-pct">{% if cell.pct is not none %}{{ "%.1f"|format(cell.pct) }}%{% else %}—{% endif %}</span>
                   <span class="val-pts">{% if cell.pts is not none %}{{ "%.1f"|format(cell.pts) }}{% else %}—{% endif %}</span>
+                  {% if filters.show_comments and cell.comments %}
+                  <div class="text-start text-muted mt-1" style="font-size:0.65rem;white-space:normal;word-break:break-word;line-height:1.2">
+                    {% for c in cell.comments %}<div>{{ c }}</div>{% endfor %}
+                  </div>
+                  {% endif %}
                 </td>
                 {% endfor %}
               {% endif %}

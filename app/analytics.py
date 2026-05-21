@@ -526,7 +526,9 @@ def compute_employee_report(evaluations: list[Evaluation], checklist: Checklist,
             for block in blocks:
                 pct = block_scores.get(block.id)
                 pts = round(pct / 100 * block.weight, 1) if pct is not None else None
-                cells.append({"pct": pct, "pts": pts})
+                block_crits = sorted(block.criteria, key=lambda x: x.order_index)
+                comments = [crit_comments[c.id] for c in block_crits if c.id in crit_comments]
+                cells.append({"pct": pct, "pts": pts, "comments": comments})
 
         detail_rows.append({
             "ev": ev,
