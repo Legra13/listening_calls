@@ -15,6 +15,13 @@ router = APIRouter(prefix="/evaluations")
 templates = Jinja2Templates(directory="app/templates")
 
 
+def _clean_operator_name(name: str) -> str:
+    """Убирает скобочные приписки и лишние пробелы, оставляет только Фамилию Имя."""
+    name = re.sub(r'\s*\(.*?\)', '', name)   # (Отпуск ...), (уволен) и т.д.
+    name = re.sub(r'\s{2,}', ' ', name)      # двойные пробелы
+    return name.strip()
+
+
 def _parse_comments(raw: str | None) -> list[dict]:
     """Парсит комментарий из БД (JSON-массив или plain text для старых записей)."""
     if not raw:
@@ -226,7 +233,7 @@ async def evaluations_create(
     m = re.search(r'/deal/details/(\d+)', deal_id)
     if m:
         deal_id = m.group(1)
-    operator_name = (form.get("operator_name") or "").strip()
+    operator_name = _clean_operator_name(form.get("operator_name") or "")
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
     stage = (form.get("stage") or "в работе").strip()
@@ -425,7 +432,7 @@ async def evaluations_update(
     m = re.search(r'/deal/details/(\d+)', deal_id)
     if m:
         deal_id = m.group(1)
-    operator_name = (form.get("operator_name") or "").strip()
+    operator_name = _clean_operator_name(form.get("operator_name") or "")
     department = (form.get("department") or "").strip()
     eval_date_str = (form.get("eval_date") or "").strip()
     stage = (form.get("stage") or "в работе").strip()

@@ -219,17 +219,25 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
-@router.get("/admin/dirty-names")
-def dirty_names(request: Request, db: Session = Depends(get_db)):
+@router.post("/admin/clean-operator-names")
+def clean_operator_names(request: Request, db: Session = Depends(get_db)):
+    """Чистит скобочные приписки и лишние пробелы в именах операторов."""
     token = request.headers.get("X-Deploy-Token", "")
     if token != DEPLOY_SECRET:
         from fastapi import HTTPException
         raise HTTPException(status_code=403)
+    import re
     from sqlalchemy import text
-    rows = db.execute(text(
-        "SELECT DISTINCT operator_name FROM evaluations ORDER BY operator_name"
-    )).fetchall()
-    return [r[0] for r in rows if r[0]]
+    rows = db.execute(text("SELECT id, operator_name FROM evaluations WHERE operator_name IS NOT NULL")).fetchall()
+    fixed = []
+    for ev_id, name in rows:
+        cleaned = re.sub(r'\s*\(.*?\)', '', name)
+        cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
+        if cleaned != name:
+            db.execute(text("UPDATE evaluations SET operator_name=:n WHERE id=:i"), {"n": cleaned, "i": ev_id})
+            fixed.append({"id": ev_id, "was": name, "now": cleaned})
+    db.commit()
+    return {"fixed": len(fixed), "changes": fixed}
 
 
 @router.post("/admin/run-import")
