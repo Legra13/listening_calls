@@ -108,12 +108,29 @@ def get_filter_options(db: Session) -> dict:
     operators = list(seen.values())
 
     checklists = db.query(Checklist).filter(Checklist.status == "active").all()
-    # Только отделы, привязанные хотя бы к одному активному чек-листу
+    # Отделы с привязкой к активным чек-листам:
+    # — явно заданные в настройках чек-листа
+    # — или взятые из оценок, если привязка не настроена
     dept_set: set[str] = set()
     for cl in checklists:
-        for d in (cl.departments or "").split(","):
-            d = d.strip()
-            if d:
+        if cl.departments:
+            for d in cl.departments.split(","):
+                d = d.strip()
+                if d:
+                    dept_set.add(d)
+        else:
+            rows = (
+                db.query(Evaluation.department)
+                .filter(
+                    Evaluation.checklist_id == cl.id,
+                    Evaluation.department.isnot(None),
+                    Evaluation.department != "",
+                    Evaluation.status == "published",
+                )
+                .distinct()
+                .all()
+            )
+            for (d,) in rows:
                 dept_set.add(d)
     departments = sorted(dept_set)
     return {
