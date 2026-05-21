@@ -219,6 +219,39 @@ def deploy(request: Request):
     return {"status": "deploying"}
 
 
+@router.get("/admin/eval-detail")
+def eval_detail(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    token = request.headers.get("X-Deploy-Token", "")
+    if token != DEPLOY_SECRET:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403)
+    from sqlalchemy import text
+    rows = db.execute(text(
+        "SELECT e.id, e.deal_id, e.operator_name, e.department, e.eval_date, "
+        "e.updated_at, e.stage, e.total_score, e.status, e.general_comment, "
+        "e.evaluator_id, e.created_at "
+        "FROM evaluations e WHERE e.checklist_id=9 AND e.id BETWEEN 693 AND 729 "
+        "ORDER BY e.id"
+    )).fetchall()
+    evals = []
+    for r in rows:
+        items = db.execute(text(
+            "SELECT ei.criterion_id, ei.value, ei.comment "
+            "FROM evaluation_items ei WHERE ei.evaluation_id=:eid ORDER BY ei.criterion_id"
+        ), {"eid": r[0]}).fetchall()
+        evals.append({
+            "id": r[0], "deal_id": r[1], "operator": r[2], "dept": r[3],
+            "eval_date": str(r[4]), "updated_at": str(r[5]), "stage": r[6],
+            "score": r[7], "status": r[8], "general_comment": r[9],
+            "evaluator_id": r[10], "created_at": str(r[11]),
+            "items": [{"crit_id": i[0], "value": i[1], "comment": i[2]} for i in items],
+        })
+    return evals
+
+
 @router.post("/admin/run-import")
 def run_import(request: Request):
     token = request.headers.get("X-Deploy-Token", "")
