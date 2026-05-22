@@ -286,8 +286,8 @@
             </th>
             {% endfor %}
             <th class="hm-th-group" rowspan="2" style="min-width:60px">Итог</th>
-            <th class="hm-th-group" rowspan="2" style="min-width:55px">Оценок</th>
             <th class="hm-th-group" rowspan="2" style="min-width:70px">% успех</th>
+            <th class="hm-th-group" rowspan="2" style="min-width:55px">Оценок</th>
           </tr>
           <tr>
             {% for col in report.columns %}
@@ -306,8 +306,8 @@
             </th>
             {% endfor %}
             <th style="min-width:60px">Итог</th>
-            <th style="min-width:40px">N</th>
             <th style="min-width:70px">% успех</th>
+            <th style="min-width:55px">Оценок</th>
           </tr>
           {% endif %}
         </thead>
@@ -324,10 +324,10 @@
             <td class="fw-semibold">
               {% if row.total is not none %}{{ "%.1f"|format(row.total) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-muted">{{ row.count }}</td>
             <td class="fw-semibold text-success">
               {% if row.won_pct is not none %}{{ "%.1f"|format(row.won_pct) }}%{% else %}—{% endif %}
             </td>
+            <td class="text-muted">{{ row.count }}</td>
           </tr>
           {% endfor %}
           {# Команда #}
@@ -342,10 +342,10 @@
             <td class="fw-bold">
               {% if report.team_total is not none %}{{ "%.1f"|format(report.team_total) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-muted fw-semibold">{{ report.team_count }}</td>
             <td class="fw-bold text-success">
               {% if report.team_won_pct is not none %}{{ "%.1f"|format(report.team_won_pct) }}%{% else %}—{% endif %}
             </td>
+            <td class="text-muted fw-semibold">{{ report.team_count }}</td>
           </tr>
         </tbody>
       </table>
