@@ -57,6 +57,7 @@ _SORT_COLUMNS = {
     "score":    Evaluation.total_score,
     "stage":    Evaluation.stage,
     "dept":     Evaluation.department,
+    "category": Evaluation.client_category,
 }
 
 
