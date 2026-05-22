@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}План / Факт — Отчёты{% endblock %}
+
+{% block styles %}
+<style>
+  .cal-cell {
+    width: 28px; min-width: 28px; height: 28px;
+    font-size: 0.68rem; text-align: center; vertical-align: middle;
+    border: 1px solid #dee2e6; padding: 0;
+  }
+  .cal-0  { background: #f8f9fa; color: #adb5bd; }
+  .cal-1  { background: #bbf7d0; color: #15803d; font-weight: 600; }
+  .cal-2  { background: #86efac; color: #15803d; font-weight: 700; }
+  .cal-3p { background: #4ade80; color: #14532d; font-weight: 700; }
+  .cal-today { outline: 2px solid #3b82f6; outline-offset: -2px; }
+  .cal-weekend { background-color: rgba(0,0,0,0.03); }
+  .progress-sm { height: 6px; }
+  .emp-name { white-space: nowrap; font-weight: 600; }
+  .sticky-col { position: sticky; left: 0; background: #fff; z-index: 2; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h5>
+</div>
+
+{# Навигация по видам отчётов #}
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  <a href="/reports" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-grid-3x3 me-1"></i>Общие показатели
+  </a>
+  <a href="/reports/employee" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-people me-1"></i>Результаты сотрудников
+  </a>
+  <a href="/reports/plan" class="btn btn-sm btn-primary">
+    <i class="bi bi-clipboard-check me-1"></i>План / Факт
+  </a>
+</div>
+
+{# ── Фильтры ─────────────────────────────────────────────────────────────── #}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-sliders me-2"></i>Настройки отчёта
+  </div>
+  <div class="card-body py-3">
+    <form method="get" id="planFilterForm">
+      <div class="row g-2 align-items-end">
+
+        {# Месяц #}
+        <div class="col-auto">
+          <label class="form-label small fw-semibold mb-1">Месяц</label>
+          <input type="month" name="_month" class="form-control form-control-sm"
+                 value="{{ '%04d-%02d' % (year, month) }}"
+                 id="monthPicker" style="min-width:160px">
+        </div>
+
+        {# Чек-лист #}
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-1">Чек-лист</label>
+          <select name="checklist_id" class="form-select form-select-sm">
+            <option value="">— Все чек-листы —</option>
+            {% for cl in options.checklists %}
+            <option value="{{ cl.id }}" {% if checklist_id == cl.id %}selected{% endif %}>
+              {{ cl.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Отдел #}
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">Отдел</label>
+          <div style="max-height:90px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+            {% for dept in options.departments %}
+            <div class="form-check py-0">
+              <input class="form-check-input" type="checkbox" name="departments"
+                     value="{{ dept }}" id="dept_{{ loop.index }}"
+                     {% if dept in departments %}checked{% endif %}>
+              <label class="form-check-label" for="dept_{{ loop.index }}">{{ dept }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="col d-flex gap-2 justify-content-start align-items-end">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-funnel me-1"></i>Применить
+          </button>
+          <a href="/reports/plan" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Сбросить
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Установка плана ──────────────────────────────────────────────────────── #}
+<div class="card shadow-sm mb-4 border-primary border-opacity-25">
+  <div class="card-header py-2 small fw-semibold bg-primary bg-opacity-10">
+    <i class="bi bi-bullseye me-2"></i>Целевой план на месяц
+  </div>
+  <div class="card-body py-3">
+    <form method="post" action="/reports/plan/target" class="row g-2 align-items-end">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="checklist_id" value="{{ checklist_id or '' }}">
+      {% for d in departments %}
+      <input type="hidden" name="departments" value="{{ d }}">
+      {% endfor %}
+
+      <div class="col-auto">
+        <label class="form-label small fw-semibold mb-1">Минимум оценок на сотрудника</label>
+        <div class="input-group input-group-sm">
+          <input type="number" name="target_per_employee" class="form-control"
+                 value="{{ target_per_employee }}" min="1" max="200" style="width:90px">
+          <span class="input-group-text">звонков</span>
+        </div>
+      </div>
+
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-floppy me-1"></i>Сохранить план
+        </button>
+      </div>
+
+      {% if report and report.rows %}
+      <div class="col-auto align-self-end">
+        <span class="text-muted small">
+          Итого план на команду:
+          <strong>{{ report.total_plan }}</strong> оценок
+          ({{ report.rows|length }} сотр. × {{ target_per_employee }})
+        </span>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if not report or not report.rows %}
+<div class="alert alert-secondary">
+  <i class="bi bi-search me-2"></i>Нет оценок за выбранный период.
+</div>
+
+{% else %}
+
+{# ── Сводка команды ────────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card shadow-sm h-100 text-center">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold text-primary">{{ report.total_fact }}</div>
+        <div class="text-muted small">оценок проведено</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card shadow-sm h-100 text-center">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold {% if report.total_pct >= 100 %}text-success{% elif report.total_pct >= 70 %}text-warning{% else %}text-danger{% endif %}">
+          {{ report.total_pct }}%
+        </div>
+        <div class="text-muted small">выполнение плана</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card shadow-sm h-100 text-center">
+      <div class="card-body py-3">
+        {% if pace_target is not none %}
+        <div class="display-6 fw-bold text-info">{{ pace_target }}</div>
+        <div class="text-muted small">ожидается к сегодня ({{ today_day }} дн.)</div>
+        {% else %}
+        <div class="display-6 fw-bold text-secondary">{{ report.total_plan }}</div>
+        <div class="text-muted small">план на месяц</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Таблица план/факт по сотрудникам ─────────────────────────────────────── #}
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-table me-2"></i>Сводка по сотрудникам
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-bordered table-sm mb-0 align-middle" style="font-size:0.85rem">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:150px">Сотрудник</th>
+          <th style="min-width:120px">Отдел</th>
+          <th class="text-center" style="min-width:70px">План</th>
+          <th class="text-center" style="min-width:70px">Факт</th>
+          <th style="min-width:160px">Выполнение</th>
+          <th class="text-center" style="min-width:80px">Дней работы</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.rows %}
+        {% set pct = row.pct %}
+        <tr>
+          <td class="fw-semibold">{{ row.name }}</td>
+          <td class="text-muted small">{{ row.dept or '—' }}</td>
+          <td class="text-center">{{ row.plan }}</td>
+          <td class="text-center fw-semibold
+            {% if pct >= 100 %}text-success
+            {% elif pct >= 70 %}text-warning
+            {% else %}text-danger{% endif %}">
+            {{ row.fact }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1 progress-sm">
+                <div class="progress-bar
+                  {% if pct >= 100 %}bg-success{% elif pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                  style="width:{{ [pct, 100]|min }}%"></div>
+              </div>
+              <span class="small fw-semibold" style="min-width:38px">{{ pct }}%</span>
+            </div>
+          </td>
+          <td class="text-center text-muted">{{ row.days_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="2">Команда</td>
+          <td class="text-center">{{ report.total_plan }}</td>
+          <td class="text-center {% if report.total_pct >= 100 %}text-success{% elif report.total_pct >= 70 %}text-warning{% else %}text-danger{% endif %}">
+            {{ report.total_fact }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1 progress-sm">
+                <div class="progress-bar
+                  {% if report.total_pct >= 100 %}bg-success{% elif report.total_pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                  style="width:{{ [report.total_pct, 100]|min }}%"></div>
+              </div>
+              <span class="small fw-semibold" style="min-width:38px">{{ report.total_pct }}%</span>
+            </div>
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{# ── Календарь активности ──────────────────────────────────────────────────── #}
+<div class="card shadow-sm">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-calendar3 me-2"></i>Активность по дням — {{ month }}/{{ year }}
+    <span class="text-muted fw-normal ms-3" style="font-size:0.7rem">
+      <span class="badge" style="background:#bbf7d0;color:#15803d">1</span> 1 оценка
+      <span class="badge ms-1" style="background:#86efac;color:#15803d">2</span> 2 оценки
+      <span class="badge ms-1" style="background:#4ade80;color:#14532d">3+</span> 3+ оценки
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0" style="font-size:0.75rem; table-layout:fixed; min-width: {{ 160 + report.days_in_month * 29 }}px">
+        <thead class="table-light">
+          <tr>
+            <th style="width:160px; min-width:160px">Сотрудник</th>
+            {% for d in report.days_labels %}
+            {% set dow = (namespace(v=0)) %}
+            {# Определяем день недели через Jinja: используем date() #}
+            <th class="cal-cell text-center p-0
+              {% if today_day == d %}cal-today{% endif %}"
+              style="width:28px"
+              title="{{ d }}/{{ month }}/{{ year }}">
+              {{ d }}
+            </th>
+            {% endfor %}
+            <th class="text-center" style="width:45px">Итог</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.rows %}
+          <tr>
+            <td class="sticky-col fw-semibold" style="font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ row.name }}">{{ row.name }}</td>
+            {% for cnt in row.calendar %}
+            <td class="cal-cell p-0
+              {% if cnt == 0 %}cal-0
+              {% elif cnt == 1 %}cal-1
+              {% elif cnt == 2 %}cal-2
+              {% else %}cal-3p{% endif %}
+              {% if today_day == loop.index %}cal-today{% endif %}"
+              title="{{ cnt }} оц. — день {{ loop.index }}">
+              {% if cnt > 0 %}{{ cnt }}{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center fw-semibold
+              {% if row.pct >= 100 %}text-success
+              {% elif row.pct >= 70 %}text-warning
+              {% else %}text-danger{% endif %}">
+              {{ row.fact }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td class="fw-bold">Команда</td>
+            {% for d in report.days_labels %}
+            {% set di = loop.index0 %}
+            {% set day_total = namespace(v=0) %}
+            {% for row in report.rows %}{% set day_total.v = day_total.v + row.calendar[di] %}{% endfor %}
+            <td class="cal-cell p-0 fw-semibold text-center
+              {% if day_total.v == 0 %}cal-0
+              {% elif day_total.v <= 2 %}cal-1
+              {% elif day_total.v <= 4 %}cal-2
+              {% else %}cal-3p{% endif %}
+              {% if today_day == d %}cal-today{% endif %}"
+              title="{{ day_total.v }} всего — день {{ d }}">
+              {% if day_total.v > 0 %}{{ day_total.v }}{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center fw-bold">{{ report.total_fact }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}{# /report.rows #}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Преобразуем поле "YYYY-MM" в year + month при сабмите */
+document.getElementById('planFilterForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const mp = document.getElementById('monthPicker').value; // "2025-05"
+  const [y, m] = mp.split('-');
+  const params = new URLSearchParams(new FormData(this));
+  params.delete('_month');
+  params.set('year', y);
+  params.set('month', m);
+  window.location.href = '/reports/plan?' + params.toString();
+});
+</script>
+{% endblock %}

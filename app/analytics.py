@@ -634,3 +634,49 @@ def compute_employee_report(evaluations: list[Evaluation], checklist: Checklist,
         "team_count": len(detail_rows),
         "team_won_pct": round(team_won / team_closed * 100, 1) if team_closed > 0 else None,
     }
+
+
+# ── План / Факт ────────────────────────────────────────────────────────────────
+
+from calendar import monthrange
+from collections import Counter as _Counter
+
+
+def compute_plan_fact(evaluations: list, year: int, month: int, target_per_employee: int) -> dict:
+    days_in_month = monthrange(year, month)[1]
+    by_emp: dict[str, dict] = {}
+
+    for ev in evaluations:
+        name = ev.operator_name
+        if name not in by_emp:
+            by_emp[name] = {"dept": ev.department, "by_day": _Counter()}
+        rating_dt = ev.updated_at or ev.created_at
+        if rating_dt:
+            by_emp[name]["by_day"][rating_dt.day] += 1
+
+    rows = []
+    for name in sorted(by_emp.keys()):
+        data = by_emp[name]
+        cal = [data["by_day"].get(d, 0) for d in range(1, days_in_month + 1)]
+        fact = sum(cal)
+        pct = round(fact / target_per_employee * 100) if target_per_employee else 0
+        rows.append({
+            "name": name,
+            "dept": data["dept"],
+            "plan": target_per_employee,
+            "fact": fact,
+            "pct": pct,
+            "days_count": sum(1 for c in cal if c > 0),
+            "calendar": cal,
+        })
+
+    total_fact = sum(r["fact"] for r in rows)
+    total_plan = target_per_employee * len(rows)
+    return {
+        "rows": rows,
+        "days_in_month": days_in_month,
+        "days_labels": list(range(1, days_in_month + 1)),
+        "total_fact": total_fact,
+        "total_plan": total_plan,
+        "total_pct": round(total_fact / total_plan * 100) if total_plan else 0,
+    }

@@ -125,6 +125,18 @@ class EvaluationItem(Base):
     criterion: Mapped["Criterion"] = relationship(back_populates="evaluation_items")
 
 
+class EvaluationTarget(Base):
+    __tablename__ = "evaluation_targets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    month: Mapped[int] = mapped_column(Integer, nullable=False)
+    department: Mapped[str | None] = mapped_column(String(200))
+    checklist_id: Mapped[int | None] = mapped_column(ForeignKey("checklists.id"))
+    target_per_employee: Mapped[int] = mapped_column(Integer, default=5)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
 class DealCache(Base):
     __tablename__ = "deal_cache"
 
