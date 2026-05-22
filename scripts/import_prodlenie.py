@@ -219,18 +219,21 @@ def main():
                 total_score, _ = calculate_scores(items_to_score, checklist)
                 ev.total_score = total_score
 
-                # Категория клиента из Битрикс24
+                # Категория клиента и стадия из Битрикс24
                 if deal_id:
                     try:
                         cached = db.query(DealCache).filter(DealCache.deal_id == deal_id).first()
-                        if cached and cached.client_category:
+                        if cached and (cached.client_category or cached.stage):
                             ev.client_category = cached.client_category
+                            ev.stage = cached.stage
                         else:
                             info = get_deal(deal_id)
-                            if info and info.client_category:
+                            if info:
                                 ev.client_category = info.client_category
+                                ev.stage = info.stage
                                 if cached:
                                     cached.client_category = info.client_category
+                                    cached.stage = info.stage
                     except Exception:
                         pass
 
