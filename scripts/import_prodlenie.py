@@ -34,8 +34,9 @@ sys.path.insert(0, "/home/egerasimchuk/Инструмент_прослушки_�
 from sqlalchemy.orm import joinedload
 
 from app.database import SessionLocal
-from app.models import Block, Checklist, Criterion, Evaluation, EvaluationItem
+from app.models import Block, Checklist, Criterion, DealCache, Evaluation, EvaluationItem
 from app.scoring import calculate_scores, MONTH_NAMES
+from app.bitrix import get_deal
 
 CHECKLIST_ID = 9          # ТВК Продление Аудит
 EVALUATOR_USER_ID = 2     # Наумова Екатерина
@@ -217,6 +218,21 @@ def main():
                 # Подсчёт итогового балла
                 total_score, _ = calculate_scores(items_to_score, checklist)
                 ev.total_score = total_score
+
+                # Категория клиента из Битрикс24
+                if deal_id:
+                    try:
+                        cached = db.query(DealCache).filter(DealCache.deal_id == deal_id).first()
+                        if cached and cached.client_category:
+                            ev.client_category = cached.client_category
+                        else:
+                            info = get_deal(deal_id)
+                            if info and info.client_category:
+                                ev.client_category = info.client_category
+                                if cached:
+                                    cached.client_category = info.client_category
+                    except Exception:
+                        pass
 
                 imported += 1
                 print(f"  Строка {idx}: {operator_name} | сделка {deal_id} | {eval_date} | итог {total_score}%")
