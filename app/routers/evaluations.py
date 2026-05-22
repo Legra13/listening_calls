@@ -74,6 +74,7 @@ def evaluations_index(
     evaluator_id: str = "",
     rated_from: str = "",
     rated_to: str = "",
+    duplicates_only: str = "",
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
@@ -127,6 +128,22 @@ def evaluations_index(
             q = q.filter(Evaluation.eval_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
         except ValueError:
             pass
+
+    if duplicates_only == "1":
+        from sqlalchemy import and_, or_
+        dup_pairs = (
+            db.query(Evaluation.deal_id, Evaluation.checklist_id)
+            .filter(Evaluation.deal_id.isnot(None), Evaluation.deal_id != "")
+            .group_by(Evaluation.deal_id, Evaluation.checklist_id)
+            .having(func.count() > 1)
+            .all()
+        )
+        if dup_pairs:
+            q = q.filter(or_(
+                *[and_(Evaluation.deal_id == p[0], Evaluation.checklist_id == p[1]) for p in dup_pairs]
+            ))
+        else:
+            q = q.filter(Evaluation.id == -1)
 
     col = _SORT_COLUMNS.get(sort, Evaluation.id)
     q = q.order_by(col.asc() if dir == "asc" else col.desc())
@@ -185,6 +202,7 @@ def evaluations_index(
             "evaluator_id": evaluator_id,
             "rated_from": rated_from,
             "rated_to": rated_to,
+            "duplicates_only": duplicates_only,
         },
         "sort": sort,
         "dir": dir,
