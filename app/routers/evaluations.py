@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
@@ -76,7 +76,7 @@ def evaluations_index(
     rated_from: str = "",
     rated_to: str = "",
     duplicates_only: str = "",
-    client_category: str = "",
+    client_category: list[str] = Query(default=[]),
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
@@ -132,7 +132,7 @@ def evaluations_index(
             pass
 
     if client_category:
-        q = q.filter(Evaluation.client_category == client_category)
+        q = q.filter(Evaluation.client_category.in_(client_category))
 
     if duplicates_only == "1":
         from sqlalchemy import and_, or_
