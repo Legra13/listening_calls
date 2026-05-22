@@ -642,7 +642,7 @@ from calendar import monthrange
 from collections import Counter as _Counter
 
 
-def compute_plan_fact(evaluations: list, year: int, month: int, target_per_employee: int) -> dict:
+def compute_plan_fact(evaluations: list, year: int, month: int, target_total: int) -> dict:
     days_in_month = monthrange(year, month)[1]
     by_emp: dict[str, dict] = {}
 
@@ -658,24 +658,20 @@ def compute_plan_fact(evaluations: list, year: int, month: int, target_per_emplo
         data = by_emp[name]
         cal = [data["by_day"].get(d, 0) for d in range(1, days_in_month + 1)]
         fact = sum(cal)
-        pct = round(fact / target_per_employee * 100) if target_per_employee else 0
         rows.append({
             "name": name,
             "dept": data["dept"],
-            "plan": target_per_employee,
             "fact": fact,
-            "pct": pct,
             "days_count": sum(1 for c in cal if c > 0),
             "calendar": cal,
         })
 
     total_fact = sum(r["fact"] for r in rows)
-    total_plan = target_per_employee * len(rows)
     return {
         "rows": rows,
         "days_in_month": days_in_month,
         "days_labels": list(range(1, days_in_month + 1)),
         "total_fact": total_fact,
-        "total_plan": total_plan,
-        "total_pct": round(total_fact / total_plan * 100) if total_plan else 0,
+        "total_plan": target_total,
+        "total_pct": round(total_fact / target_total * 100) if target_total else 0,
     }

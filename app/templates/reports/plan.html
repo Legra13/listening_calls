@@ -126,10 +126,10 @@
       {% endfor %}
 
       <div class="col-auto">
-        <label class="form-label small fw-semibold mb-1">Минимум оценок на сотрудника</label>
+        <label class="form-label small fw-semibold mb-1">Общий план на месяц</label>
         <div class="input-group input-group-sm">
           <input type="number" name="target_per_employee" class="form-control"
-                 value="{{ target_per_employee }}" min="1" max="200" style="width:90px">
+                 value="{{ target_total }}" min="0" max="9999" style="width:100px">
           <span class="input-group-text">звонков</span>
         </div>
       </div>
@@ -139,16 +139,6 @@
           <i class="bi bi-floppy me-1"></i>Сохранить план
         </button>
       </div>
-
-      {% if report and report.rows %}
-      <div class="col-auto align-self-end">
-        <span class="text-muted small">
-          Итого план на команду:
-          <strong>{{ report.total_plan }}</strong> оценок
-          ({{ report.rows|length }} сотр. × {{ target_per_employee }})
-        </span>
-      </div>
-      {% endif %}
     </form>
   </div>
 </div>
@@ -173,10 +163,15 @@
   <div class="col-sm-4">
     <div class="card shadow-sm h-100 text-center">
       <div class="card-body py-3">
+        {% if report.total_plan %}
         <div class="display-6 fw-bold {% if report.total_pct >= 100 %}text-success{% elif report.total_pct >= 70 %}text-warning{% else %}text-danger{% endif %}">
           {{ report.total_pct }}%
         </div>
         <div class="text-muted small">выполнение плана</div>
+        {% else %}
+        <div class="display-6 fw-bold text-secondary">—</div>
+        <div class="text-muted small">выполнение плана</div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -185,10 +180,13 @@
       <div class="card-body py-3">
         {% if pace_target is not none %}
         <div class="display-6 fw-bold text-info">{{ pace_target }}</div>
-        <div class="text-muted small">ожидается к сегодня ({{ today_day }} дн.)</div>
-        {% else %}
+        <div class="text-muted small">ожидается к сегодня ({{ today_day }} дн. из {{ report.days_in_month }})</div>
+        {% elif report.total_plan %}
         <div class="display-6 fw-bold text-secondary">{{ report.total_plan }}</div>
         <div class="text-muted small">план на месяц</div>
+        {% else %}
+        <div class="display-6 fw-bold text-secondary">—</div>
+        <div class="text-muted small">план не задан</div>
         {% endif %}
       </div>
     </div>
@@ -206,55 +204,25 @@
         <tr>
           <th style="min-width:150px">Сотрудник</th>
           <th style="min-width:120px">Отдел</th>
-          <th class="text-center" style="min-width:70px">План</th>
-          <th class="text-center" style="min-width:70px">Факт</th>
-          <th style="min-width:160px">Выполнение</th>
+          <th class="text-center" style="min-width:70px">Оценок</th>
           <th class="text-center" style="min-width:80px">Дней работы</th>
         </tr>
       </thead>
       <tbody>
         {% for row in report.rows %}
-        {% set pct = row.pct %}
         <tr>
           <td class="fw-semibold">{{ row.name }}</td>
           <td class="text-muted small">{{ row.dept or '—' }}</td>
-          <td class="text-center">{{ row.plan }}</td>
-          <td class="text-center fw-semibold
-            {% if pct >= 100 %}text-success
-            {% elif pct >= 70 %}text-warning
-            {% else %}text-danger{% endif %}">
-            {{ row.fact }}
-          </td>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="progress flex-grow-1 progress-sm">
-                <div class="progress-bar
-                  {% if pct >= 100 %}bg-success{% elif pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
-                  style="width:{{ [pct, 100]|min }}%"></div>
-              </div>
-              <span class="small fw-semibold" style="min-width:38px">{{ pct }}%</span>
-            </div>
-          </td>
+          <td class="text-center fw-semibold">{{ row.fact }}</td>
           <td class="text-center text-muted">{{ row.days_count }}</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot class="table-light fw-bold">
         <tr>
-          <td colspan="2">Команда</td>
-          <td class="text-center">{{ report.total_plan }}</td>
+          <td colspan="2">Итого</td>
           <td class="text-center {% if report.total_pct >= 100 %}text-success{% elif report.total_pct >= 70 %}text-warning{% else %}text-danger{% endif %}">
-            {{ report.total_fact }}
-          </td>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="progress flex-grow-1 progress-sm">
-                <div class="progress-bar
-                  {% if report.total_pct >= 100 %}bg-success{% elif report.total_pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
-                  style="width:{{ [report.total_pct, 100]|min }}%"></div>
-              </div>
-              <span class="small fw-semibold" style="min-width:38px">{{ report.total_pct }}%</span>
-            </div>
+            {{ report.total_fact }}{% if report.total_plan %} / {{ report.total_plan }}{% endif %}
           </td>
           <td></td>
         </tr>

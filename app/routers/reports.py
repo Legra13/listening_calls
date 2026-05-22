@@ -229,7 +229,7 @@ def reports_plan(
     else:
         tq = tq.filter(EvaluationTarget.checklist_id.is_(None))
     saved_target = tq.first()
-    target_per_employee = saved_target.target_per_employee if saved_target else 5
+    target_total = saved_target.target_per_employee if saved_target else 0
 
     # Fetch evaluations created in the selected month
     month_start = datetime(year, month, 1)
@@ -249,13 +249,13 @@ def reports_plan(
         q = q.filter(Evaluation.evaluator_id == ev_id)
 
     evaluations = q.all()
-    report = compute_plan_fact(evaluations, year, month, target_per_employee)
+    report = compute_plan_fact(evaluations, year, month, target_total)
 
     # Pace: expected fact by today within this month
     pace_target = None
     if year == today.year and month == today.month:
         elapsed = today.day
-        pace_target = round(target_per_employee * elapsed / last_day)
+        pace_target = round(target_total * elapsed / last_day) if target_total else None
 
     return templates.TemplateResponse("reports/plan.html", {
         "request": request,
@@ -266,7 +266,7 @@ def reports_plan(
         "month": month,
         "checklist_id": cl_id,
         "departments": departments,
-        "target_per_employee": target_per_employee,
+        "target_total": target_total,
         "evaluator_id": ev_id,
         "report": report,
         "pace_target": pace_target,
@@ -296,14 +296,14 @@ def save_plan_target(
     ).first()
 
     if existing:
-        existing.target_per_employee = target_per_employee
+        existing.target_per_employee = target_per_employee  # хранит общий план
     else:
         db.add(EvaluationTarget(
             year=year,
             month=month,
             checklist_id=cl_id,
             target_per_employee=target_per_employee,
-        ))
+        ))  # поле target_per_employee переиспользуется как общий план
     db.commit()
 
     depts_qs = "&".join(f"departments={d}" for d in departments)
