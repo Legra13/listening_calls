@@ -22,6 +22,10 @@ _USERS_TABLE  = "b24-entera-bitrix24-ru-users"
 _DEPTS_TABLE  = "b24-entera-bitrix24-ru-departments"
 
 
+_CATEGORY_FIELD = "UF_CRM_1690299302751"
+_ENUMERATIONS_TABLE = "b24-entera-bitrix24-ru-enumerations"
+
+
 @dataclass
 class DealInfo:
     deal_id: str
@@ -31,6 +35,7 @@ class DealInfo:
     title: str | None
     department: str | None = None
     presentation_date: date | None = None   # UF_CRM_1654694803 — Продление дата "Провели презентацию"
+    client_category: str | None = None      # UF_CRM_1690299302751 — Категория клиента (A/B/C/D)
 
 
 def _get_connection() -> pymysql.Connection:
@@ -67,6 +72,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID,
                            d.ASSIGNED_BY_ID, d.DATE_CREATE,
                            d.UF_CRM_1654694803,
+                           d.{_CATEGORY_FIELD},
                            u.NAME, u.LAST_NAME, u.UF_DEPARTMENT
                     FROM `{_DEALS_TABLE}` d
                     LEFT JOIN `{_USERS_TABLE}` u ON u.ID = d.ASSIGNED_BY_ID
@@ -109,6 +115,19 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
             elif isinstance(raw_pres, datetime):
                 presentation_date = raw_pres.date()
 
+            # Категория клиента — int → расшифровка через enumerations
+            client_category: str | None = None
+            cat_id = row.get(_CATEGORY_FIELD)
+            if cat_id:
+                with conn.cursor() as cur3:
+                    cur3.execute(
+                        f"SELECT VALUE FROM `{_ENUMERATIONS_TABLE}` WHERE ID = %s LIMIT 1",
+                        (cat_id,),
+                    )
+                    cat_row = cur3.fetchone()
+                    if cat_row:
+                        client_category = cat_row["VALUE"]
+
             return DealInfo(
                 deal_id=str(row["ID"]),
                 operator_name=operator_name,
@@ -117,6 +136,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                 title=row.get("TITLE"),
                 department=department,
                 presentation_date=presentation_date,
+                client_category=client_category,
             )
         finally:
             conn.close()

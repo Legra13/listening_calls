@@ -195,6 +195,12 @@ label:has(input.score-num:checked) .score-btn-num { background: #0d6efd; color: 
             <input type="text" id="phone_input" name="phone" class="form-control form-control-sm"
                    placeholder="+7 900 000-00-00">
           </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Категория клиента</label>
+            <input type="text" id="client_category_input" name="client_category"
+                   class="form-control form-control-sm bg-light"
+                   placeholder="—" readonly>
+          </div>
         </div>
         <input type="hidden" id="stage" name="stage" value="в работе">
       </div>
@@ -537,6 +543,8 @@ function lookupDeal() {
       const callDate = data.presentation_date || data.deal_date;
       if (callDate) document.getElementById('eval_date').value = callDate;
       document.getElementById('stage').value = data.stage || 'в работе';
+      const catInput = document.getElementById('client_category_input');
+      if (catInput) catInput.value = data.client_category || '';
       const icon = data.from_cache ? 'bi-database' : 'bi-check-circle';
       const dateHint = data.presentation_date ? ' · дата из карточки' : '';
       status.innerHTML = '<span class="text-success"><i class="bi ' + icon + ' me-1"></i>'

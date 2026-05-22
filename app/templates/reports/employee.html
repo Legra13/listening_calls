@@ -159,6 +159,17 @@
             </select>
           </div>
 
+          {# Категория клиента #}
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Категория клиента</label>
+            <select name="client_category" class="form-select form-select-sm">
+              <option value="">— Все категории —</option>
+              {% for cat in ["A","B","C","D"] %}
+              <option value="{{ cat }}" {% if filters.client_category == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
         </div>
 
         {# Строка 3: Отображение + Разрез + Комментарии + Кнопки #}
@@ -244,6 +255,9 @@
   {% endif %}
   {% if filters.stage %}
   <span class="badge bg-info text-dark">Стадия: {{ filters.stage }}</span>
+  {% endif %}
+  {% if filters.client_category %}
+  <span class="badge bg-secondary">Категория: {{ filters.client_category }}</span>
   {% endif %}
 </div>
 
@@ -388,6 +402,7 @@
               {% endfor %}
               <th style="min-width:60px">Итог</th>
               <th style="min-width:110px">Сделка</th>
+              <th style="min-width:70px;white-space:nowrap">Категория</th>
               <th style="min-width:100px;white-space:nowrap">Стадия</th>
               {% if filters.show_comments %}
               <th style="min-width:160px">Комментарий</th>
@@ -456,6 +471,11 @@
                 {% if ev.phone %}
                 <br><span class="text-muted" style="font-size:0.75rem"><i class="bi bi-telephone"></i> {{ ev.phone }}</span>
                 {% endif %}
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td class="text-center">
+                {% if ev.client_category %}
+                <span class="badge bg-secondary-subtle text-secondary fw-semibold">{{ ev.client_category }}</span>
                 {% else %}<span class="text-muted">—</span>{% endif %}
               </td>
               <td class="small">

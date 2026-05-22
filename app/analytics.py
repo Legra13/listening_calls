@@ -375,6 +375,7 @@ class EmployeeFilters:
     checklist_id: int | None = None
     evaluator_id: int | None = None
     stage: str | None = None
+    client_category: str | None = None
     display_mode: str = "pct"    # "pct" | "pts"
     group_mode: str = "groups"   # "groups" | "criteria"
     show_comments: bool = True
@@ -468,6 +469,8 @@ def fetch_evaluations_employee(db: Session, filters: EmployeeFilters) -> list[Ev
         q = q.filter(Evaluation.evaluator_id == filters.evaluator_id)
     if filters.stage:
         q = q.filter(Evaluation.stage == filters.stage)
+    if filters.client_category:
+        q = q.filter(Evaluation.client_category == filters.client_category)
     q = q.filter(Evaluation.status == "published")
     q = q.order_by(Evaluation.eval_date.desc().nullslast(), Evaluation.created_at.desc())
     return q.all()

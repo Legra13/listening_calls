@@ -98,6 +98,7 @@ class Evaluation(Base):
     total_score: Mapped[float | None] = mapped_column(Float)
     evaluator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     general_comment: Mapped[str | None] = mapped_column(Text)
+    client_category: Mapped[str | None] = mapped_column(String(10))
     # status: "draft" | "published"
     status: Mapped[str] = mapped_column(String(20), default="published")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
@@ -133,4 +134,5 @@ class DealCache(Base):
     deal_date: Mapped[datetime | None] = mapped_column(DateTime)
     presentation_date: Mapped[datetime | None] = mapped_column(DateTime)
     stage: Mapped[str | None] = mapped_column(String(200))
+    client_category: Mapped[str | None] = mapped_column(String(10))
     last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

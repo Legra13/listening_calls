@@ -102,6 +102,15 @@
     <input type="date" name="rated_to" class="form-control form-control-sm"
            value="{{ filters.rated_to }}" style="width:140px">
   </div>
+  <div class="col-auto">
+    <label class="form-label form-label-sm mb-1 text-muted">Категория клиента</label>
+    <select name="client_category" class="form-select form-select-sm" style="width:110px">
+      <option value="">Все</option>
+      {% for cat in ["A","B","C","D"] %}
+      <option value="{{ cat }}" {% if filters.client_category == cat %}selected{% endif %}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="col-auto d-flex align-items-end gap-3">
     <div class="form-check mb-1">
       <input class="form-check-input" type="checkbox" name="duplicates_only" value="1" id="filter-dups"
@@ -117,7 +126,7 @@
 
 {% macro sort_url(col) %}
   {% set new_dir = "asc" if (sort == col and dir == "desc") else "desc" %}
-  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&eval_status={{ filters.eval_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&deal_id={{ filters.deal_id }}&evaluator_id={{ filters.evaluator_id }}&rated_from={{ filters.rated_from }}&rated_to={{ filters.rated_to }}&duplicates_only={{ filters.duplicates_only }}
+  /evaluations?sort={{ col }}&dir={{ new_dir }}&operator={{ filters.operator }}&checklist_id={{ filters.checklist_id }}&eval_status={{ filters.eval_status }}&stage={{ filters.stage }}&department={{ filters.department }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&deal_id={{ filters.deal_id }}&evaluator_id={{ filters.evaluator_id }}&rated_from={{ filters.rated_from }}&rated_to={{ filters.rated_to }}&duplicates_only={{ filters.duplicates_only }}&client_category={{ filters.client_category }}
 {%- endmacro %}
 
 {% macro sort_icon(col) %}
@@ -137,6 +146,7 @@
         <th data-col-key="operator"><a href="{{ sort_url('operator') }}" class="text-decoration-none text-dark">Сотрудник{{ sort_icon('operator') }}</a></th>
         <th data-col-key="dept"><a href="{{ sort_url('dept') }}" class="text-decoration-none text-dark">Отдел{{ sort_icon('dept') }}</a></th>
         <th data-col-key="deal">Сделка</th>
+        <th data-col-key="category">Категория</th>
         <th data-col-key="checklist">Чек-лист</th>
         <th data-col-key="call_date"><a href="{{ sort_url('date') }}" class="text-decoration-none text-dark">Дата звонка{{ sort_icon('date') }}</a></th>
         <th data-col-key="score"><a href="{{ sort_url('score') }}" class="text-decoration-none text-dark">Итог{{ sort_icon('score') }}</a></th>
@@ -164,6 +174,11 @@
           {% if ev.deal_id %}
             #{{ ev.deal_id }}
             {% if ev.phone %}<br><span class="text-secondary"><i class="bi bi-telephone"></i> {{ ev.phone }}</span>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td class="align-middle text-center">
+          {% if ev.client_category %}
+          <span class="badge bg-secondary-subtle text-secondary fw-semibold" style="font-size:0.8rem">{{ ev.client_category }}</span>
           {% else %}—{% endif %}
         </td>
         <td class="align-middle small">{{ ev.checklist.name if ev.checklist else '—' }}</td>

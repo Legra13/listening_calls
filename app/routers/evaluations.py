@@ -75,6 +75,7 @@ def evaluations_index(
     rated_from: str = "",
     rated_to: str = "",
     duplicates_only: str = "",
+    client_category: str = "",
     sort: str = "id",
     dir: str = "desc",
     db: Session = Depends(get_db),
@@ -128,6 +129,9 @@ def evaluations_index(
             q = q.filter(Evaluation.eval_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
         except ValueError:
             pass
+
+    if client_category:
+        q = q.filter(Evaluation.client_category == client_category)
 
     if duplicates_only == "1":
         from sqlalchemy import and_, or_
@@ -203,6 +207,7 @@ def evaluations_index(
             "rated_from": rated_from,
             "rated_to": rated_to,
             "duplicates_only": duplicates_only,
+            "client_category": client_category,
         },
         "sort": sort,
         "dir": dir,
@@ -334,6 +339,7 @@ async def evaluations_create(
                 status = "draft"
 
     deal_url = f"https://entera.bitrix24.ru/crm/deal/details/{deal_id}/" if deal_id else None
+    client_category = (form.get("client_category") or "").strip() or None
 
     evaluation = Evaluation(
         checklist_id=checklist_id,
@@ -347,6 +353,7 @@ async def evaluations_create(
         week_year=eval_date.year if eval_date else None,
         month=MONTH_NAMES[eval_date.month - 1] if eval_date else None,
         stage=stage,
+        client_category=client_category,
         total_score=total_score,
         evaluator_id=current_user.id,
         general_comment=general_comment or None,
@@ -488,6 +495,7 @@ async def evaluations_update(
     evaluation.week_year = eval_date.year if eval_date else None
     evaluation.month = MONTH_NAMES[eval_date.month - 1] if eval_date else None
     evaluation.stage = stage
+    evaluation.client_category = (form.get("client_category") or "").strip() or None
     evaluation.general_comment = general_comment or None
 
     # Update items

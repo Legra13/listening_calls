@@ -54,6 +54,7 @@ def deal_lookup(
                 stage=cached.stage or "в работе",
                 from_cache=True,
                 presentation_date=cached.presentation_date,
+                client_category=cached.client_category,
             )
 
     # Битрикс
@@ -73,6 +74,7 @@ def deal_lookup(
         deal_date=info.deal_date,
         presentation_date=info.presentation_date,
         stage=info.stage,
+        client_category=info.client_category,
         last_synced_at=datetime.utcnow(),
     )
     db.merge(entry)
@@ -86,6 +88,7 @@ def deal_lookup(
         stage=info.stage,
         from_cache=False,
         presentation_date=info.presentation_date,
+        client_category=info.client_category,
     )
 
 
@@ -186,6 +189,7 @@ def _deal_response(
     stage: str,
     from_cache: bool,
     presentation_date=None,
+    client_category: str | None = None,
 ) -> JSONResponse:
     badge_class, badge_label = STAGE_BADGE.get(stage, ("secondary", stage))
     pd_str = ""
@@ -204,6 +208,7 @@ def _deal_response(
         "stage_badge": badge_class,
         "stage_label": badge_label,
         "from_cache": from_cache,
+        "client_category": client_category or "",
     })
 
 
