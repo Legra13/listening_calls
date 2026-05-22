@@ -650,9 +650,8 @@ def compute_plan_fact(evaluations: list, year: int, month: int, target_per_emplo
         name = ev.operator_name
         if name not in by_emp:
             by_emp[name] = {"dept": ev.department, "by_day": _Counter()}
-        rating_dt = ev.updated_at or ev.created_at
-        if rating_dt:
-            by_emp[name]["by_day"][rating_dt.day] += 1
+        if ev.eval_date:
+            by_emp[name]["by_day"][ev.eval_date.day] += 1
 
     rows = []
     for name in sorted(by_emp.keys()):

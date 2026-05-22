@@ -238,8 +238,8 @@ def reports_plan(
 
     q = db.query(Evaluation).filter(
         Evaluation.status == "published",
-        Evaluation.created_at >= month_start,
-        Evaluation.created_at <= month_end,
+        Evaluation.eval_date >= month_start,
+        Evaluation.eval_date <= month_end,
     )
     if cl_id:
         q = q.filter(Evaluation.checklist_id == cl_id)
