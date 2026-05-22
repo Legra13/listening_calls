@@ -395,7 +395,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for row in report.detail_rows[:10] %}
+            {% for row in report.detail_rows %}
             {% set ev = row.ev %}
             <tr>
               <td class="text-muted">{{ loop.index }}</td>
@@ -448,6 +448,14 @@
                    class="deal-link text-decoration-none">
                   <i class="bi bi-box-arrow-up-right me-1"></i>#{{ ev.deal_id }}
                 </a>
+                {% if ev.deal_id in duplicate_deal_ids %}
+                <span class="badge bg-warning-subtle text-warning-emphasis ms-1"
+                      style="font-size:0.65rem"
+                      title="По этой сделке несколько оценок">2 звонка</span>
+                {% endif %}
+                {% if ev.phone %}
+                <br><span class="text-muted" style="font-size:0.75rem"><i class="bi bi-telephone"></i> {{ ev.phone }}</span>
+                {% endif %}
                 {% else %}<span class="text-muted">—</span>{% endif %}
               </td>
               <td class="small">

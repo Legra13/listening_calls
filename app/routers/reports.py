@@ -167,10 +167,14 @@ def reports_employee(
         or filters.rated_date_from or filters.rated_date_to
     )
 
+    duplicate_deal_ids: set[str] = set()
     if applied and selected_cl:
         evaluations = fetch_evaluations_employee(db, filters)
         if evaluations:
             report = compute_employee_report(evaluations, selected_cl, filters.group_mode)
+            from collections import Counter
+            deal_counts = Counter(ev.deal_id for ev in evaluations if ev.deal_id)
+            duplicate_deal_ids = {did for did, cnt in deal_counts.items() if cnt > 1}
 
     return templates.TemplateResponse("reports/employee.html", {
         "request": request,
@@ -183,4 +187,5 @@ def reports_employee(
         "applied": applied,
         "heat_style": heat_style,
         "BITRIX_BASE_URL": "https://entera.bitrix24.ru",
+        "duplicate_deal_ids": duplicate_deal_ids,
     })
