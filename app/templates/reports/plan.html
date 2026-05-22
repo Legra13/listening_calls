@@ -83,6 +83,20 @@
           </div>
         </div>
 
+        {# Оценщик #}
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">Оценщик</label>
+          <select name="evaluator_id" class="form-select form-select-sm">
+            <option value="">— Все —</option>
+            {% for ev_user in options.evaluators %}
+            <option value="{{ ev_user.id }}"
+              {% if evaluator_id == ev_user.id %}selected{% endif %}>
+              {{ ev_user.full_name or ev_user.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
         <div class="col d-flex gap-2 justify-content-start align-items-end">
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-funnel me-1"></i>Применить
@@ -106,6 +120,7 @@
       <input type="hidden" name="year" value="{{ year }}">
       <input type="hidden" name="month" value="{{ month }}">
       <input type="hidden" name="checklist_id" value="{{ checklist_id or '' }}">
+      <input type="hidden" name="evaluator_id" value="{{ evaluator_id or '' }}">
       {% for d in departments %}
       <input type="hidden" name="departments" value="{{ d }}">
       {% endfor %}

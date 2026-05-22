@@ -204,6 +204,7 @@ def reports_plan(
     month: int = 0,
     checklist_id: str = "",
     departments: list[str] = Query(default=[]),
+    evaluator_id: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -215,6 +216,7 @@ def reports_plan(
 
     options = get_employee_report_options(db)
     cl_id = int(checklist_id) if checklist_id else None
+    ev_id = int(evaluator_id) if evaluator_id else None
 
     # Load saved target for this period
     tq = db.query(EvaluationTarget).filter(
@@ -243,6 +245,8 @@ def reports_plan(
         q = q.filter(Evaluation.checklist_id == cl_id)
     if departments:
         q = q.filter(Evaluation.department.in_(departments))
+    if ev_id:
+        q = q.filter(Evaluation.evaluator_id == ev_id)
 
     evaluations = q.all()
     report = compute_plan_fact(evaluations, year, month, target_per_employee)
@@ -263,6 +267,7 @@ def reports_plan(
         "checklist_id": cl_id,
         "departments": departments,
         "target_per_employee": target_per_employee,
+        "evaluator_id": ev_id,
         "report": report,
         "pace_target": pace_target,
         "today_day": today.day if (year == today.year and month == today.month) else None,
@@ -275,6 +280,7 @@ def save_plan_target(
     year: int = Form(...),
     month: int = Form(...),
     checklist_id: str = Form(""),
+    evaluator_id: str = Form(""),
     target_per_employee: int = Form(5),
     departments: list[str] = Form(default=[]),
     db: Session = Depends(get_db),
@@ -301,7 +307,7 @@ def save_plan_target(
     db.commit()
 
     depts_qs = "&".join(f"departments={d}" for d in departments)
-    redirect = f"/reports/plan?year={year}&month={month}&checklist_id={checklist_id or ''}"
+    redirect = f"/reports/plan?year={year}&month={month}&checklist_id={checklist_id or ''}&evaluator_id={evaluator_id or ''}"
     if depts_qs:
         redirect += f"&{depts_qs}"
     return RedirectResponse(redirect, status_code=303)
