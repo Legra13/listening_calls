@@ -276,12 +276,7 @@
               {% if cnt > 0 %}{{ cnt }}{% endif %}
             </td>
             {% endfor %}
-            <td class="text-center fw-semibold
-              {% if row.pct >= 100 %}text-success
-              {% elif row.pct >= 70 %}text-warning
-              {% else %}text-danger{% endif %}">
-              {{ row.fact }}
-            </td>
+            <td class="text-center fw-semibold">{{ row.fact }}</td>
           </tr>
           {% endfor %}
         </tbody>
