@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Оценки — Оценка звонков{% endblock %}
 
+{% block styles %}
+<style>
+/* Липкая шапка таблицы оценок */
+.evals-table thead th {
+  position: sticky;
+  top: 59px;   /* навбар: 3px полоска + 56px = 59px */
+  z-index: 20;
+  background-color: #f8f9fa;   /* цвет table-light */
+  box-shadow: 0 1px 0 #dee2e6; /* имитация нижней границы (border не работает со sticky) */
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Оценки</h5>
@@ -143,7 +156,7 @@
 
 {% if evaluations %}
 <div class="card shadow-sm">
-  <table class="table table-hover table-sm mb-0">
+  <table class="table table-hover table-sm mb-0 evals-table">
     <thead class="table-light">
       <tr>
         <th data-col-key="id"><a href="{{ sort_url('id') }}" class="text-decoration-none text-dark">#{{ sort_icon('id') }}</a></th>
