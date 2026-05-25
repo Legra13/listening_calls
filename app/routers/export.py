@@ -378,28 +378,53 @@ def _rpt_sheet_tab1(wb, tab1: dict):
     _autowidth(ws)
 
 
+_FILL_IMPACT_POS = PatternFill("solid", fgColor="D5F5E3")
+_FILL_IMPACT_NEG = PatternFill("solid", fgColor="FADBD8")
+_FILL_IMPACT_NEU = PatternFill("solid", fgColor="F2F3F4")
+
+
+def _impact_fill(v):
+    if v is None:    return _FILL_IMPACT_NEU
+    if v >= 5:       return _FILL_IMPACT_POS
+    if v <= -5:      return _FILL_IMPACT_NEG
+    return _FILL_IMPACT_NEU
+
+
 def _rpt_sheet_tab2(wb, tab2: list):
-    """Лист 2: Корреляция — блоки × результат сделки."""
+    """Лист 2: Корреляция — блоки × результат сделки. Сортировка по влиянию на WR."""
     ws = wb.create_sheet("Корреляция по блокам")
     _write_header(ws, [
-        "Блок", "Вес", "Ср. балл (победа) %", "Ср. балл (не продал) %",
-        "Разница (Δ) %", "Win rate если сделано %", "Win rate если не сделано %", "Влияние на WR %",
+        "Блок", "Вес",
+        "Ср. балл — победа %", "Ср. балл — не продал %",
+        "Разница (Δ) пп",
+        "Win Rate если выполнен %", "Win Rate если не выполнен %",
+        "Влияние на WR пп",
     ])
     ws.freeze_panes = "A2"
 
-    for row in tab2:
+    # Сортируем по влиянию на WR — самые важные блоки вверху
+    tab2_sorted = sorted(tab2, key=lambda r: (r.get("wr_impact") or 0), reverse=True)
+
+    for row in tab2_sorted:
         ws.append([
             row["name"], row["weight"],
             row["avg_won"], row["avg_lost"], row["delta"],
             row["wr_done"], row["wr_not_done"], row["wr_impact"],
         ])
         ri = ws.max_row
-        ws.cell(ri, 3).fill = _score_fill(row["avg_won"])
-        ws.cell(ri, 3).alignment = _CENTER
-        ws.cell(ri, 4).fill = _score_fill(row["avg_lost"])
-        ws.cell(ri, 4).alignment = _CENTER
-        for col in (5, 6, 7, 8):
-            ws.cell(ri, col).alignment = _CENTER
+        ws.cell(ri, 3).fill = _score_fill(row["avg_won"]); ws.cell(ri, 3).alignment = _CENTER
+        ws.cell(ri, 4).fill = _score_fill(row["avg_lost"]); ws.cell(ri, 4).alignment = _CENTER
+        ws.cell(ri, 5).fill = _impact_fill(row["delta"]);   ws.cell(ri, 5).alignment = _CENTER
+        ws.cell(ri, 6).fill = _score_fill(row["wr_done"]);  ws.cell(ri, 6).alignment = _CENTER
+        ws.cell(ri, 7).fill = _score_fill(row["wr_not_done"]); ws.cell(ri, 7).alignment = _CENTER
+        ws.cell(ri, 8).fill = _impact_fill(row["wr_impact"]); ws.cell(ri, 8).alignment = _CENTER
+        ws.cell(ri, 8).font = Font(bold=True)
+
+    # Пояснение под таблицей
+    ws.append([])
+    ws.append(["Сортировка: по «Влияние на WR пп» — блоки с наибольшим влиянием на исход сделки вверху."])
+    ws.append(["Δ — разница среднего балла между успешными и проигранными сделками."])
+    ws.append(["Win Rate если выполнен — % побед среди сделок, где блок набрал > 0%."])
 
     _autowidth(ws)
 
@@ -652,10 +677,11 @@ def export_xlsx(
 @router.get("/reports")
 def export_reports_xlsx(
     checklist_id: str = "",
-    department: str = "",
+    departments: list[str] = QueryParam(default=[]),
     operators: list[str] = QueryParam(default=[]),
     date_from: str = "",
     date_to: str = "",
+    stage: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -663,11 +689,12 @@ def export_reports_xlsx(
     from collections import Counter
 
     filters = Filters(
-        department=department,
+        departments=departments,
         operators=operators,
         date_from=date_type.fromisoformat(date_from) if date_from else None,
         date_to=date_type.fromisoformat(date_to) if date_to else None,
         checklist_id=int(checklist_id) if checklist_id else None,
+        stage=stage if stage in ("won", "lost", "progress") else "",
     )
 
     evaluations = fetch_evaluations(db, filters)

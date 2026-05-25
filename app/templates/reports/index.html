@@ -574,27 +574,43 @@
     <div class="mb-4" style="height:320px">
       <canvas id="corrChart"></canvas>
     </div>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="text-muted small">
+        <i class="bi bi-sort-down me-1"></i>Кликни на заголовок колонки для сортировки.
+        По умолчанию — «Влияние WR» по убыванию.
+      </span>
+    </div>
     <div class="table-responsive">
-      <table class="table table-bordered table-sm align-middle" style="font-size:0.8rem">
-        <thead class="table-light">
+      <table id="corrTable" class="table table-bordered table-sm align-middle" style="font-size:0.8rem">
+        <thead class="table-light" style="cursor:pointer;user-select:none">
           <tr>
-            <th style="min-width:160px">Блок</th>
-            <th class="text-center" style="min-width:90px" title="Средний балл по успешным сделкам">
-              <i class="bi bi-check-circle text-success"></i> Успешных
+            <th data-col="0" class="text-start" style="min-width:160px">
+              Блок <span class="sort-icon text-muted"></span>
             </th>
-            <th class="text-center" style="min-width:90px" title="Средний балл по потерянным сделкам">
-              <i class="bi bi-x-circle text-danger"></i> Не продали
+            <th data-col="1" class="text-center" style="min-width:90px" title="Средний балл по успешным сделкам">
+              <i class="bi bi-check-circle text-success"></i> Успешных <span class="sort-icon text-muted"></span>
             </th>
-            <th class="text-center" style="min-width:80px">Δ Won−Lost</th>
-            <th class="text-center" style="min-width:90px"
-                title="Win Rate среди сделок, где блок выполнен (>0%)">WR выполнено</th>
-            <th class="text-center" style="min-width:90px"
-                title="Win Rate среди сделок, где блок не выполнен (0%)">WR не выполнено</th>
-            <th class="text-center" style="min-width:90px"
-                title="Разница Win Rate: влияние выполнения блока на закрытие">Влияние WR</th>
+            <th data-col="2" class="text-center" style="min-width:90px" title="Средний балл по потерянным сделкам">
+              <i class="bi bi-x-circle text-danger"></i> Не продали <span class="sort-icon text-muted"></span>
+            </th>
+            <th data-col="3" class="text-center" style="min-width:80px">
+              Δ Won−Lost <span class="sort-icon text-muted"></span>
+            </th>
+            <th data-col="4" class="text-center" style="min-width:90px"
+                title="Win Rate среди сделок, где блок выполнен (>0%)">
+              WR выполнено <span class="sort-icon text-muted"></span>
+            </th>
+            <th data-col="5" class="text-center" style="min-width:90px"
+                title="Win Rate среди сделок, где блок не выполнен (0%)">
+              WR не выполнено <span class="sort-icon text-muted"></span>
+            </th>
+            <th data-col="6" class="text-center" style="min-width:90px"
+                title="Разница Win Rate: влияние выполнения блока на закрытие">
+              Влияние WR <span class="sort-icon text-muted">↓</span>
+            </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="corrTableBody">
           {% for row in tab2 %}
           <tr>
             <td class="fw-semibold">
@@ -603,24 +619,30 @@
               <span class="text-muted fw-normal ms-1" style="font-size:0.7rem">({{ row.weight }})</span>
               {% endif %}
             </td>
-            <td class="text-center" style="{{ heat_style(row.avg_won) | safe }}">
+            <td class="text-center" style="{{ heat_style(row.avg_won) | safe }}"
+                data-val="{{ row.avg_won if row.avg_won is not none else '' }}">
               {% if row.avg_won is not none %}{{ "%.1f"|format(row.avg_won) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-center" style="{{ heat_style(row.avg_lost) | safe }}">
+            <td class="text-center" style="{{ heat_style(row.avg_lost) | safe }}"
+                data-val="{{ row.avg_lost if row.avg_lost is not none else '' }}">
               {% if row.avg_lost is not none %}{{ "%.1f"|format(row.avg_lost) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-center" style="{{ delta_style(row.delta) | safe }}">
+            <td class="text-center" style="{{ delta_style(row.delta) | safe }}"
+                data-val="{{ row.delta if row.delta is not none else '' }}">
               {% if row.delta is not none %}
                 {{ "+" if row.delta >= 0 else "" }}{{ "%.1f"|format(row.delta) }}
               {% else %}—{% endif %}
             </td>
-            <td class="text-center" style="{{ heat_style(row.wr_done) | safe }}">
+            <td class="text-center" style="{{ heat_style(row.wr_done) | safe }}"
+                data-val="{{ row.wr_done if row.wr_done is not none else '' }}">
               {% if row.wr_done is not none %}{{ "%.1f"|format(row.wr_done) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-center" style="{{ heat_style(row.wr_not_done) | safe }}">
+            <td class="text-center" style="{{ heat_style(row.wr_not_done) | safe }}"
+                data-val="{{ row.wr_not_done if row.wr_not_done is not none else '' }}">
               {% if row.wr_not_done is not none %}{{ "%.1f"|format(row.wr_not_done) }}%{% else %}—{% endif %}
             </td>
-            <td class="text-center" style="{{ delta_style(row.wr_impact) | safe }}">
+            <td class="text-center fw-semibold" style="{{ delta_style(row.wr_impact) | safe }}"
+                data-val="{{ row.wr_impact if row.wr_impact is not none else '' }}">
               {% if row.wr_impact is not none %}
                 {{ "+" if row.wr_impact >= 0 else "" }}{{ "%.1f"|format(row.wr_impact) }} pp
               {% else %}—{% endif %}
@@ -631,8 +653,8 @@
       </table>
     </div>
     <div class="text-muted small mt-2">
-      Δ — разница среднего балла между успешными и потерянными сделками.<br>
-      Влияние WR — насколько Win Rate выше, если блок выполнен (в процентных пунктах).
+      <strong>Влияние WR</strong> — на сколько пунктов выше Win Rate, если блок выполнен. Самые важные блоки вверху.<br>
+      <strong>Δ</strong> — разница среднего балла между успешными и потерянными сделками.
     </div>
     {% else %}
     <div class="text-muted text-center py-4">Нет данных для корреляционного анализа.</div>
@@ -866,6 +888,66 @@ if (weeklyCtx && weeklyData.length > 0) {
     }
   });
 }
+
+/* ── Сортировка таблицы корреляции (Tab 2) ───────────────────────────── */
+(function() {
+  const table = document.getElementById('corrTable');
+  if (!table) return;
+
+  let sortCol = 6;   // по умолчанию: Влияние WR
+  let sortAsc = false; // по умолчанию: убывание
+
+  function parseVal(td) {
+    const v = td.dataset.val;
+    if (v === undefined || v === '') return -Infinity;
+    return parseFloat(v);
+  }
+
+  function sortTable(col, asc) {
+    const tbody = table.querySelector('tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+      const va = parseVal(a.cells[col]);
+      const vb = parseVal(b.cells[col]);
+      if (va === -Infinity && vb === -Infinity) return 0;
+      if (va === -Infinity) return 1;
+      if (vb === -Infinity) return -1;
+      return asc ? va - vb : vb - va;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    // Обновляем иконки
+    table.querySelectorAll('th .sort-icon').forEach((el, i) => {
+      if (i === col) {
+        el.textContent = asc ? '↑' : '↓';
+        el.style.color = '#0d6efd';
+      } else {
+        el.textContent = '';
+        el.style.color = '';
+      }
+    });
+  }
+
+  // Вешаем клик на каждый заголовок
+  table.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('mouseenter', () => th.style.background = '#e9ecef');
+    th.addEventListener('mouseleave', () => th.style.background = '');
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = false; // новая колонка — по убыванию
+      }
+      sortTable(sortCol, sortAsc);
+    });
+  });
+
+  // Применяем сортировку по умолчанию при загрузке
+  sortTable(sortCol, sortAsc);
+})();
 
 /* Бар-чарт корреляции блоков (Tab 2) */
 const tab2Data = {{ tab2_json | safe }};
