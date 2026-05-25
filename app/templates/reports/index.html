@@ -361,9 +361,16 @@
     {% endif %}
 
     {# Тепловая карта #}
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <span class="fw-semibold">Тепловая карта сотрудников</span>
-      <div class="btn-group btn-group-sm" role="group">
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+      <div class="flex-grow-1">
+        <div class="fw-bold" style="font-size:0.95rem">Тепловая карта сотрудников</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Средний балл по каждому блоку чек-листа. Цвет: красный — плохо, зелёный — хорошо.
+          Бейдж «Зона риска» — сотрудники со средним баллом ниже 50%.
+        </div>
+      </div>
+      <div class="btn-group btn-group-sm flex-shrink-0" role="group">
         <button type="button" class="btn btn-outline-secondary active" id="btnPct">%</button>
         <button type="button" class="btn btn-outline-secondary" id="btnPts">Баллы</button>
       </div>
@@ -455,9 +462,15 @@
 
     {# Динамика по неделям #}
     {% if tab1.weekly %}
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <span class="fw-semibold">Динамика по неделям</span>
-      <div class="btn-group btn-group-sm" role="group">
+    <div class="d-flex align-items-start gap-2 mb-3 mt-2">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-graph-up"></i></span>
+      <div class="flex-grow-1">
+        <div class="fw-bold" style="font-size:0.95rem">Динамика по неделям</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Как менялся средний балл команды во времени. Рост — улучшение качества звонков.
+        </div>
+      </div>
+      <div class="btn-group btn-group-sm flex-shrink-0" role="group">
         <button type="button" class="btn btn-outline-secondary active" id="btnWeekChart">График</button>
         <button type="button" class="btn btn-outline-secondary" id="btnWeekTable">Таблица</button>
       </div>
@@ -495,10 +508,18 @@
     </div>
     {% endif %}
 
-    {# ─────────────────────────────────────────────────────────────────── #}
     {# ── БЛОК 1: Оценка → шанс закрыть сделку ───────────────────────── #}
-    {# ─────────────────────────────────────────────────────────────────── #}
     <hr class="my-4">
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <span class="text-success mt-1" style="font-size:1.15rem"><i class="bi bi-trophy"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Оценка звонка → шанс выиграть сделку</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Показывает, как итоговый балл оценки связан с результатом сделки.
+          Чем выше оценка — тем выше Win Rate (% успешных из закрытых сделок).
+        </div>
+      </div>
+    </div>
 
     {# Insight-заголовок — заполняется JS-ом из данных #}
     <div id="outcomeInsight" class="d-none mb-3">
@@ -543,10 +564,18 @@
       <i class="bi bi-info-circle me-1"></i>Нет данных для построения отчёта.
     </div>
 
-    {# ─────────────────────────────────────────────────────────────────── #}
     {# ── БЛОК 2: Оценка → скорость закрытия ─────────────────────────── #}
-    {# ─────────────────────────────────────────────────────────────────── #}
     <hr class="my-4">
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-stopwatch"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Оценка звонка → скорость закрытия сделки</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          За сколько дней закрывается сделка после звонка — в зависимости от качества звонка.
+          Только сделки с известной датой закрытия в Битрикс24.
+        </div>
+      </div>
+    </div>
 
     <div id="speedInsight" class="d-none mb-3">
       <div class="p-3 rounded-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe">
@@ -588,10 +617,18 @@
       <i class="bi bi-info-circle me-1"></i>Нет закрытых сделок с известными датами звонка и закрытия.
     </div>
 
-    {# ─────────────────────────────────────────────────────────────────── #}
     {# ── БЛОК 3: Категория клиента ───────────────────────────────────── #}
-    {# ─────────────────────────────────────────────────────────────────── #}
     <hr class="my-4">
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <span class="mt-1" style="font-size:1.15rem;color:#7c3aed"><i class="bi bi-tags"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Категория клиента → качество звонка</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Средний балл оценки и Win Rate по категориям A/B/C/D.
+          Только отделы продления — там заполнено поле «Категория клиента» в Битрикс24.
+        </div>
+      </div>
+    </div>
 
     <div id="catInsight" class="d-none mb-3">
       <div class="p-3 rounded-3" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #e9d5ff">
@@ -641,7 +678,16 @@
 
   {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
   <div class="tab-pane fade" id="tab2" role="tabpanel">
-    <div class="fw-semibold mb-3">Корреляция блоков с результатом сделки</div>
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-diagram-3"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Корреляция блоков с результатом сделки</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Какие блоки чек-листа сильнее всего влияют на победу в сделке.
+          Отсортировано по «Влияние WR» — самые важные блоки вверху.
+        </div>
+      </div>
+    </div>
 
     {% if tab2 %}
     <div class="mb-4" style="height:320px">
@@ -739,7 +785,15 @@
   <div class="tab-pane fade" id="tab3" role="tabpanel">
 
     {# Таблица 1: оператор × блок → Won% / Lost% / Δ #}
-    <div class="fw-semibold mb-2">Won / Lost / Δ по сотрудникам</div>
+    <div class="d-flex align-items-start gap-2 mb-2">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-person-lines-fill"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Win / Lost / Δ по сотрудникам</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          Для каждого блока: средний балл по выигранным и проигранным сделкам. Δ — разница между ними.
+        </div>
+      </div>
+    </div>
     <div class="table-responsive mb-4">
       <table class="table table-bordered table-sm align-middle mb-0" style="font-size:0.75rem">
         <thead class="table-light">
@@ -802,10 +856,16 @@
     </div>
 
     {# Таблица 2: Win Rate по уровням выполнения #}
-    <div class="fw-semibold mb-1">Win Rate по уровням выполнения блока</div>
-    <div class="text-muted small mb-2">
-      Ячейка: Win Rate % среди сделок с известным итогом. <em>n</em> — всего сделок в диапазоне.
-      Чем выше WR справа — тем сильнее влияние блока на закрытие.
+    <div class="d-flex align-items-start gap-2 mb-2 mt-4">
+      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-bar-chart-steps"></i></span>
+      <div>
+        <div class="fw-bold" style="font-size:0.95rem">Win Rate по уровням выполнения блока</div>
+        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
+          % успешных сделок в зависимости от того, выполнен блок или нет.
+          Чем заметнее рост Win Rate слева направо — тем важнее блок для закрытия сделки.
+          <em>n</em> — количество сделок в диапазоне.
+        </div>
+      </div>
     </div>
     <div class="table-responsive">
       <table class="table table-bordered table-sm align-middle" style="font-size:0.78rem">
