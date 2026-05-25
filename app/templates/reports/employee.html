@@ -24,17 +24,72 @@
   <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h5>
 </div>
 
-{# ── Выбор вида отчёта ────────────────────────────────────────────────────── #}
-<div class="d-flex gap-2 mb-4 flex-wrap">
-  <a href="/reports" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-grid-3x3 me-1"></i>Общие показатели
-  </a>
-  <a href="/reports/employee" class="btn btn-sm btn-primary">
-    <i class="bi bi-people me-1"></i>Результаты сотрудников
-  </a>
-  <a href="/reports/plan" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-clipboard-check me-1"></i>План / Факт
-  </a>
+{# ── Навигация по отчётам ─────────────────────────────────────────────────── #}
+<div class="row g-2 mb-4">
+
+  <div class="col-12 col-md-4">
+    <a href="/reports" class="text-decoration-none">
+      <div class="card h-100 shadow-sm {% if request.url.path == '/reports' %}border-primary border-2{% endif %}">
+        <div class="card-body py-2 px-3 d-flex gap-3 align-items-start">
+          <div style="font-size:1.5rem;line-height:1.2"
+               class="{% if request.url.path == '/reports' %}text-primary{% else %}text-secondary{% endif %}">
+            <i class="bi bi-grid-3x3"></i>
+          </div>
+          <div>
+            <div class="fw-bold {% if request.url.path == '/reports' %}text-primary{% endif %}" style="font-size:0.92rem">
+              Общие показатели
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;line-height:1.35">
+              Тепловая карта команды, корреляция оценки с исходом сделки, динамика по неделям
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <a href="/reports/employee" class="text-decoration-none">
+      <div class="card h-100 shadow-sm {% if request.url.path == '/reports/employee' %}border-primary border-2{% endif %}">
+        <div class="card-body py-2 px-3 d-flex gap-3 align-items-start">
+          <div style="font-size:1.5rem;line-height:1.2"
+               class="{% if request.url.path == '/reports/employee' %}text-primary{% else %}text-secondary{% endif %}">
+            <i class="bi bi-people"></i>
+          </div>
+          <div>
+            <div class="fw-bold {% if request.url.path == '/reports/employee' %}text-primary{% endif %}" style="font-size:0.92rem">
+              Результаты сотрудников
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;line-height:1.35">
+              Баллы по каждому блоку, детализация звонков с комментариями, сравнение с командой
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <a href="/reports/plan" class="text-decoration-none">
+      <div class="card h-100 shadow-sm {% if request.url.path == '/reports/plan' %}border-primary border-2{% endif %}">
+        <div class="card-body py-2 px-3 d-flex gap-3 align-items-start">
+          <div style="font-size:1.5rem;line-height:1.2"
+               class="{% if request.url.path == '/reports/plan' %}text-primary{% else %}text-secondary{% endif %}">
+            <i class="bi bi-clipboard-check"></i>
+          </div>
+          <div>
+            <div class="fw-bold {% if request.url.path == '/reports/plan' %}text-primary{% endif %}" style="font-size:0.92rem">
+              План / Факт
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;line-height:1.35">
+              Норма оценок на месяц и фактическое выполнение по каждому сотруднику
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
 </div>
 
 {# ── Фильтры ─────────────────────────────────────────────────────────────── #}
