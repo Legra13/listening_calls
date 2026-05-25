@@ -354,71 +354,47 @@
     </div>
     {% endif %}
 
-    {# ── Категория клиента vs Оценка ────────────────────────────────── #}
+    {# ─────────────────────────────────────────────────────────────────── #}
+    {# ── БЛОК 1: Оценка → шанс закрыть сделку ───────────────────────── #}
+    {# ─────────────────────────────────────────────────────────────────── #}
     <hr class="my-4">
-    <div class="d-flex align-items-center gap-2 mb-1">
-      <span class="fw-semibold">Категория клиента vs Оценка</span>
-      <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem">только отделы продления</span>
-    </div>
-    <div class="text-muted small mb-3">
-      Средний балл и Win Rate (% успешных сделок) по каждой категории клиента.
-    </div>
-    <div id="catScoreSection">
-      <div class="row g-3">
-        <div class="col-lg-7">
-          <div style="height:260px"><canvas id="catScoreChart"></canvas></div>
-        </div>
-        <div class="col-lg-5">
-          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
-            <thead class="table-light">
-              <tr>
-                <th>Категория</th>
-                <th class="text-center">Оценок</th>
-                <th class="text-center">Ср. балл</th>
-                <th class="text-center">Успешных</th>
-                <th class="text-center">Не продали</th>
-                <th class="text-center">В работе</th>
-                <th class="text-center">Win Rate</th>
-              </tr>
-            </thead>
-            <tbody id="catScoreTableBody"></tbody>
-          </table>
-          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate = % успешных среди закрытых сделок (успешна + не продали).</div>
+
+    {# Insight-заголовок — заполняется JS-ом из данных #}
+    <div id="outcomeInsight" class="d-none mb-3">
+      <div class="p-3 rounded-3" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0">
+        <div class="d-flex align-items-start gap-3">
+          <span style="font-size:1.6rem;line-height:1">💡</span>
+          <div>
+            <div class="fw-bold mb-1" style="font-size:1rem" id="outcomeInsightText"></div>
+            <div class="text-muted small">
+              Win Rate = % успешных сделок среди закрытых (Успешна / Не продали).
+              «В работе» в расчёт не входят.
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div id="catScoreEmpty" class="text-muted small d-none">
-      <i class="bi bi-info-circle me-1"></i>Нет оценок с заполненной категорией клиента.
-      Категория заполняется для отделов продления при поиске сделки.
-    </div>
 
-    {# ── Оценка vs Исход сделки ──────────────────────────────────────── #}
-    <hr class="my-4">
-    <div class="fw-semibold mb-1">Оценка vs Исход сделки</div>
-    <div class="text-muted small mb-3">
-      Для каждого диапазона итогового балла — доля сделок по итогу.
-      Чем правее столбец, тем выше оценка звонка.
-    </div>
+    {# Карточки по диапазонам #}
     <div id="scoreOutcomeSection">
+      <div id="outcomeCards" class="row g-2 mb-3"></div>
       <div class="row g-3">
-        <div class="col-lg-7">
-          <div style="height:260px"><canvas id="scoreOutcomeChart"></canvas></div>
+        <div class="col-lg-8">
+          <div class="fw-semibold small text-muted mb-2">Win Rate по уровню оценки звонка</div>
+          <div style="height:220px"><canvas id="scoreOutcomeChart"></canvas></div>
         </div>
-        <div class="col-lg-5">
-          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
+        <div class="col-lg-4">
+          <div class="fw-semibold small text-muted mb-2">Детали</div>
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem">
             <thead class="table-light">
               <tr>
-                <th>Диапазон балла</th>
-                <th class="text-center">Всего</th>
-                <th class="text-center text-success">Успешных</th>
-                <th class="text-center text-danger">Не продали</th>
-                <th class="text-center text-warning">В работе</th>
+                <th>Уровень</th>
+                <th class="text-center">Звонков</th>
                 <th class="text-center">Win Rate</th>
               </tr>
             </thead>
             <tbody id="scoreOutcomeTableBody"></tbody>
           </table>
-          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate — % успешных среди закрытых сделок. «В работе» — ещё не закрыты.</div>
         </div>
       </div>
     </div>
@@ -426,39 +402,98 @@
       <i class="bi bi-info-circle me-1"></i>Нет данных для построения отчёта.
     </div>
 
-    {# ── Скорость закрытия сделки ─────────────────────────────────────── #}
+    {# ─────────────────────────────────────────────────────────────────── #}
+    {# ── БЛОК 2: Оценка → скорость закрытия ─────────────────────────── #}
+    {# ─────────────────────────────────────────────────────────────────── #}
     <hr class="my-4">
-    <div class="fw-semibold mb-1">Оценка vs Скорость закрытия сделки</div>
-    <div class="text-muted small mb-3">
-      Среднее количество дней от даты звонка до даты закрытия сделки (из Битрикс24) —
-      по диапазонам итогового балла. Только закрытые сделки (Успешна / Не продали).
+
+    <div id="speedInsight" class="d-none mb-3">
+      <div class="p-3 rounded-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe">
+        <div class="d-flex align-items-start gap-3">
+          <span style="font-size:1.6rem;line-height:1">⚡</span>
+          <div>
+            <div class="fw-bold mb-1" style="font-size:1rem" id="speedInsightText"></div>
+            <div class="text-muted small">
+              Только успешно закрытые сделки. Дней = разница между датой звонка
+              и датой закрытия в Битрикс24.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div id="closingSpeedSection">
       <div class="row g-3">
-        <div class="col-lg-7">
-          <div style="height:260px"><canvas id="closingSpeedChart"></canvas></div>
+        <div class="col-lg-8">
+          <div class="fw-semibold small text-muted mb-2">Среднее дней до закрытия успешной сделки</div>
+          <div style="height:220px"><canvas id="closingSpeedChart"></canvas></div>
         </div>
-        <div class="col-lg-5">
-          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
+        <div class="col-lg-4">
+          <div class="fw-semibold small text-muted mb-2">Детали</div>
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem">
             <thead class="table-light">
               <tr>
-                <th>Диапазон балла</th>
-                <th class="text-center">Закрытых</th>
-                <th class="text-center text-success">Успешных<br><span class="fw-normal">ср. дней</span></th>
-                <th class="text-center text-danger">Не продали<br><span class="fw-normal">ср. дней</span></th>
-                <th class="text-center">Все<br><span class="fw-normal">ср. дней</span></th>
+                <th>Уровень</th>
+                <th class="text-center text-success">Успешных<br><small class="fw-normal">дней</small></th>
+                <th class="text-center text-danger">Не продали<br><small class="fw-normal">дней</small></th>
               </tr>
             </thead>
             <tbody id="closingSpeedTableBody"></tbody>
           </table>
-          <div class="text-muted mt-2" style="font-size:0.72rem">
-            Дней = разница между датой звонка (Провели презентацию) и датой закрытия сделки в Битрикс24.
-          </div>
         </div>
       </div>
     </div>
     <div id="closingSpeedEmpty" class="text-muted small d-none">
       <i class="bi bi-info-circle me-1"></i>Нет закрытых сделок с известными датами звонка и закрытия.
+    </div>
+
+    {# ─────────────────────────────────────────────────────────────────── #}
+    {# ── БЛОК 3: Категория клиента ───────────────────────────────────── #}
+    {# ─────────────────────────────────────────────────────────────────── #}
+    <hr class="my-4">
+
+    <div id="catInsight" class="d-none mb-3">
+      <div class="p-3 rounded-3" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #e9d5ff">
+        <div class="d-flex align-items-start gap-3">
+          <span style="font-size:1.6rem;line-height:1">🏷️</span>
+          <div>
+            <div class="fw-bold mb-1" style="font-size:1rem" id="catInsightText"></div>
+            <div class="text-muted small">
+              Только отделы продления. Категория клиента (A/B/C/D) берётся из карточки сделки в Битрикс24.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="catScoreSection">
+      <div class="row g-3">
+        <div class="col-lg-8">
+          <div class="fw-semibold small text-muted mb-2">Средний балл оценки звонка по категории клиента</div>
+          <div style="height:220px"><canvas id="catScoreChart"></canvas></div>
+        </div>
+        <div class="col-lg-4">
+          <div class="fw-semibold small text-muted mb-2">Детали</div>
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.8rem">
+            <thead class="table-light">
+              <tr>
+                <th>Категория</th>
+                <th class="text-center">Звонков</th>
+                <th class="text-center">Ср. балл</th>
+                <th class="text-center">Win Rate</th>
+              </tr>
+            </thead>
+            <tbody id="catScoreTableBody"></tbody>
+          </table>
+          <div class="text-muted mt-2" style="font-size:0.7rem">
+            A — наиболее лояльный клиент, D — сложный.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="catScoreEmpty" class="text-muted small d-none">
+      <i class="bi bi-info-circle me-1"></i>Нет оценок с заполненной категорией клиента.
+      Категория заполняется для отделов продления при поиске сделки.
     </div>
 
   </div>{# /tab1 #}
@@ -810,21 +845,269 @@ if (corrCtx && tab2Data.length > 0) {
   });
 }
 
-/* ── Категория vs Оценка ─────────────────────────────────────────────── */
+/* ── Метки и цвета диапазонов ────────────────────────────────────────── */
+const RANGE_LABELS = {
+  '0–40%':   'Слабые (0–40%)',
+  '40–60%':  'Средние (40–60%)',
+  '60–80%':  'Хорошие (60–80%)',
+  '80–100%': 'Отличные (80–100%)',
+};
+const RANGE_COLORS     = ['#ef4444', '#f97316', '#84cc16', '#22c55e'];
+const RANGE_BG_COLORS  = ['#fef2f2', '#fff7ed', '#f0fdf4', '#dcfce7'];
+
+/* ── Блок 1: Оценка → шанс закрыть сделку ───────────────────────────── */
+const scoreOutcomeData = {{ score_outcome_json | safe }};
+(function() {
+  const section  = document.getElementById('scoreOutcomeSection');
+  const empty    = document.getElementById('scoreOutcomeEmpty');
+  const tbody    = document.getElementById('scoreOutcomeTableBody');
+  const cards    = document.getElementById('outcomeCards');
+  const insight  = document.getElementById('outcomeInsight');
+  const insText  = document.getElementById('outcomeInsightText');
+
+  if (!scoreOutcomeData || scoreOutcomeData.length === 0) {
+    if (section) section.classList.add('d-none');
+    if (empty)   empty.classList.remove('d-none');
+    return;
+  }
+
+  // Insight-заголовок
+  if (insight) insight.classList.remove('d-none');
+  if (insText) {
+    const first = scoreOutcomeData[0];
+    const last  = scoreOutcomeData[scoreOutcomeData.length - 1];
+    const wr1 = first.win_rate != null ? first.win_rate.toFixed(0) : '?';
+    const wr2 = last.win_rate  != null ? last.win_rate.toFixed(0)  : '?';
+    let multStr = '';
+    if (first.win_rate > 0 && last.win_rate > 0) {
+      multStr = ` — в ${(last.win_rate / first.win_rate).toFixed(1)}× чаще`;
+    }
+    insText.textContent = `Отличные звонки (80–100%) закрываются успешно${multStr}: Win Rate ${wr1}% → ${wr2}%`;
+  }
+
+  // KPI-карточки (по одной на диапазон)
+  if (cards) {
+    cards.innerHTML = scoreOutcomeData.map((d, i) => {
+      const wr    = d.win_rate != null ? d.win_rate.toFixed(0) + '%' : '—';
+      const label = RANGE_LABELS[d.range] || d.range;
+      const color = RANGE_COLORS[i] || '#64748b';
+      const bg    = RANGE_BG_COLORS[i] || '#f8f9fa';
+      return `
+        <div class="col-6 col-md-3">
+          <div class="card border-0 h-100 text-center py-2 px-1"
+               style="background:${bg};border-left:4px solid ${color}!important;border-style:solid;border-width:0 0 0 4px">
+            <div class="fs-3 fw-bold" style="color:${color}">${wr}</div>
+            <div class="text-muted small">Win Rate</div>
+            <div class="fw-semibold mt-1" style="font-size:0.72rem">${label}</div>
+            <div class="text-muted" style="font-size:0.68rem">${d.total} звонков</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // График: простые бары Win Rate (без стэкирования)
+  const ctx = document.getElementById('scoreOutcomeChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: scoreOutcomeData.map(d => RANGE_LABELS[d.range] || d.range),
+        datasets: [{
+          label: 'Win Rate',
+          data: scoreOutcomeData.map(d => d.win_rate),
+          backgroundColor: RANGE_COLORS.slice(0, scoreOutcomeData.length).map(c => c + 'bb'),
+          borderColor:     RANGE_COLORS.slice(0, scoreOutcomeData.length),
+          borderWidth: 2,
+          borderRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: 'Уровень оценки звонка', font: { size: 11 } } },
+          y: {
+            min: 0, max: 100,
+            title: { display: true, text: 'Win Rate, %', font: { size: 11 } },
+            ticks: { callback: v => v + '%' },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => {
+                const d = scoreOutcomeData[items[0].dataIndex];
+                return `${RANGE_LABELS[d.range] || d.range}  (${d.total} звонков)`;
+              },
+              label: ctx => {
+                const v = ctx.raw;
+                const d = scoreOutcomeData[ctx.dataIndex];
+                if (v == null) return 'Win Rate: нет данных';
+                return `Win Rate: ${v.toFixed(1)}%  (${d.won} из ${d.won + d.lost} закрытых)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Таблица: 3 колонки
+  if (tbody) {
+    tbody.innerHTML = scoreOutcomeData.map((d, i) => {
+      const wr    = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
+      const color = RANGE_COLORS[i] || '#64748b';
+      const dot   = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:5px"></span>`;
+      return `<tr>
+        <td class="fw-semibold">${dot}${RANGE_LABELS[d.range] || d.range}</td>
+        <td class="text-center">${d.total}</td>
+        <td class="text-center fw-bold" style="color:${color}">${wr}</td>
+      </tr>`;
+    }).join('');
+  }
+})();
+
+/* ── Блок 2: Скорость закрытия сделки ────────────────────────────────── */
+const closingSpeedData = {{ closing_speed_json | safe }};
+(function() {
+  const section = document.getElementById('closingSpeedSection');
+  const empty   = document.getElementById('closingSpeedEmpty');
+  const tbody   = document.getElementById('closingSpeedTableBody');
+  const insight = document.getElementById('speedInsight');
+  const insText = document.getElementById('speedInsightText');
+
+  if (!closingSpeedData || closingSpeedData.length === 0) {
+    if (section) section.classList.add('d-none');
+    if (empty)   empty.classList.remove('d-none');
+    return;
+  }
+
+  // Insight-заголовок
+  if (insight) insight.classList.remove('d-none');
+  if (insText) {
+    const withData = closingSpeedData.filter(d => d.avg_won != null);
+    if (withData.length >= 2) {
+      const slowest = withData.reduce((a, b) => a.avg_won > b.avg_won ? a : b);
+      const fastest = withData.reduce((a, b) => a.avg_won < b.avg_won ? a : b);
+      if (slowest !== fastest && fastest.avg_won > 0) {
+        const ratio = (slowest.avg_won / fastest.avg_won).toFixed(1);
+        insText.textContent = `${RANGE_LABELS[fastest.range] || fastest.range}: успешные сделки закрываются в ${ratio}× быстрее, чем "${RANGE_LABELS[slowest.range] || slowest.range}" (${Math.round(fastest.avg_won)} vs ${Math.round(slowest.avg_won)} дней)`;
+      } else {
+        insText.textContent = `Среднее время закрытия успешной сделки: ${Math.round(fastest.avg_won)} дней`;
+      }
+    } else if (withData.length === 1) {
+      insText.textContent = `Среднее время закрытия успешной сделки: ${Math.round(withData[0].avg_won)} дней`;
+    }
+  }
+
+  // График: сгруппированные бары (успешные + не продали)
+  const ctx = document.getElementById('closingSpeedChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: closingSpeedData.map(d => RANGE_LABELS[d.range] || d.range),
+        datasets: [
+          {
+            label: 'Успешные (дней)',
+            data: closingSpeedData.map(d => d.avg_won),
+            backgroundColor: 'rgba(34,197,94,0.75)',
+            borderColor: 'rgb(34,197,94)',
+            borderWidth: 1.5,
+            borderRadius: 5,
+          },
+          {
+            label: 'Не продали (дней)',
+            data: closingSpeedData.map(d => d.avg_lost),
+            backgroundColor: 'rgba(239,68,68,0.65)',
+            borderColor: 'rgb(239,68,68)',
+            borderWidth: 1.5,
+            borderRadius: 5,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: 'Уровень оценки звонка', font: { size: 11 } } },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Среднее дней до закрытия', font: { size: 11 } },
+            ticks: { callback: v => v + ' дн.' },
+          },
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              title: items => `${RANGE_LABELS[closingSpeedData[items[0].dataIndex].range] || closingSpeedData[items[0].dataIndex].range}`,
+              label: ctx => {
+                const v = ctx.raw;
+                if (v == null) return `${ctx.dataset.label}: нет данных`;
+                const d   = closingSpeedData[ctx.dataIndex];
+                const n   = ctx.datasetIndex === 0 ? d.n_won : d.n_lost;
+                return `${ctx.dataset.label}: ${v.toFixed(1)} дн. (n=${n})`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Таблица: 3 колонки
+  if (tbody) {
+    tbody.innerHTML = closingSpeedData.map((d, i) => {
+      const fmt   = v => v != null ? v.toFixed(1) + ' дн.' : '—';
+      const color = RANGE_COLORS[i] || '#64748b';
+      const dot   = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:5px"></span>`;
+      return `<tr>
+        <td class="fw-semibold">${dot}${RANGE_LABELS[d.range] || d.range}</td>
+        <td class="text-center text-success fw-semibold">${fmt(d.avg_won)}</td>
+        <td class="text-center text-danger fw-semibold">${fmt(d.avg_lost)}</td>
+      </tr>`;
+    }).join('');
+  }
+})();
+
+/* ── Блок 3: Категория клиента ────────────────────────────────────────── */
 const catScoreData = {{ cat_score_json | safe }};
 (function() {
   const section = document.getElementById('catScoreSection');
   const empty   = document.getElementById('catScoreEmpty');
   const tbody   = document.getElementById('catScoreTableBody');
+  const insight = document.getElementById('catInsight');
+  const insText = document.getElementById('catInsightText');
+
   if (!catScoreData || catScoreData.length === 0) {
     if (section) section.classList.add('d-none');
     if (empty)   empty.classList.remove('d-none');
     return;
   }
 
+  // Insight-заголовок
+  if (insight) insight.classList.remove('d-none');
+  if (insText) {
+    const withWR = catScoreData.filter(d => d.win_rate != null).sort((a, b) => b.win_rate - a.win_rate);
+    if (withWR.length >= 2) {
+      const best  = withWR[0];
+      const worst = withWR[withWR.length - 1];
+      let multStr = '';
+      if (worst.win_rate > 0) {
+        multStr = ` (в ${(best.win_rate / worst.win_rate).toFixed(1)}× чаще)`;
+      }
+      insText.textContent = `Клиенты категории ${best.category} закрываются лучше всего: Win Rate ${best.win_rate.toFixed(0)}% против ${worst.win_rate.toFixed(0)}% у категории ${worst.category}${multStr}`;
+    } else if (withWR.length === 1) {
+      insText.textContent = `Категория ${withWR[0].category}: ${withWR[0].count} звонков, Win Rate ${withWR[0].win_rate.toFixed(0)}%`;
+    }
+  }
+
   const CAT_COLORS = { A: '#2563eb', B: '#16a34a', C: '#d97706', D: '#7c3aed' };
   const labels = catScoreData.map(d => `Категория ${d.category} (n=${d.count})`);
 
+  // График: бары (балл) + линия (Win Rate)
   const ctx = document.getElementById('catScoreChart');
   if (ctx) {
     new Chart(ctx, {
@@ -835,9 +1118,10 @@ const catScoreData = {{ cat_score_json | safe }};
           {
             label: 'Средний балл оценки',
             data: catScoreData.map(d => d.avg_score),
-            backgroundColor: catScoreData.map(d => (CAT_COLORS[d.category] || '#64748b') + 'cc'),
+            backgroundColor: catScoreData.map(d => (CAT_COLORS[d.category] || '#64748b') + 'bb'),
             borderColor:     catScoreData.map(d => CAT_COLORS[d.category] || '#64748b'),
             borderWidth: 2,
+            borderRadius: 5,
             yAxisID: 'yScore',
             order: 2,
           },
@@ -846,7 +1130,7 @@ const catScoreData = {{ cat_score_json | safe }};
             data: catScoreData.map(d => d.win_rate),
             type: 'line',
             borderColor: '#ef4444',
-            backgroundColor: 'rgba(239,68,68,0.15)',
+            backgroundColor: 'rgba(239,68,68,0.12)',
             pointBackgroundColor: '#ef4444',
             pointRadius: 6,
             pointHoverRadius: 8,
@@ -862,18 +1146,18 @@ const catScoreData = {{ cat_score_json | safe }};
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: {
-            title: { display: true, text: 'Категория клиента (A — лучший, D — сложный)', font: { size: 11 } },
+            title: { display: true, text: 'Категория клиента (A — лояльный, D — сложный)', font: { size: 11 } },
           },
           yScore: {
             type: 'linear', position: 'left',
             min: 0, max: 100,
-            title: { display: true, text: 'Средний балл оценки звонка, %', font: { size: 11 } },
+            title: { display: true, text: 'Средний балл звонка, %', font: { size: 11 } },
             ticks: { callback: v => v + '%' },
           },
           yWR: {
             type: 'linear', position: 'right',
             min: 0, max: 100,
-            title: { display: true, text: 'Win Rate (% успешных из закрытых), %', font: { size: 11 } },
+            title: { display: true, text: 'Win Rate, %', font: { size: 11 } },
             ticks: { callback: v => v + '%' },
             grid: { drawOnChartArea: false },
           },
@@ -894,203 +1178,17 @@ const catScoreData = {{ cat_score_json | safe }};
     });
   }
 
-  // Таблица
+  // Таблица: 4 колонки
   if (tbody) {
     tbody.innerHTML = catScoreData.map(d => {
-      const wr = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
-      const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[d.category]||'#64748b'};margin-right:4px"></span>`;
+      const wr    = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
+      const color = CAT_COLORS[d.category] || '#64748b';
+      const dot   = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:4px"></span>`;
       return `<tr>
         <td class="fw-bold">${dot}${d.category}</td>
         <td class="text-center">${d.count}</td>
         <td class="text-center fw-semibold">${d.avg_score.toFixed(1)}%</td>
-        <td class="text-center text-success">${d.won}</td>
-        <td class="text-center text-danger">${d.lost}</td>
-        <td class="text-center text-warning">${d.in_progress}</td>
-        <td class="text-center fw-semibold">${wr}</td>
-      </tr>`;
-    }).join('');
-  }
-})();
-
-/* ── Оценка vs Исход сделки ─────────────────────────────────────────── */
-const scoreOutcomeData = {{ score_outcome_json | safe }};
-(function() {
-  const section = document.getElementById('scoreOutcomeSection');
-  const empty   = document.getElementById('scoreOutcomeEmpty');
-  const tbody   = document.getElementById('scoreOutcomeTableBody');
-  if (!scoreOutcomeData || scoreOutcomeData.length === 0) {
-    if (section) section.classList.add('d-none');
-    if (empty)   empty.classList.remove('d-none');
-    return;
-  }
-
-  const labels = scoreOutcomeData.map(d => d.range);
-  const ctx = document.getElementById('scoreOutcomeChart');
-  if (ctx) {
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Успешна',
-            data: scoreOutcomeData.map(d => d.won_pct),
-            backgroundColor: 'rgba(34,197,94,0.8)',
-            borderColor: 'rgb(34,197,94)',
-            borderWidth: 1,
-            stack: 'outcome',
-          },
-          {
-            label: 'Не продали',
-            data: scoreOutcomeData.map(d => d.lost_pct),
-            backgroundColor: 'rgba(239,68,68,0.8)',
-            borderColor: 'rgb(239,68,68)',
-            borderWidth: 1,
-            stack: 'outcome',
-          },
-          {
-            label: 'В работе',
-            data: scoreOutcomeData.map(d => d.prog_pct),
-            backgroundColor: 'rgba(234,179,8,0.6)',
-            borderColor: 'rgb(234,179,8)',
-            borderWidth: 1,
-            stack: 'outcome',
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            stacked: true,
-            title: { display: true, text: 'Итоговый балл оценки звонка (диапазон)', font: { size: 11 } },
-          },
-          y: {
-            stacked: true,
-            min: 0, max: 100,
-            title: { display: true, text: 'Доля сделок, %', font: { size: 11 } },
-            ticks: { callback: v => v + '%' },
-          },
-        },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const d = scoreOutcomeData[items[0].dataIndex];
-                return `Балл: ${d.range}  (всего оценок: ${d.total})`;
-              },
-              label: ctx => {
-                const v = ctx.raw;
-                const d = scoreOutcomeData[ctx.dataIndex];
-                const abs = ctx.datasetIndex === 0 ? d.won : ctx.datasetIndex === 1 ? d.lost : d.in_progress;
-                return ` ${ctx.dataset.label}: ${v.toFixed(1)}% (${abs} сделок)`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Таблица
-  if (tbody) {
-    tbody.innerHTML = scoreOutcomeData.map(d => {
-      const wr = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
-      return `<tr>
-        <td class="fw-semibold">${d.range}</td>
-        <td class="text-center">${d.total}</td>
-        <td class="text-center text-success">${d.won} <span class="text-muted">(${d.won_pct.toFixed(0)}%)</span></td>
-        <td class="text-center text-danger">${d.lost} <span class="text-muted">(${d.lost_pct.toFixed(0)}%)</span></td>
-        <td class="text-center text-warning">${d.in_progress} <span class="text-muted">(${d.prog_pct.toFixed(0)}%)</span></td>
-        <td class="text-center fw-semibold">${wr}</td>
-      </tr>`;
-    }).join('');
-  }
-})();
-
-/* ── Скорость закрытия сделки ────────────────────────────────────────── */
-const closingSpeedData = {{ closing_speed_json | safe }};
-(function() {
-  const section = document.getElementById('closingSpeedSection');
-  const empty   = document.getElementById('closingSpeedEmpty');
-  const tbody   = document.getElementById('closingSpeedTableBody');
-  if (!closingSpeedData || closingSpeedData.length === 0) {
-    if (section) section.classList.add('d-none');
-    if (empty)   empty.classList.remove('d-none');
-    return;
-  }
-
-  const labels = closingSpeedData.map(d => d.range);
-  const ctx = document.getElementById('closingSpeedChart');
-  if (ctx) {
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Успешные сделки (ср. дней)',
-            data: closingSpeedData.map(d => d.avg_won),
-            backgroundColor: 'rgba(34,197,94,0.75)',
-            borderColor: 'rgb(34,197,94)',
-            borderWidth: 1.5,
-          },
-          {
-            label: 'Не продали (ср. дней)',
-            data: closingSpeedData.map(d => d.avg_lost),
-            backgroundColor: 'rgba(239,68,68,0.7)',
-            borderColor: 'rgb(239,68,68)',
-            borderWidth: 1.5,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Итоговый балл оценки звонка (диапазон)', font: { size: 11 } },
-          },
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: 'Среднее дней от звонка до закрытия сделки', font: { size: 11 } },
-            ticks: { callback: v => v + ' дн.' },
-          },
-        },
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const d = closingSpeedData[items[0].dataIndex];
-                return `Балл: ${d.range}  (закрытых: ${d.n})`;
-              },
-              label: ctx => {
-                const v = ctx.raw;
-                if (v == null) return `${ctx.dataset.label}: нет данных`;
-                const d = closingSpeedData[ctx.dataIndex];
-                const n = ctx.datasetIndex === 0 ? d.n_won : d.n_lost;
-                return ` ${ctx.dataset.label}: ${v.toFixed(1)} дн. (n=${n})`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // Таблица
-  if (tbody) {
-    tbody.innerHTML = closingSpeedData.map(d => {
-      const fmt = v => v != null ? v.toFixed(1) + ' дн.' : '—';
-      return `<tr>
-        <td class="fw-semibold">${d.range}</td>
-        <td class="text-center">${d.n}</td>
-        <td class="text-center text-success fw-semibold">${fmt(d.avg_won)} <span class="text-muted fw-normal">(n=${d.n_won})</span></td>
-        <td class="text-center text-danger fw-semibold">${fmt(d.avg_lost)} <span class="text-muted fw-normal">(n=${d.n_lost})</span></td>
-        <td class="text-center fw-semibold">${fmt(d.avg_days)}</td>
+        <td class="text-center fw-semibold text-success">${wr}</td>
       </tr>`;
     }).join('');
   }
