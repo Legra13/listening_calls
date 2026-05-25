@@ -73,6 +73,7 @@ def deal_lookup(
         department=info.department,
         deal_date=info.deal_date,
         presentation_date=info.presentation_date,
+        close_date=info.close_date,
         stage=info.stage,
         client_category=info.client_category,
         last_synced_at=datetime.utcnow(),

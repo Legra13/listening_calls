@@ -185,8 +185,20 @@ def prep_rows(evaluations: list[Evaluation]) -> list[dict]:
         if ev.checklist is None:
             continue
         _, block_scores = calculate_scores(ev.items, ev.checklist)
-        result.append({"ev": ev, "block_scores": block_scores})
+        result.append({"ev": ev, "block_scores": block_scores, "close_date": None})
     return result
+
+
+def attach_close_dates(rows: list[dict], db: Session) -> None:
+    """Подтягивает close_date из DealCache и дописывает в каждый row."""
+    from app.models import DealCache
+    deal_ids = list({r["ev"].deal_id for r in rows if r["ev"].deal_id})
+    if not deal_ids:
+        return
+    cache_rows = db.query(DealCache).filter(DealCache.deal_id.in_(deal_ids)).all()
+    close_map: dict[str, date | None] = {c.deal_id: (c.close_date.date() if isinstance(c.close_date, datetime) else c.close_date) for c in cache_rows}
+    for r in rows:
+        r["close_date"] = close_map.get(r["ev"].deal_id)
 
 
 # ── KPI ──────────────────────────────────────────────────────────────────────
@@ -680,11 +692,9 @@ def compute_category_score(rows: list[dict]) -> dict | None:
 
 # ── Оценка vs Исход сделки ─────────────────────────────────────────────────────
 
-def compute_score_outcome(rows: list[dict]) -> dict | None:
+def compute_score_outcome(rows: list[dict]) -> list[dict] | None:
     """
-    Разбивает оценки на диапазоны (0–40, 40–60, 60–80, 80–100)
-    и для каждого диапазона считает: Won / Lost / В работе.
-    Показывает, как уровень оценки связан с итогом сделки.
+    Разбивает оценки на диапазоны и для каждого считает Won / Lost / В работе.
     """
     RANGES = [
         ("0–40%",   lambda s: s < 40),
@@ -717,6 +727,68 @@ def compute_score_outcome(rows: list[dict]) -> dict | None:
             "prog_pct": round(prog / total * 100, 1),
             "win_rate": round(won / closed * 100, 1) if closed else None,
         })
+    return result if result else None
+
+
+# ── Оценка vs Скорость закрытия ────────────────────────────────────────────────
+
+def compute_closing_speed(rows: list[dict]) -> list[dict] | None:
+    """
+    Для каждого диапазона балла считает среднее количество дней
+    от даты звонка (eval_date) до даты закрытия сделки (close_date из DealCache).
+    Только для закрытых сделок (Won + Lost) с известными датами.
+    """
+    RANGES = [
+        ("0–40%",   lambda s: s < 40),
+        ("40–60%",  lambda s: 40 <= s < 60),
+        ("60–80%",  lambda s: 60 <= s < 80),
+        ("80–100%", lambda s: s >= 80),
+    ]
+
+    # Нужны строки с: total_score, close_date, eval_date, закрытая сделка
+    eligible = [
+        r for r in rows
+        if r["ev"].total_score is not None
+        and r.get("close_date") is not None
+        and r["ev"].eval_date is not None
+        and r["ev"].stage in (WON, LOST)
+    ]
+    if not eligible:
+        return None
+
+    def _days(r: dict) -> int | None:
+        cd = r["close_date"]
+        ed = r["ev"].eval_date
+        if cd is None or ed is None:
+            return None
+        # ed может быть datetime или date
+        ed_date = ed.date() if isinstance(ed, datetime) else ed
+        cd_date = cd.date() if isinstance(cd, datetime) else cd
+        delta = (cd_date - ed_date).days
+        return delta if delta >= 0 else None   # отрицательные = артефакты данных
+
+    result = []
+    for label, fn in RANGES:
+        subset = [r for r in eligible if fn(float(r["ev"].total_score))]
+        if not subset:
+            continue
+        won_sub  = [r for r in subset if r["ev"].stage == WON]
+        lost_sub = [r for r in subset if r["ev"].stage == LOST]
+
+        won_days  = [d for r in won_sub  if (d := _days(r)) is not None]
+        lost_days = [d for r in lost_sub if (d := _days(r)) is not None]
+        all_days  = [d for r in subset   if (d := _days(r)) is not None]
+
+        result.append({
+            "range":     label,
+            "n":         len(subset),
+            "n_won":     len(won_sub),
+            "n_lost":    len(lost_sub),
+            "avg_days":  round(sum(all_days)  / len(all_days),  1) if all_days  else None,
+            "avg_won":   round(sum(won_days)  / len(won_days),  1) if won_days  else None,
+            "avg_lost":  round(sum(lost_days) / len(lost_days), 1) if lost_days else None,
+        })
+
     return result if result else None
 
 

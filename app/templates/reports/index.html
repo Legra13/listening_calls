@@ -396,8 +396,8 @@
     <hr class="my-4">
     <div class="fw-semibold mb-1">Оценка vs Исход сделки</div>
     <div class="text-muted small mb-3">
-      Для каждого диапазона итогового балла — доля сделок с разным исходом.
-      Показывает, как уровень оценки связан с результатом продления / продажи.
+      Для каждого диапазона итогового балла — доля сделок по итогу.
+      Чем правее столбец, тем выше оценка звонка.
     </div>
     <div id="scoreOutcomeSection">
       <div class="row g-3">
@@ -408,7 +408,7 @@
           <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
             <thead class="table-light">
               <tr>
-                <th>Диапазон</th>
+                <th>Диапазон балла</th>
                 <th class="text-center">Всего</th>
                 <th class="text-center text-success">Успешных</th>
                 <th class="text-center text-danger">Не продали</th>
@@ -418,12 +418,47 @@
             </thead>
             <tbody id="scoreOutcomeTableBody"></tbody>
           </table>
-          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate считается только среди закрытых сделок. «В работе» — ещё не закрыты.</div>
+          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate — % успешных среди закрытых сделок. «В работе» — ещё не закрыты.</div>
         </div>
       </div>
     </div>
     <div id="scoreOutcomeEmpty" class="text-muted small d-none">
       <i class="bi bi-info-circle me-1"></i>Нет данных для построения отчёта.
+    </div>
+
+    {# ── Скорость закрытия сделки ─────────────────────────────────────── #}
+    <hr class="my-4">
+    <div class="fw-semibold mb-1">Оценка vs Скорость закрытия сделки</div>
+    <div class="text-muted small mb-3">
+      Среднее количество дней от даты звонка до даты закрытия сделки (из Битрикс24) —
+      по диапазонам итогового балла. Только закрытые сделки (Успешна / Не продали).
+    </div>
+    <div id="closingSpeedSection">
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div style="height:260px"><canvas id="closingSpeedChart"></canvas></div>
+        </div>
+        <div class="col-lg-5">
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
+            <thead class="table-light">
+              <tr>
+                <th>Диапазон балла</th>
+                <th class="text-center">Закрытых</th>
+                <th class="text-center text-success">Успешных<br><span class="fw-normal">ср. дней</span></th>
+                <th class="text-center text-danger">Не продали<br><span class="fw-normal">ср. дней</span></th>
+                <th class="text-center">Все<br><span class="fw-normal">ср. дней</span></th>
+              </tr>
+            </thead>
+            <tbody id="closingSpeedTableBody"></tbody>
+          </table>
+          <div class="text-muted mt-2" style="font-size:0.72rem">
+            Дней = разница между датой звонка (Провели презентацию) и датой закрытия сделки в Битрикс24.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="closingSpeedEmpty" class="text-muted small d-none">
+      <i class="bi bi-info-circle me-1"></i>Нет закрытых сделок с известными датами звонка и закрытия.
     </div>
 
   </div>{# /tab1 #}
@@ -788,7 +823,7 @@ const catScoreData = {{ cat_score_json | safe }};
   }
 
   const CAT_COLORS = { A: '#2563eb', B: '#16a34a', C: '#d97706', D: '#7c3aed' };
-  const labels = catScoreData.map(d => `Категория ${d.category}`);
+  const labels = catScoreData.map(d => `Категория ${d.category} (n=${d.count})`);
 
   const ctx = document.getElementById('catScoreChart');
   if (ctx) {
@@ -798,7 +833,7 @@ const catScoreData = {{ cat_score_json | safe }};
         labels,
         datasets: [
           {
-            label: 'Средний балл',
+            label: 'Средний балл оценки',
             data: catScoreData.map(d => d.avg_score),
             backgroundColor: catScoreData.map(d => (CAT_COLORS[d.category] || '#64748b') + 'cc'),
             borderColor:     catScoreData.map(d => CAT_COLORS[d.category] || '#64748b'),
@@ -807,7 +842,7 @@ const catScoreData = {{ cat_score_json | safe }};
             order: 2,
           },
           {
-            label: 'Win Rate',
+            label: 'Win Rate (% успешных)',
             data: catScoreData.map(d => d.win_rate),
             type: 'line',
             borderColor: '#ef4444',
@@ -826,16 +861,19 @@ const catScoreData = {{ cat_score_json | safe }};
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
+          x: {
+            title: { display: true, text: 'Категория клиента (A — лучший, D — сложный)', font: { size: 11 } },
+          },
           yScore: {
             type: 'linear', position: 'left',
             min: 0, max: 100,
-            title: { display: true, text: 'Средний балл, %', font: { size: 11 } },
+            title: { display: true, text: 'Средний балл оценки звонка, %', font: { size: 11 } },
             ticks: { callback: v => v + '%' },
           },
           yWR: {
             type: 'linear', position: 'right',
             min: 0, max: 100,
-            title: { display: true, text: 'Win Rate, %', font: { size: 11 } },
+            title: { display: true, text: 'Win Rate (% успешных из закрытых), %', font: { size: 11 } },
             ticks: { callback: v => v + '%' },
             grid: { drawOnChartArea: false },
           },
@@ -924,10 +962,14 @@ const scoreOutcomeData = {{ score_outcome_json | safe }};
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { stacked: true },
+          x: {
+            stacked: true,
+            title: { display: true, text: 'Итоговый балл оценки звонка (диапазон)', font: { size: 11 } },
+          },
           y: {
             stacked: true,
             min: 0, max: 100,
+            title: { display: true, text: 'Доля сделок, %', font: { size: 11 } },
             ticks: { callback: v => v + '%' },
           },
         },
@@ -937,13 +979,13 @@ const scoreOutcomeData = {{ score_outcome_json | safe }};
             callbacks: {
               title: (items) => {
                 const d = scoreOutcomeData[items[0].dataIndex];
-                return `${d.range}  (всего: ${d.total})`;
+                return `Балл: ${d.range}  (всего оценок: ${d.total})`;
               },
               label: ctx => {
                 const v = ctx.raw;
                 const d = scoreOutcomeData[ctx.dataIndex];
                 const abs = ctx.datasetIndex === 0 ? d.won : ctx.datasetIndex === 1 ? d.lost : d.in_progress;
-                return ` ${ctx.dataset.label}: ${v.toFixed(1)}% (${abs})`;
+                return ` ${ctx.dataset.label}: ${v.toFixed(1)}% (${abs} сделок)`;
               }
             }
           }
@@ -963,6 +1005,92 @@ const scoreOutcomeData = {{ score_outcome_json | safe }};
         <td class="text-center text-danger">${d.lost} <span class="text-muted">(${d.lost_pct.toFixed(0)}%)</span></td>
         <td class="text-center text-warning">${d.in_progress} <span class="text-muted">(${d.prog_pct.toFixed(0)}%)</span></td>
         <td class="text-center fw-semibold">${wr}</td>
+      </tr>`;
+    }).join('');
+  }
+})();
+
+/* ── Скорость закрытия сделки ────────────────────────────────────────── */
+const closingSpeedData = {{ closing_speed_json | safe }};
+(function() {
+  const section = document.getElementById('closingSpeedSection');
+  const empty   = document.getElementById('closingSpeedEmpty');
+  const tbody   = document.getElementById('closingSpeedTableBody');
+  if (!closingSpeedData || closingSpeedData.length === 0) {
+    if (section) section.classList.add('d-none');
+    if (empty)   empty.classList.remove('d-none');
+    return;
+  }
+
+  const labels = closingSpeedData.map(d => d.range);
+  const ctx = document.getElementById('closingSpeedChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Успешные сделки (ср. дней)',
+            data: closingSpeedData.map(d => d.avg_won),
+            backgroundColor: 'rgba(34,197,94,0.75)',
+            borderColor: 'rgb(34,197,94)',
+            borderWidth: 1.5,
+          },
+          {
+            label: 'Не продали (ср. дней)',
+            data: closingSpeedData.map(d => d.avg_lost),
+            backgroundColor: 'rgba(239,68,68,0.7)',
+            borderColor: 'rgb(239,68,68)',
+            borderWidth: 1.5,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: { display: true, text: 'Итоговый балл оценки звонка (диапазон)', font: { size: 11 } },
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Среднее дней от звонка до закрытия сделки', font: { size: 11 } },
+            ticks: { callback: v => v + ' дн.' },
+          },
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const d = closingSpeedData[items[0].dataIndex];
+                return `Балл: ${d.range}  (закрытых: ${d.n})`;
+              },
+              label: ctx => {
+                const v = ctx.raw;
+                if (v == null) return `${ctx.dataset.label}: нет данных`;
+                const d = closingSpeedData[ctx.dataIndex];
+                const n = ctx.datasetIndex === 0 ? d.n_won : d.n_lost;
+                return ` ${ctx.dataset.label}: ${v.toFixed(1)} дн. (n=${n})`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Таблица
+  if (tbody) {
+    tbody.innerHTML = closingSpeedData.map(d => {
+      const fmt = v => v != null ? v.toFixed(1) + ' дн.' : '—';
+      return `<tr>
+        <td class="fw-semibold">${d.range}</td>
+        <td class="text-center">${d.n}</td>
+        <td class="text-center text-success fw-semibold">${fmt(d.avg_won)} <span class="text-muted fw-normal">(n=${d.n_won})</span></td>
+        <td class="text-center text-danger fw-semibold">${fmt(d.avg_lost)} <span class="text-muted fw-normal">(n=${d.n_lost})</span></td>
+        <td class="text-center fw-semibold">${fmt(d.avg_days)}</td>
       </tr>`;
     }).join('');
   }

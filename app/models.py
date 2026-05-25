@@ -145,6 +145,7 @@ class DealCache(Base):
     department: Mapped[str | None] = mapped_column(String(200))
     deal_date: Mapped[datetime | None] = mapped_column(DateTime)
     presentation_date: Mapped[datetime | None] = mapped_column(DateTime)
+    close_date: Mapped[datetime | None] = mapped_column(DateTime)   # CLOSEDATE из Битрикс
     stage: Mapped[str | None] = mapped_column(String(200))
     client_category: Mapped[str | None] = mapped_column(String(10))
     last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

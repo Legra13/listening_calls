@@ -36,6 +36,7 @@ class DealInfo:
     department: str | None = None
     presentation_date: date | None = None   # UF_CRM_1654694803 — Продление дата "Провели презентацию"
     client_category: str | None = None      # UF_CRM_1690299302751 — Категория клиента (A/B/C/D)
+    close_date: date | None = None          # CLOSEDATE — дата закрытия сделки
 
 
 def _get_connection() -> pymysql.Connection:
@@ -70,7 +71,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                 cur.execute(
                     f"""
                     SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID,
-                           d.ASSIGNED_BY_ID, d.DATE_CREATE,
+                           d.ASSIGNED_BY_ID, d.DATE_CREATE, d.CLOSEDATE,
                            d.UF_CRM_1654694803,
                            d.{_CATEGORY_FIELD},
                            u.NAME, u.LAST_NAME, u.UF_DEPARTMENT
@@ -115,6 +116,13 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
             elif isinstance(raw_pres, datetime):
                 presentation_date = raw_pres.date()
 
+            raw_close = row.get("CLOSEDATE")
+            close_date: date | None = None
+            if isinstance(raw_close, date):
+                close_date = raw_close
+            elif isinstance(raw_close, datetime):
+                close_date = raw_close.date()
+
             # Категория клиента — int → расшифровка через enumerations
             client_category: str | None = None
             cat_id = row.get(_CATEGORY_FIELD)
@@ -137,6 +145,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                 department=department,
                 presentation_date=presentation_date,
                 client_category=client_category,
+                close_date=close_date,
             )
         finally:
             conn.close()
