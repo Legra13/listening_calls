@@ -373,7 +373,7 @@
             {% for block in tab1.blocks %}
             <th style="min-width:85px;white-space:normal;line-height:1.2"
                 title="{{ block.name }}">
-              {{ (block.display_name or block.name) | truncate(16, True, '…') }}
+              {{ (block.display_name or block.name) | truncate(20, True, '…') }}
               <br><span class="text-muted fw-normal" style="font-size:0.7rem">вес {{ block.weight }}</span>
             </th>
             {% endfor %}
