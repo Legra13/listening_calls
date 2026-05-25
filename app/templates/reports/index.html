@@ -193,6 +193,25 @@
       </div>
     </div>
   </div>
+  <div class="col-6 col-md-3">
+    <div class="card shadow-sm text-center h-100">
+      <div class="card-body py-3">
+        {% if kpi.win_rate is not none %}
+          {% if kpi.win_rate >= 50 %}
+            <div class="fs-2 fw-bold text-success">{{ "%.1f"|format(kpi.win_rate) }}%</div>
+          {% elif kpi.win_rate >= 30 %}
+            <div class="fs-2 fw-bold text-warning">{{ "%.1f"|format(kpi.win_rate) }}%</div>
+          {% else %}
+            <div class="fs-2 fw-bold text-danger">{{ "%.1f"|format(kpi.win_rate) }}%</div>
+          {% endif %}
+        {% else %}
+          <div class="fs-2 fw-bold text-muted">—</div>
+        {% endif %}
+        <div class="text-muted small">Win Rate</div>
+        <div style="font-size:0.7rem;color:#94a3b8">Успешных из закрытых</div>
+      </div>
+    </div>
+  </div>
 </div>
 {% elif filters.checklist_id or filters.operators or filters.departments or filters.date_from or filters.date_to %}
 <div class="alert alert-secondary">
@@ -246,6 +265,28 @@
   {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
   <div class="tab-pane fade show active" id="tab1" role="tabpanel">
 
+    {# ── Ключевой инсайт ─────────────────────────────────────────────────── #}
+    {% if top_insight %}
+    <div class="mb-4 p-3 rounded-3 d-flex align-items-start gap-3"
+         style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #22c55e">
+      <span style="font-size:1.6rem;line-height:1.1">🎯</span>
+      <div>
+        <div class="fw-bold" style="font-size:1rem">
+          {% if top_insight.ratio_ok %}
+            Звонки с оценкой {{ top_insight.label_high }} закрываются в {{ top_insight.ratio }}× чаще слабых:
+            Win Rate {{ top_insight.wr_low }}% → {{ top_insight.wr_high }}%
+          {% else %}
+            Win Rate по уровням оценки: от {{ top_insight.wr_low }}% ({{ top_insight.label_low }}) до {{ top_insight.wr_high }}% ({{ top_insight.label_high }})
+          {% endif %}
+        </div>
+        <div class="text-muted small mt-1">
+          На основе {{ top_insight.total_closed }} закрытых сделок из {{ top_insight.total_all }} всего.
+          Чем выше оценка — тем выше шанс закрыть сделку.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     {# Тепловая карта #}
     <div class="d-flex align-items-center justify-content-between mb-2">
       <span class="fw-semibold">Тепловая карта сотрудников</span>
@@ -274,8 +315,23 @@
         </thead>
         <tbody>
           {% for row in tab1.hm_rows %}
+          {% set _closed = row.won + row.lost %}
+          {% set _risk   = row.total is not none and row.total < 50 and row.count >= 3 %}
+          {% set _below  = (not _risk) and row.won_pct is not none
+                           and tab1.team_won_pct is not none
+                           and _closed >= 5
+                           and row.won_pct < (tab1.team_won_pct - 10) %}
           <tr>
-            <td class="text-start fw-semibold">{{ row.name }}</td>
+            <td class="text-start fw-semibold">
+              {{ row.name }}
+              {% if _risk %}
+                <span class="badge bg-danger ms-1" style="font-size:0.62rem;font-weight:500"
+                      title="Средний балл {{ '%.0f'|format(row.total) }}% — звонки ниже 50%">Зона риска</span>
+              {% elif _below %}
+                <span class="badge bg-warning text-dark ms-1" style="font-size:0.62rem;font-weight:500"
+                      title="Win Rate {{ '%.0f'|format(row.won_pct) }}% — ниже командного {{ '%.0f'|format(tab1.team_won_pct) }}%">Ниже команды</span>
+              {% endif %}
+            </td>
             {% for cell in row.cells %}
             <td style="{{ heat_style(cell.pct) | safe }}">
               <span class="val-pct">

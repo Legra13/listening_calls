@@ -223,7 +223,8 @@ def compute_kpi(rows: list[dict]) -> dict:
     won_pct = round(won / closed * 100, 1) if closed else None
     lost_pct = round(lost / closed * 100, 1) if closed else None
     return {"count": count, "avg_score": avg_score, "won": won, "lost": lost,
-            "won_pct": won_pct, "lost_pct": lost_pct}
+            "won_pct": won_pct, "lost_pct": lost_pct,
+            "win_rate": won_pct}   # алиас: won / (won+lost) * 100
 
 
 # ── Tab 1 — Общие показатели ─────────────────────────────────────────────────
@@ -250,6 +251,9 @@ def compute_tab1(rows: list[dict], checklist: Checklist) -> dict:
             "name": op,
             "cells": cells,
             "total": total,
+            "count": len(op_rows),
+            "won": won,
+            "lost": lost,
             "won_pct": round(won / closed * 100, 1) if closed else None,
             "lost_pct": round(lost / closed * 100, 1) if closed else None,
         })

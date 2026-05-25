@@ -115,6 +115,30 @@ def reports_index(
     if closing_speed_data:
         closing_speed_json = json.dumps(closing_speed_data)
 
+    # ── Ключевой инсайт для шапки (серверная сторона) ─────────────────────────
+    top_insight = None
+    if score_outcome_data:
+        _MIN = 5
+        closed_ranges = [d for d in score_outcome_data
+                         if d.get("won", 0) + d.get("lost", 0) >= _MIN]
+        if len(closed_ranges) >= 2:
+            first = closed_ranges[0]
+            last  = closed_ranges[-1]
+            wr1, wr2 = first.get("win_rate"), last.get("win_rate")
+            if wr1 is not None and wr2 is not None and wr1 > 0:
+                ratio = wr2 / wr1
+                top_insight = {
+                    "wr_low":      round(wr1, 1),
+                    "wr_high":     round(wr2, 1),
+                    "ratio":       round(ratio, 1),
+                    "ratio_ok":    ratio >= 1.3,
+                    "label_low":   first["range"],
+                    "label_high":  last["range"],
+                    "total_closed": sum(d.get("won", 0) + d.get("lost", 0)
+                                       for d in score_outcome_data),
+                    "total_all":   sum(d.get("total", 0) for d in score_outcome_data),
+                }
+
     return templates.TemplateResponse("reports/index.html", {
         "request": request,
         "current_user": current_user,
@@ -123,6 +147,7 @@ def reports_index(
         "filters": filters,
         "stage": filters.stage,
         "kpi": kpi,
+        "top_insight": top_insight,
         "selected_cl": selected_cl,
         "auto_cl": auto_cl,
         "available_cls": available_cls,
