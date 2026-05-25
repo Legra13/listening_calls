@@ -320,17 +320,6 @@
       </div>
     </button>
   </li>
-  <li class="nav-item">
-    <button class="nav-link px-3 py-2" data-bs-toggle="tab" data-bs-target="#tab3" type="button">
-      <div class="d-flex align-items-center gap-2">
-        <i class="bi bi-people" style="font-size:1.15rem"></i>
-        <div class="text-start">
-          <div class="fw-semibold" style="font-size:0.88rem">По сотрудникам</div>
-          <div style="font-size:0.7rem;opacity:0.65;font-weight:400">Win Rate и Δ по каждому блоку</div>
-        </div>
-      </div>
-    </button>
-  </li>
 </ul>
 
 <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white shadow-sm">
@@ -782,127 +771,7 @@
   </div>{# /tab2 #}
 
   {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 3 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
-  <div class="tab-pane fade" id="tab3" role="tabpanel">
-
-    {# Таблица 1: оператор × блок → Won% / Lost% / Δ #}
-    <div class="d-flex align-items-start gap-2 mb-2">
-      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-person-lines-fill"></i></span>
-      <div>
-        <div class="fw-bold" style="font-size:0.95rem">Win / Lost / Δ по сотрудникам</div>
-        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
-          Для каждого блока: средний балл по выигранным и проигранным сделкам. Δ — разница между ними.
-        </div>
-      </div>
-    </div>
-    <div class="table-responsive mb-4">
-      <table class="table table-bordered table-sm align-middle mb-0" style="font-size:0.75rem">
-        <thead class="table-light">
-          <tr>
-            <th style="min-width:130px;white-space:nowrap">Сотрудник</th>
-            {% for block in tab3.blocks %}
-            <th class="text-center" style="min-width:80px;white-space:normal;line-height:1.2"
-                title="{{ block.name }}">
-              {{ (block.display_name or block.name) | truncate(14, True, '…') }}
-            </th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in tab3.t1_rows %}
-          <tr>
-            <td class="fw-semibold">{{ row.name }}</td>
-            {% for cell in row.cells %}
-            <td class="text-center p-1">
-              {% if cell.won is not none or cell.lost is not none %}
-              <div style="font-size:0.68rem;line-height:1.3">
-                <span class="text-success">{{ "%.0f"|format(cell.won) if cell.won is not none else "—" }}%</span>
-                <span class="text-muted mx-1">/</span>
-                <span class="text-danger">{{ "%.0f"|format(cell.lost) if cell.lost is not none else "—" }}%</span>
-                <br>
-                <span style="{{ delta_style(cell.delta) | safe }}">
-                  {{ ("+" if cell.delta >= 0 else "") + "%.1f"|format(cell.delta) if cell.delta is not none else "—" }}
-                </span>
-              </div>
-              {% else %}
-              <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-          {# Команда #}
-          <tr class="table-light">
-            <td class="fw-bold">Команда</td>
-            {% for cell in tab3.team_cells %}
-            <td class="text-center p-1">
-              {% if cell.won is not none or cell.lost is not none %}
-              <div style="font-size:0.68rem;line-height:1.3;font-weight:600">
-                <span class="text-success">{{ "%.0f"|format(cell.won) if cell.won is not none else "—" }}%</span>
-                <span class="text-muted mx-1">/</span>
-                <span class="text-danger">{{ "%.0f"|format(cell.lost) if cell.lost is not none else "—" }}%</span>
-                <br>
-                <span style="{{ delta_style(cell.delta) | safe }}">
-                  {{ ("+" if cell.delta >= 0 else "") + "%.1f"|format(cell.delta) if cell.delta is not none else "—" }}
-                </span>
-              </div>
-              {% else %}
-              <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            {% endfor %}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    {# Таблица 2: Win Rate по уровням выполнения #}
-    <div class="d-flex align-items-start gap-2 mb-2 mt-4">
-      <span class="text-primary mt-1" style="font-size:1.15rem"><i class="bi bi-bar-chart-steps"></i></span>
-      <div>
-        <div class="fw-bold" style="font-size:0.95rem">Win Rate по уровням выполнения блока</div>
-        <div class="text-muted" style="font-size:0.76rem;line-height:1.3">
-          % успешных сделок в зависимости от того, выполнен блок или нет.
-          Чем заметнее рост Win Rate слева направо — тем важнее блок для закрытия сделки.
-          <em>n</em> — количество сделок в диапазоне.
-        </div>
-      </div>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-bordered table-sm align-middle" style="font-size:0.78rem">
-        <thead class="table-light">
-          <tr>
-            <th style="min-width:90px;white-space:nowrap">Выполнение</th>
-            {% for block in tab3.blocks %}
-            <th class="text-center" style="min-width:75px;white-space:normal;line-height:1.2"
-                title="{{ block.name }}">
-              {{ (block.display_name or block.name) | truncate(14, True, '…') }}
-            </th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in tab3.t2_rows %}
-          <tr>
-            <td class="fw-semibold">{{ row.label }}</td>
-            {% for cell in row.cells %}
-            <td class="text-center" style="{{ heat_style(cell.wr) | safe }}">
-              {% if cell.wr is not none %}
-                {{ "%.1f"|format(cell.wr) }}%
-                <br><span style="font-size:0.65rem;opacity:0.8">n={{ cell.n }}</span>
-              {% elif cell.n > 0 %}
-                <span class="text-muted">n={{ cell.n }}</span>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-  </div>{# /tab3 #}
+  {# tab3 скрыта — можно вернуть при необходимости #}
 
 </div>{# /tab-content #}
 
