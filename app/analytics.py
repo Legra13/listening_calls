@@ -76,6 +76,7 @@ class Filters:
     date_from: date | None = None
     date_to: date | None = None
     checklist_id: int | None = None
+    stage: str = ""   # "" = все; "won" | "lost" | "progress"
 
 
 # ── Загрузка ─────────────────────────────────────────────────────────────────
@@ -100,6 +101,13 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
         q = q.filter(Evaluation.eval_date <= datetime.combine(filters.date_to, datetime.max.time()))
     if filters.checklist_id:
         q = q.filter(Evaluation.checklist_id == filters.checklist_id)
+    _STAGE_MAP = {
+        "won":      "сделка успешна",
+        "lost":     "не смог продать",
+        "progress": "в работе",
+    }
+    if filters.stage and filters.stage in _STAGE_MAP:
+        q = q.filter(Evaluation.stage == _STAGE_MAP[filters.stage])
     q = q.filter(Evaluation.status == "published")
     return q.all()
 

@@ -31,6 +31,7 @@ def reports_index(
     operators: list[str] = Query(default=[]),
     date_from: str = "",
     date_to: str = "",
+    stage: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -42,6 +43,7 @@ def reports_index(
         date_from=date.fromisoformat(date_from) if date_from else None,
         date_to=date.fromisoformat(date_to) if date_to else None,
         checklist_id=int(checklist_id) if checklist_id else None,
+        stage=stage if stage in ("won", "lost", "progress") else "",
     )
 
     evaluations = fetch_evaluations(db, filters)
@@ -119,6 +121,7 @@ def reports_index(
         "flash": pop_flash(request),
         "options": options,
         "filters": filters,
+        "stage": filters.stage,
         "kpi": kpi,
         "selected_cl": selected_cl,
         "auto_cl": auto_cl,

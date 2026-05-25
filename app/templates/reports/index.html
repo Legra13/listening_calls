@@ -87,6 +87,18 @@
           <div class="form-text" style="font-size:0.7rem">Можно выбрать несколько</div>
         </div>
 
+        {# Стадия сделки #}
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold mb-1">Стадия сделки</label>
+          <select name="stage" class="form-select form-select-sm">
+            <option value=""     {% if not filters.stage %}selected{% endif %}>— Все стадии —</option>
+            <option value="won"      {% if filters.stage == 'won' %}selected{% endif %}>✅ Успешна</option>
+            <option value="lost"     {% if filters.stage == 'lost' %}selected{% endif %}>❌ Не продали</option>
+            <option value="progress" {% if filters.stage == 'progress' %}selected{% endif %}>🔄 В работе</option>
+          </select>
+          <div class="form-text" style="font-size:0.7rem">Из карточки Битрикс24</div>
+        </div>
+
         {# Даты #}
         <div class="col-md-2">
           <label class="form-label small fw-semibold mb-1">С</label>
@@ -872,17 +884,34 @@ const scoreOutcomeData = {{ score_outcome_json | safe }};
   }
 
   // Insight-заголовок
+  const MIN_CLOSED = 5; // минимум закрытых сделок для вывода
+  const rangesWithData = scoreOutcomeData.filter(d => (d.won + d.lost) >= MIN_CLOSED);
+  const totalClosed    = scoreOutcomeData.reduce((s, d) => s + d.won + d.lost, 0);
+  const totalAll       = scoreOutcomeData.reduce((s, d) => s + d.total, 0);
+  const dataNote       = `На основе ${totalClosed} закрытых сделок из ${totalAll} всего.`;
+
   if (insight) insight.classList.remove('d-none');
   if (insText) {
-    const first = scoreOutcomeData[0];
-    const last  = scoreOutcomeData[scoreOutcomeData.length - 1];
-    const wr1 = first.win_rate != null ? first.win_rate.toFixed(0) : '?';
-    const wr2 = last.win_rate  != null ? last.win_rate.toFixed(0)  : '?';
-    let multStr = '';
-    if (first.win_rate > 0 && last.win_rate > 0) {
-      multStr = ` — в ${(last.win_rate / first.win_rate).toFixed(1)}× чаще`;
+    if (rangesWithData.length < 2) {
+      // Мало данных — не делаем вывод
+      insight.querySelector('.p-3').style.background = 'linear-gradient(135deg,#f8f9fa,#e9ecef)';
+      insight.querySelector('.p-3').style.border     = '1px solid #dee2e6';
+      insight.querySelector('span[style*="font-size:1.6rem"]').textContent = 'ℹ️';
+      insText.textContent = `Недостаточно закрытых сделок для уверенного вывода. ${dataNote}`;
+    } else {
+      const first = rangesWithData[0];
+      const last  = rangesWithData[rangesWithData.length - 1];
+      const wr1   = first.win_rate != null ? first.win_rate.toFixed(0) : '?';
+      const wr2   = last.win_rate  != null ? last.win_rate.toFixed(0)  : '?';
+      const ratio = (first.win_rate > 0 && last.win_rate > 0) ? last.win_rate / first.win_rate : 1;
+      let multStr = '';
+      if (ratio >= 1.3) {
+        multStr = ` — в ${ratio.toFixed(1)}× чаще`;
+      }
+      const firstName = RANGE_LABELS[first.range] || first.range;
+      const lastName  = RANGE_LABELS[last.range]  || last.range;
+      insText.textContent = `«${lastName}» закрываются успешно${multStr}: Win Rate ${wr1}% → ${wr2}%. ${dataNote}`;
     }
-    insText.textContent = `Отличные звонки (80–100%) закрываются успешно${multStr}: Win Rate ${wr1}% → ${wr2}%`;
   }
 
   // KPI-карточки (по одной на диапазон)
@@ -984,20 +1013,27 @@ const closingSpeedData = {{ closing_speed_json | safe }};
   }
 
   // Insight-заголовок
+  const MIN_SPEED = 3; // минимум сделок для вывода
+  const speedWithData = closingSpeedData.filter(d => d.avg_won != null && d.n_won >= MIN_SPEED);
+  const totalSpeedClosed = closingSpeedData.reduce((s, d) => s + (d.n_won || 0) + (d.n_lost || 0), 0);
+  const speedDataNote = `На основе ${totalSpeedClosed} закрытых сделок с известной датой закрытия.`;
+
   if (insight) insight.classList.remove('d-none');
   if (insText) {
-    const withData = closingSpeedData.filter(d => d.avg_won != null);
-    if (withData.length >= 2) {
-      const slowest = withData.reduce((a, b) => a.avg_won > b.avg_won ? a : b);
-      const fastest = withData.reduce((a, b) => a.avg_won < b.avg_won ? a : b);
-      if (slowest !== fastest && fastest.avg_won > 0) {
-        const ratio = (slowest.avg_won / fastest.avg_won).toFixed(1);
-        insText.textContent = `${RANGE_LABELS[fastest.range] || fastest.range}: успешные сделки закрываются в ${ratio}× быстрее, чем "${RANGE_LABELS[slowest.range] || slowest.range}" (${Math.round(fastest.avg_won)} vs ${Math.round(slowest.avg_won)} дней)`;
+    if (speedWithData.length < 2) {
+      insight.querySelector('.p-3').style.background = 'linear-gradient(135deg,#f8f9fa,#e9ecef)';
+      insight.querySelector('.p-3').style.border     = '1px solid #dee2e6';
+      insight.querySelector('span[style*="font-size:1.6rem"]').textContent = 'ℹ️';
+      insText.textContent = `Недостаточно данных для сравнения скорости закрытия. ${speedDataNote}`;
+    } else {
+      const slowest = speedWithData.reduce((a, b) => a.avg_won > b.avg_won ? a : b);
+      const fastest = speedWithData.reduce((a, b) => a.avg_won < b.avg_won ? a : b);
+      const ratio   = slowest.avg_won / fastest.avg_won;
+      if (ratio >= 1.3 && slowest !== fastest) {
+        insText.textContent = `«${RANGE_LABELS[fastest.range] || fastest.range}» закрывается в ${ratio.toFixed(1)}× быстрее «${RANGE_LABELS[slowest.range] || slowest.range}» (${Math.round(fastest.avg_won)} vs ${Math.round(slowest.avg_won)} дней). ${speedDataNote}`;
       } else {
-        insText.textContent = `Среднее время закрытия успешной сделки: ${Math.round(fastest.avg_won)} дней`;
+        insText.textContent = `Среднее время закрытия успешной сделки: ${Math.round(fastest.avg_won)}–${Math.round(slowest.avg_won)} дней. ${speedDataNote}`;
       }
-    } else if (withData.length === 1) {
-      insText.textContent = `Среднее время закрытия успешной сделки: ${Math.round(withData[0].avg_won)} дней`;
     }
   }
 
@@ -1088,19 +1124,28 @@ const catScoreData = {{ cat_score_json | safe }};
   }
 
   // Insight-заголовок
+  const MIN_CAT = 3; // минимум закрытых сделок для вывода по категории
+  const catWithWR = catScoreData.filter(d => d.win_rate != null && (d.won + d.lost) >= MIN_CAT)
+                                .sort((a, b) => b.win_rate - a.win_rate);
+  const catTotalClosed = catScoreData.reduce((s, d) => s + d.won + d.lost, 0);
+  const catDataNote    = `На основе ${catTotalClosed} закрытых сделок с заполненной категорией.`;
+
   if (insight) insight.classList.remove('d-none');
   if (insText) {
-    const withWR = catScoreData.filter(d => d.win_rate != null).sort((a, b) => b.win_rate - a.win_rate);
-    if (withWR.length >= 2) {
-      const best  = withWR[0];
-      const worst = withWR[withWR.length - 1];
+    if (catWithWR.length < 2) {
+      insight.querySelector('.p-3').style.background = 'linear-gradient(135deg,#f8f9fa,#e9ecef)';
+      insight.querySelector('.p-3').style.border     = '1px solid #dee2e6';
+      insight.querySelector('span[style*="font-size:1.6rem"]').textContent = 'ℹ️';
+      insText.textContent = `Недостаточно закрытых сделок по категориям для сравнения. ${catDataNote}`;
+    } else {
+      const best  = catWithWR[0];
+      const worst = catWithWR[catWithWR.length - 1];
+      const ratio = worst.win_rate > 0 ? best.win_rate / worst.win_rate : null;
       let multStr = '';
-      if (worst.win_rate > 0) {
-        multStr = ` (в ${(best.win_rate / worst.win_rate).toFixed(1)}× чаще)`;
+      if (ratio != null && ratio >= 1.3) {
+        multStr = ` (в ${ratio.toFixed(1)}× чаще)`;
       }
-      insText.textContent = `Клиенты категории ${best.category} закрываются лучше всего: Win Rate ${best.win_rate.toFixed(0)}% против ${worst.win_rate.toFixed(0)}% у категории ${worst.category}${multStr}`;
-    } else if (withWR.length === 1) {
-      insText.textContent = `Категория ${withWR[0].category}: ${withWR[0].count} звонков, Win Rate ${withWR[0].win_rate.toFixed(0)}%`;
+      insText.textContent = `Категория ${best.category} закрывается лучше всего: Win Rate ${best.win_rate.toFixed(0)}% против ${worst.win_rate.toFixed(0)}% у категории ${worst.category}${multStr}. ${catDataNote}`;
     }
   }
 
