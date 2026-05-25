@@ -1272,20 +1272,32 @@ const catScoreData = {{ cat_score_json | safe }};
 
   if (insight) insight.classList.remove('d-none');
   if (insText) {
-    if (catWithWR.length < 2) {
+    const _neutral = (msg) => {
       insight.querySelector('.p-3').style.background = 'linear-gradient(135deg,#f8f9fa,#e9ecef)';
       insight.querySelector('.p-3').style.border     = '1px solid #dee2e6';
       insight.querySelector('span[style*="font-size:1.6rem"]').textContent = 'ℹ️';
-      insText.textContent = `Недостаточно закрытых сделок по категориям для сравнения. ${catDataNote}`;
+      insText.textContent = msg;
+    };
+
+    if (catWithWR.length < 2) {
+      _neutral(`Недостаточно закрытых сделок по категориям для сравнения. ${catDataNote}`);
     } else {
       const best  = catWithWR[0];
       const worst = catWithWR[catWithWR.length - 1];
+      const diff  = best.win_rate - worst.win_rate;
       const ratio = worst.win_rate > 0 ? best.win_rate / worst.win_rate : null;
-      let multStr = '';
-      if (ratio != null && ratio >= 1.3) {
-        multStr = ` (в ${ratio.toFixed(1)}× чаще)`;
+
+      if (diff < 10) {
+        // Разница незначимая — не делаем сравнение
+        const avgWR = (catWithWR.reduce((s, d) => s + d.win_rate, 0) / catWithWR.length).toFixed(0);
+        _neutral(`Win Rate по категориям схожий (~${avgWR}%) — данных пока недостаточно для уверенного вывода. ${catDataNote}`);
+      } else {
+        let multStr = '';
+        if (ratio != null && ratio >= 1.3) {
+          multStr = ` (в ${ratio.toFixed(1)}× чаще)`;
+        }
+        insText.textContent = `Категория ${best.category} закрывается лучше всего: Win Rate ${best.win_rate.toFixed(0)}% против ${worst.win_rate.toFixed(0)}% у категории ${worst.category}${multStr}. ${catDataNote}`;
       }
-      insText.textContent = `Категория ${best.category} закрывается лучше всего: Win Rate ${best.win_rate.toFixed(0)}% против ${worst.win_rate.toFixed(0)}% у категории ${worst.category}${multStr}. ${catDataNote}`;
     }
   }
 
