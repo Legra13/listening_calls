@@ -354,6 +354,78 @@
     </div>
     {% endif %}
 
+    {# ── Категория клиента vs Оценка ────────────────────────────────── #}
+    <hr class="my-4">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <span class="fw-semibold">Категория клиента vs Оценка</span>
+      <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.7rem">только отделы продления</span>
+    </div>
+    <div class="text-muted small mb-3">
+      Средний балл и Win Rate (% успешных сделок) по каждой категории клиента.
+    </div>
+    <div id="catScoreSection">
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div style="height:260px"><canvas id="catScoreChart"></canvas></div>
+        </div>
+        <div class="col-lg-5">
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
+            <thead class="table-light">
+              <tr>
+                <th>Категория</th>
+                <th class="text-center">Оценок</th>
+                <th class="text-center">Ср. балл</th>
+                <th class="text-center">Успешных</th>
+                <th class="text-center">Не продали</th>
+                <th class="text-center">В работе</th>
+                <th class="text-center">Win Rate</th>
+              </tr>
+            </thead>
+            <tbody id="catScoreTableBody"></tbody>
+          </table>
+          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate = % успешных среди закрытых сделок (успешна + не продали).</div>
+        </div>
+      </div>
+    </div>
+    <div id="catScoreEmpty" class="text-muted small d-none">
+      <i class="bi bi-info-circle me-1"></i>Нет оценок с заполненной категорией клиента.
+      Категория заполняется для отделов продления при поиске сделки.
+    </div>
+
+    {# ── Оценка vs Исход сделки ──────────────────────────────────────── #}
+    <hr class="my-4">
+    <div class="fw-semibold mb-1">Оценка vs Исход сделки</div>
+    <div class="text-muted small mb-3">
+      Для каждого диапазона итогового балла — доля сделок с разным исходом.
+      Показывает, как уровень оценки связан с результатом продления / продажи.
+    </div>
+    <div id="scoreOutcomeSection">
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div style="height:260px"><canvas id="scoreOutcomeChart"></canvas></div>
+        </div>
+        <div class="col-lg-5">
+          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.82rem">
+            <thead class="table-light">
+              <tr>
+                <th>Диапазон</th>
+                <th class="text-center">Всего</th>
+                <th class="text-center text-success">Успешных</th>
+                <th class="text-center text-danger">Не продали</th>
+                <th class="text-center text-warning">В работе</th>
+                <th class="text-center">Win Rate</th>
+              </tr>
+            </thead>
+            <tbody id="scoreOutcomeTableBody"></tbody>
+          </table>
+          <div class="text-muted mt-2" style="font-size:0.72rem">Win Rate считается только среди закрытых сделок. «В работе» — ещё не закрыты.</div>
+        </div>
+      </div>
+    </div>
+    <div id="scoreOutcomeEmpty" class="text-muted small d-none">
+      <i class="bi bi-info-circle me-1"></i>Нет данных для построения отчёта.
+    </div>
+
   </div>{# /tab1 #}
 
   {# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ TAB 2 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ #}
@@ -702,6 +774,199 @@ if (corrCtx && tab2Data.length > 0) {
     }
   });
 }
+
+/* ── Категория vs Оценка ─────────────────────────────────────────────── */
+const catScoreData = {{ cat_score_json | safe }};
+(function() {
+  const section = document.getElementById('catScoreSection');
+  const empty   = document.getElementById('catScoreEmpty');
+  const tbody   = document.getElementById('catScoreTableBody');
+  if (!catScoreData || catScoreData.length === 0) {
+    if (section) section.classList.add('d-none');
+    if (empty)   empty.classList.remove('d-none');
+    return;
+  }
+
+  const CAT_COLORS = { A: '#2563eb', B: '#16a34a', C: '#d97706', D: '#7c3aed' };
+  const labels = catScoreData.map(d => `Категория ${d.category}`);
+
+  const ctx = document.getElementById('catScoreChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Средний балл',
+            data: catScoreData.map(d => d.avg_score),
+            backgroundColor: catScoreData.map(d => (CAT_COLORS[d.category] || '#64748b') + 'cc'),
+            borderColor:     catScoreData.map(d => CAT_COLORS[d.category] || '#64748b'),
+            borderWidth: 2,
+            yAxisID: 'yScore',
+            order: 2,
+          },
+          {
+            label: 'Win Rate',
+            data: catScoreData.map(d => d.win_rate),
+            type: 'line',
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239,68,68,0.15)',
+            pointBackgroundColor: '#ef4444',
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            borderWidth: 2.5,
+            yAxisID: 'yWR',
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          yScore: {
+            type: 'linear', position: 'left',
+            min: 0, max: 100,
+            title: { display: true, text: 'Средний балл, %', font: { size: 11 } },
+            ticks: { callback: v => v + '%' },
+          },
+          yWR: {
+            type: 'linear', position: 'right',
+            min: 0, max: 100,
+            title: { display: true, text: 'Win Rate, %', font: { size: 11 } },
+            ticks: { callback: v => v + '%' },
+            grid: { drawOnChartArea: false },
+          },
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.raw;
+                if (v == null) return `${ctx.dataset.label}: —`;
+                return `${ctx.dataset.label}: ${v.toFixed(1)}%`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Таблица
+  if (tbody) {
+    tbody.innerHTML = catScoreData.map(d => {
+      const wr = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
+      const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[d.category]||'#64748b'};margin-right:4px"></span>`;
+      return `<tr>
+        <td class="fw-bold">${dot}${d.category}</td>
+        <td class="text-center">${d.count}</td>
+        <td class="text-center fw-semibold">${d.avg_score.toFixed(1)}%</td>
+        <td class="text-center text-success">${d.won}</td>
+        <td class="text-center text-danger">${d.lost}</td>
+        <td class="text-center text-warning">${d.in_progress}</td>
+        <td class="text-center fw-semibold">${wr}</td>
+      </tr>`;
+    }).join('');
+  }
+})();
+
+/* ── Оценка vs Исход сделки ─────────────────────────────────────────── */
+const scoreOutcomeData = {{ score_outcome_json | safe }};
+(function() {
+  const section = document.getElementById('scoreOutcomeSection');
+  const empty   = document.getElementById('scoreOutcomeEmpty');
+  const tbody   = document.getElementById('scoreOutcomeTableBody');
+  if (!scoreOutcomeData || scoreOutcomeData.length === 0) {
+    if (section) section.classList.add('d-none');
+    if (empty)   empty.classList.remove('d-none');
+    return;
+  }
+
+  const labels = scoreOutcomeData.map(d => d.range);
+  const ctx = document.getElementById('scoreOutcomeChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Успешна',
+            data: scoreOutcomeData.map(d => d.won_pct),
+            backgroundColor: 'rgba(34,197,94,0.8)',
+            borderColor: 'rgb(34,197,94)',
+            borderWidth: 1,
+            stack: 'outcome',
+          },
+          {
+            label: 'Не продали',
+            data: scoreOutcomeData.map(d => d.lost_pct),
+            backgroundColor: 'rgba(239,68,68,0.8)',
+            borderColor: 'rgb(239,68,68)',
+            borderWidth: 1,
+            stack: 'outcome',
+          },
+          {
+            label: 'В работе',
+            data: scoreOutcomeData.map(d => d.prog_pct),
+            backgroundColor: 'rgba(234,179,8,0.6)',
+            borderColor: 'rgb(234,179,8)',
+            borderWidth: 1,
+            stack: 'outcome',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true },
+          y: {
+            stacked: true,
+            min: 0, max: 100,
+            ticks: { callback: v => v + '%' },
+          },
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const d = scoreOutcomeData[items[0].dataIndex];
+                return `${d.range}  (всего: ${d.total})`;
+              },
+              label: ctx => {
+                const v = ctx.raw;
+                const d = scoreOutcomeData[ctx.dataIndex];
+                const abs = ctx.datasetIndex === 0 ? d.won : ctx.datasetIndex === 1 ? d.lost : d.in_progress;
+                return ` ${ctx.dataset.label}: ${v.toFixed(1)}% (${abs})`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Таблица
+  if (tbody) {
+    tbody.innerHTML = scoreOutcomeData.map(d => {
+      const wr = d.win_rate != null ? d.win_rate.toFixed(1) + '%' : '—';
+      return `<tr>
+        <td class="fw-semibold">${d.range}</td>
+        <td class="text-center">${d.total}</td>
+        <td class="text-center text-success">${d.won} <span class="text-muted">(${d.won_pct.toFixed(0)}%)</span></td>
+        <td class="text-center text-danger">${d.lost} <span class="text-muted">(${d.lost_pct.toFixed(0)}%)</span></td>
+        <td class="text-center text-warning">${d.in_progress} <span class="text-muted">(${d.prog_pct.toFixed(0)}%)</span></td>
+        <td class="text-center fw-semibold">${wr}</td>
+      </tr>`;
+    }).join('');
+  }
+})();
 
 // Кнопки экспорта — передаём текущие фильтры включая множественных операторов
 (function() {

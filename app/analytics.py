@@ -636,6 +636,90 @@ def compute_employee_report(evaluations: list[Evaluation], checklist: Checklist,
     }
 
 
+# ── Категория клиента vs Оценка ───────────────────────────────────────────────
+
+def compute_category_score(rows: list[dict]) -> dict | None:
+    """
+    Для каждой категории клиента (A/B/C/D) вычисляет:
+    - среднюю оценку
+    - Win Rate (% успешных среди закрытых)
+    - количество оценок
+    Возвращает None, если нет оценок с категорией.
+    """
+    CAT_ORDER = ["A", "B", "C", "D"]
+    by_cat: dict[str, list[dict]] = {c: [] for c in CAT_ORDER}
+
+    for r in rows:
+        cat = (r["ev"].client_category or "").strip().upper()
+        if cat in by_cat and r["ev"].total_score is not None:
+            by_cat[cat].append(r)
+
+    result = []
+    for cat in CAT_ORDER:
+        cat_rows = by_cat[cat]
+        if not cat_rows:
+            continue
+        scores = [float(r["ev"].total_score) for r in cat_rows]
+        avg = round(sum(scores) / len(scores), 1)
+        won   = sum(1 for r in cat_rows if r["ev"].stage == WON)
+        lost  = sum(1 for r in cat_rows if r["ev"].stage == LOST)
+        closed = won + lost
+        wr = round(won / closed * 100, 1) if closed else None
+        result.append({
+            "category": cat,
+            "count": len(cat_rows),
+            "avg_score": avg,
+            "win_rate": wr,
+            "won": won,
+            "lost": lost,
+            "in_progress": sum(1 for r in cat_rows if r["ev"].stage not in (WON, LOST)),
+        })
+
+    return result if result else None
+
+
+# ── Оценка vs Исход сделки ─────────────────────────────────────────────────────
+
+def compute_score_outcome(rows: list[dict]) -> dict | None:
+    """
+    Разбивает оценки на диапазоны (0–40, 40–60, 60–80, 80–100)
+    и для каждого диапазона считает: Won / Lost / В работе.
+    Показывает, как уровень оценки связан с итогом сделки.
+    """
+    RANGES = [
+        ("0–40%",   lambda s: s < 40),
+        ("40–60%",  lambda s: 40 <= s < 60),
+        ("60–80%",  lambda s: 60 <= s < 80),
+        ("80–100%", lambda s: s >= 80),
+    ]
+    total_rows = [r for r in rows if r["ev"].total_score is not None]
+    if not total_rows:
+        return None
+
+    result = []
+    for label, fn in RANGES:
+        subset = [r for r in total_rows if fn(float(r["ev"].total_score))]
+        if not subset:
+            continue
+        won   = sum(1 for r in subset if r["ev"].stage == WON)
+        lost  = sum(1 for r in subset if r["ev"].stage == LOST)
+        prog  = sum(1 for r in subset if r["ev"].stage not in (WON, LOST))
+        total = len(subset)
+        closed = won + lost
+        result.append({
+            "range": label,
+            "total": total,
+            "won":   won,
+            "lost":  lost,
+            "in_progress": prog,
+            "won_pct":  round(won  / total * 100, 1),
+            "lost_pct": round(lost / total * 100, 1),
+            "prog_pct": round(prog / total * 100, 1),
+            "win_rate": round(won / closed * 100, 1) if closed else None,
+        })
+    return result if result else None
+
+
 # ── План / Факт ────────────────────────────────────────────────────────────────
 
 from calendar import monthrange

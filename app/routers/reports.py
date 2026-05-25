@@ -12,6 +12,7 @@ from app.deps import get_current_user, pop_flash
 from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
     prep_rows, compute_kpi, compute_tab1, compute_tab2, compute_tab3,
+    compute_category_score, compute_score_outcome,
     heat_style, delta_style,
     EmployeeFilters, get_employee_report_options, fetch_evaluations_employee,
     compute_employee_report, compute_plan_fact,
@@ -87,6 +88,8 @@ def reports_index(
     tab1 = tab2 = tab3 = None
     weekly_json = "[]"
     tab2_json = "[]"
+    cat_score_json = "[]"
+    score_outcome_json = "[]"
 
     if selected_cl and rows_for_cl:
         tab1 = compute_tab1(rows_for_cl, selected_cl)
@@ -94,6 +97,15 @@ def reports_index(
         tab3 = compute_tab3(rows_for_cl, selected_cl)
         weekly_json = json.dumps(tab1["weekly"])
         tab2_json = json.dumps(tab2)
+
+    # Эти два отчёта считаем по выбранному чек-листу, иначе по всем строкам
+    base_rows = rows_for_cl if rows_for_cl is not None and len(rows_for_cl) > 0 else rows
+    cat_score_data  = compute_category_score(base_rows)
+    score_outcome_data = compute_score_outcome(base_rows)
+    if cat_score_data:
+        cat_score_json = json.dumps(cat_score_data)
+    if score_outcome_data:
+        score_outcome_json = json.dumps(score_outcome_data)
 
     return templates.TemplateResponse("reports/index.html", {
         "request": request,
@@ -110,6 +122,8 @@ def reports_index(
         "tab3": tab3,
         "weekly_json": weekly_json,
         "tab2_json": tab2_json,
+        "cat_score_json": cat_score_json,
+        "score_outcome_json": score_outcome_json,
         "heat_style": heat_style,
         "delta_style": delta_style,
     })
