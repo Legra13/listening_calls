@@ -196,6 +196,48 @@
     }
     .btn-enter:active { transform: none; }
 
+    .btn-bitrix {
+      width: 100%;
+      padding: .7rem;
+      background: #fff;
+      border: 1.5px solid #D8E8E2;
+      border-radius: 8px;
+      color: #1A2B3C;
+      font-family: 'Open Sans', sans-serif;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: .75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      transition: border-color .15s, box-shadow .15s, transform .1s;
+    }
+    .btn-bitrix:hover {
+      border-color: #00B583;
+      box-shadow: 0 4px 14px rgba(0,181,131,.18);
+      transform: translateY(-1px);
+    }
+    .btn-bitrix:active { transform: none; }
+    .btn-bitrix svg { flex-shrink: 0; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 1.4rem 0 .5rem;
+      color: #C0CDD8;
+      font-size: .75rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #E8EEF3;
+    }
+
     .alert-box {
       padding: .65rem 1rem;
       border-radius: 8px;
@@ -245,10 +287,21 @@
       </div>
     {% endif %}
 
+    {% if bitrix24_enabled %}
+      <a href="/auth/bitrix24" class="btn-bitrix">
+        <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="40" height="40" rx="8" fill="#2FC7F7"/>
+          <path d="M20 8C13.37 8 8 13.37 8 20C8 26.63 13.37 32 20 32C26.63 32 32 26.63 32 20C32 13.37 26.63 8 20 8ZM22.5 25.5H14V23H22.5C23.88 23 25 21.88 25 20.5C25 19.12 23.88 18 22.5 18H17.5V15.5H22.5C25.26 15.5 27.5 17.74 27.5 20.5C27.5 23.26 25.26 25.5 22.5 25.5Z" fill="white"/>
+        </svg>
+        Войти через Битрикс24
+      </a>
+      <div class="divider">или</div>
+    {% endif %}
+
     <form action="/login" method="post">
       <div class="form-group">
         <label>Логин</label>
-        <input type="text" name="username" autofocus required placeholder="Введите логин">
+        <input type="text" name="username" {% if not bitrix24_enabled %}autofocus{% endif %} required placeholder="Введите логин">
       </div>
       <div class="form-group">
         <label>Пароль</label>

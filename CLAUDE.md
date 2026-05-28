@@ -100,6 +100,18 @@
 
 Логика расчётов описана в `logic_summary.md`.
 
+### Авторизация через Битрикс24 (OAuth2)
+- Реализован OAuth2-вход через `https://entera.bitrix24.ru/oauth/authorize/`
+- Маршруты: `GET /auth/bitrix24` (старт), `GET /auth/bitrix24/callback` (обработка кода)
+- При первом входе пользователь создаётся автоматически: `username = email`, `full_name`, `bitrix_id`, `email`
+- Модель `User` дополнена полями `bitrix_id VARCHAR(50)` (unique) и `email VARCHAR(200)`; `password_hash` теперь nullable
+- Миграция: `ALTER TABLE users ADD COLUMN bitrix_id VARCHAR(50); ALTER TABLE users ADD COLUMN email VARCHAR(200);`
+- Кнопка «Войти через Битрикс24» отображается только если заданы `BITRIX24_CLIENT_ID` в `.env`
+- Форма логин/пароль остаётся как fallback для admin-пользователя
+- Требует приложение в Битрикс24 (тип: Серверное): `https://entera.bitrix24.ru/marketplace/local/add/`
+- Переменные `.env`: `BITRIX24_CLIENT_ID`, `BITRIX24_CLIENT_SECRET`, `BITRIX24_PORTAL=entera.bitrix24.ru`
+- Redirect URI для приложения: `http://188.227.87.11:8550/auth/bitrix24/callback`
+
 ### Форма оценки — UX-решения
 - Кнопки Да/Нет/Н/П — pill-форма с цветными контурами (зелёный/красный/серый), заливка при выборе
 - `{% block styles %}` добавлен в `base.html` — без него CSS дочерних шаблонов игнорировался

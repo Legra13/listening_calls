@@ -13,7 +13,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
     user = db.query(User).filter(User.username == username, User.is_active == True).first()
-    if user and verify_password(password, user.password_hash):
+    if user and user.password_hash and verify_password(password, user.password_hash):
         return user
     return None
 
