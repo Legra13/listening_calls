@@ -239,11 +239,12 @@
         </td>
         <td class="text-end align-middle" style="white-space:nowrap">
           <form action="/evaluations/{{ ev.id }}/toggle-calibration" method="post" class="d-inline">
-            <input type="hidden" name="next" value="{{ request.url }}">
+            <input type="hidden" name="next" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
             <button type="submit"
-                    class="btn btn-sm {% if ev.is_calibration %}btn-danger{% else %}btn-outline-secondary{% endif %}"
+                    class="btn btn-sm {% if ev.is_calibration %}btn-danger{% else %}btn-outline-danger{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="top"
                     title="{% if ev.is_calibration %}Снять с калибровки{% else %}Отметить на калибровку{% endif %}">
-              <i class="bi bi-bullseye"></i>
+              <i class="bi bi-bullseye"></i>{% if ev.is_calibration %}&nbsp;К{% endif %}
             </button>
           </form>
           <a href="/evaluations/{{ ev.id }}" class="btn btn-sm btn-outline-secondary">
