@@ -24,6 +24,9 @@
 {% endblock %}
 
 {% block content %}
+{% set source_name = (sess.source_evaluation.evaluator.full_name or sess.source_evaluation.evaluator.username) if sess.source_evaluation.evaluator else 'Неизвестно' %}
+{% set calib_name  = (active_participant.user.full_name or active_participant.user.username) if active_participant.user else 'Неизвестно' %}
+
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb small">
     <li class="breadcrumb-item"><a href="/calibration">Калибровка</a></li>
@@ -161,9 +164,8 @@
       <div class="fw-bold text-{{ score_color(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
         {{ "%.1f"|format(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else '—' }}%
       </div>
-      <div class="small text-muted">Исходная оценка<br>
-        <span class="text-dark">{{ (sess.source_evaluation.evaluator.full_name or sess.source_evaluation.evaluator.username) if sess.source_evaluation.evaluator else '—' }}</span>
-      </div>
+      <div class="small text-muted">Исходная оценка</div>
+      <div class="small fw-semibold text-dark">{{ source_name }}</div>
     </div>
   </div>
   <div class="col-auto d-flex align-items-center text-muted">
@@ -174,9 +176,8 @@
       <div class="fw-bold text-{{ score_color(active_participant.total_score) if active_participant.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
         {{ "%.1f"|format(active_participant.total_score) if active_participant.total_score is not none else '—' }}%
       </div>
-      <div class="small text-muted">Калибровка<br>
-        <span class="text-dark">{{ (active_participant.user.full_name or active_participant.user.username) if active_participant.user else '—' }}</span>
-      </div>
+      <div class="small text-muted">Калибровка</div>
+      <div class="small fw-semibold text-dark">{{ calib_name }}</div>
     </div>
   </div>
   {% if active_participant.general_comment %}
@@ -221,8 +222,8 @@
         <thead class="table-light sticky-hdr">
           <tr>
             <th style="width:45%">Критерий</th>
-            <th style="width:10%">Исходная</th>
-            <th style="width:10%">Калибровка</th>
+            <th style="width:14%">{{ source_name }}<br><span class="text-muted fw-normal" style="font-size:0.7rem">исходная</span></th>
+            <th style="width:14%">{{ calib_name }}<br><span class="text-muted fw-normal" style="font-size:0.7rem">калибровка</span></th>
             <th style="width:8%" class="text-center">Итог</th>
             <th>Решение (итоговый ответ)</th>
           </tr>
