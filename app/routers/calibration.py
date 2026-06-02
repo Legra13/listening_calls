@@ -91,20 +91,40 @@ def calibration_index(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Все оценки, отмеченные для калибровки
+    marked_evals = (
+        db.query(Evaluation)
+        .filter(Evaluation.is_calibration == True, Evaluation.status == "published")
+        .options(
+            joinedload(Evaluation.checklist),
+            joinedload(Evaluation.evaluator),
+        )
+        .order_by(Evaluation.id.desc())
+        .all()
+    )
+
+    # Сессии, привязанные к этим оценкам
     sessions = (
         db.query(CalibrationSession)
         .options(
-            joinedload(CalibrationSession.source_evaluation).joinedload(Evaluation.checklist),
             joinedload(CalibrationSession.created_by),
             joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
         )
         .order_by(CalibrationSession.id.desc())
         .all()
     )
+    # Карта eval_id → список сессий
+    sessions_by_eval: dict[int, list] = {}
+    for s in sessions:
+        sessions_by_eval.setdefault(s.source_evaluation_id, []).append(s)
+
     return templates.TemplateResponse("calibration/index.html", {
         "request": request,
         "current_user": current_user,
-        "sessions": sessions,
+        "marked_evals": marked_evals,
+        "sessions_by_eval": sessions_by_eval,
+        "all_sessions": sessions,
+        "score_color": score_color,
         "flash": pop_flash(request),
     })
 
