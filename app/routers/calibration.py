@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
@@ -14,6 +15,21 @@ from app.scoring import calculate_scores, score_color
 
 router = APIRouter(prefix="/calibration")
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _comment_text(raw: str | None) -> str | None:
+    """Извлекает читаемый текст из комментария (JSON-массив или plain text)."""
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            parts = [str(c.get("text", "")).strip() for c in data if isinstance(c, dict)]
+            parts = [p for p in parts if p]
+            return " | ".join(parts) if parts else None
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return raw.strip() or None
 
 
 def _compute_comparison(source_eval: Evaluation, participant: CalibrationParticipant, checklist: Checklist):
@@ -42,9 +58,9 @@ def _compute_comparison(source_eval: Evaluation, participant: CalibrationPartici
             criteria_data.append({
                 "criterion": crit,
                 "source_value": sv_val,
-                "source_comment": sv.comment if sv else None,
+                "source_comment": _comment_text(sv.comment if sv else None),
                 "calib_value": cv_val,
-                "calib_comment": cv.comment if cv else None,
+                "calib_comment": _comment_text(cv.comment if cv else None),
                 "match": sv_val == cv_val,
                 "both_na": both_na,
             })

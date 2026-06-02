@@ -47,44 +47,40 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
 </nav>
 
 <!-- Info block -->
-<div class="card shadow-sm mb-3">
+<div class="card shadow-sm mb-3 border-primary border-opacity-25">
+  <div class="card-header bg-primary bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small"><i class="bi bi-bullseye me-2 text-primary"></i>Калибровочная оценка — {{ sess.name }}</span>
+    <span class="badge bg-warning text-dark"><i class="bi bi-eye-slash me-1"></i>Оценивайте независимо</span>
+  </div>
   <div class="card-body py-2">
-    <div class="d-flex flex-wrap gap-3 align-items-center">
-      <div>
-        <span class="text-muted small">Участник:</span>
-        <span class="fw-semibold ms-1">{{ (participant.user.full_name or participant.user.username) if participant.user else '?' }}</span>
+    <div class="row g-3 align-items-center">
+      <div class="col-auto">
+        <div class="text-muted small mb-1">Вы оцениваете:</div>
+        <div class="fw-semibold">{{ source_eval.operator_name }}</div>
+        {% if source_eval.department %}
+          <span class="badge bg-secondary-subtle text-secondary">{{ source_eval.department }}</span>
+        {% endif %}
       </div>
-      <div>
-        <span class="text-muted small">Сотрудник:</span>
-        <span class="ms-1">{{ source_eval.operator_name }}</span>
-      </div>
-      {% if source_eval.department %}
-      <div>
-        <span class="badge bg-secondary-subtle text-secondary">{{ source_eval.department }}</span>
+      {% if source_eval.eval_date %}
+      <div class="col-auto">
+        <div class="text-muted small mb-1">Дата звонка</div>
+        <div class="fw-semibold">{{ source_eval.eval_date.strftime('%d.%m.%Y') }}</div>
       </div>
       {% endif %}
       {% if source_eval.deal_id %}
-      <div>
-        <span class="text-muted small">Сделка:</span>
-        <a href="{{ source_eval.deal_url }}" target="_blank" class="ms-1">#{{ source_eval.deal_id }}</a>
+      <div class="col-auto">
+        <div class="text-muted small mb-1">Сделка в Битрикс24</div>
+        <a href="{{ source_eval.deal_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Открыть сделку #{{ source_eval.deal_id }}
+        </a>
       </div>
       {% endif %}
-      {% if source_eval.eval_date %}
-      <div>
-        <span class="text-muted small">Дата звонка:</span>
-        <span class="ms-1">{{ source_eval.eval_date.strftime('%d.%m.%Y') }}</span>
+      {% if source_eval.checklist %}
+      <div class="col-auto">
+        <div class="text-muted small mb-1">Чек-лист</div>
+        <div>{{ source_eval.checklist.name }}</div>
       </div>
       {% endif %}
-      {% if source_eval.stage %}
-      <div>
-        <span class="text-muted small">Сделка:</span>
-        <span class="ms-1">{{ source_eval.stage }}</span>
-      </div>
-      {% endif %}
-    </div>
-    <div class="mt-2 text-muted small">
-      <i class="bi bi-eye-slash me-1"></i>
-      Оценивайте самостоятельно — ответы других участников скрыты до завершения сессии.
     </div>
   </div>
 </div>
