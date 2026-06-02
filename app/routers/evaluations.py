@@ -608,12 +608,14 @@ def evaluations_publish(
 # ── Toggle calibration flag ───────────────────────────────────────────────────
 
 @router.post("/{eval_id}/toggle-calibration")
-def evaluations_toggle_calibration(
+async def evaluations_toggle_calibration(
     eval_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    form = await request.form()
+    next_url = (form.get("next") or "").strip() or f"/evaluations/{eval_id}"
     evaluation = db.query(Evaluation).filter(Evaluation.id == eval_id).first()
     if evaluation:
         evaluation.is_calibration = not bool(evaluation.is_calibration)
@@ -622,7 +624,7 @@ def evaluations_toggle_calibration(
             flash(request, "Оценка отмечена для калибровки")
         else:
             flash(request, "Отметка калибровки снята")
-    return RedirectResponse(f"/evaluations/{eval_id}", status_code=302)
+    return RedirectResponse(next_url, status_code=302)
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
