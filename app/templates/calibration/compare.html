@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Сравнение — {{ sess.name }}{% endblock %}
+
+{% block styles %}
+<style>
+.val-yes  { color: #198754; font-weight: 700; }
+.val-no   { color: #dc3545; font-weight: 700; }
+.val-na   { color: #adb5bd; }
+.mismatch-row { background: rgba(220,53,69,.05); }
+.match-row    { background: rgba(25,135,84,.03); }
+.sticky-hdr th {
+  position: sticky; top: 59px; z-index: 20;
+  background: #f8f9fa;
+  box-shadow: 0 1px 0 #dee2e6;
+}
+.resolution-select { min-width: 80px; }
+.section-summary {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/calibration">Калибровка</a></li>
+    <li class="breadcrumb-item"><a href="/calibration/{{ sess.id }}">{{ sess.name }}</a></li>
+    <li class="breadcrumb-item active">Сравнение</li>
+  </ol>
+</nav>
+
+<!-- Header -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col">
+        <h5 class="mb-1">{{ sess.name }}</h5>
+        <div class="text-muted small">
+          Исходная оценка:
+          <a href="/evaluations/{{ sess.source_evaluation.id }}" target="_blank" class="fw-semibold">
+            #{{ sess.source_evaluation.id }} — {{ sess.source_evaluation.operator_name }}
+          </a>
+          {% if sess.source_evaluation.checklist %}
+           · {{ sess.source_evaluation.checklist.name }}
+          {% endif %}
+          {% if sess.source_evaluation.deal_id %}
+           · Сделка <a href="{{ sess.source_evaluation.deal_url }}" target="_blank">#{{ sess.source_evaluation.deal_id }}</a>
+          {% endif %}
+          {% if sess.source_evaluation.eval_date %}
+           · {{ sess.source_evaluation.eval_date.strftime('%d.%m.%Y') }}
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-auto text-center">
+        <div class="display-6 fw-bold text-{{ score_color(match_pct) }}">{{ match_pct }}%</div>
+        <div class="small text-muted">совпадение</div>
+      </div>
+      <div class="col-auto text-center">
+        {% if mismatch_count > 0 %}
+        <div class="display-6 fw-bold text-danger">{{ mismatch_count }}</div>
+        <div class="small text-muted">расхождений</div>
+        {% else %}
+        <div class="display-6 fw-bold text-success"><i class="bi bi-check-circle"></i></div>
+        <div class="small text-muted">нет расхождений</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Participant selector -->
+{% if completed_participants | length > 1 %}
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+  <span class="text-muted small">Участник:</span>
+  {% for p in completed_participants %}
+  <a href="/calibration/{{ sess.id }}/compare?pid={{ p.id }}"
+     class="btn btn-sm {% if p.id == active_participant.id %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    {{ (p.user.full_name or p.user.username) if p.user else '?' }}
+    {% if p.total_score is not none %}
+      <span class="ms-1 opacity-75">{{ "%.0f"|format(p.total_score) }}%</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Scores comparison -->
+<div class="row g-3 mb-3">
+  <div class="col-auto">
+    <div class="card border-0 bg-light text-center px-3 py-2">
+      <div class="fw-bold text-{{ score_color(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
+        {{ "%.1f"|format(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else '—' }}%
+      </div>
+      <div class="small text-muted">Исходная оценка<br>
+        <span class="text-dark">{{ (sess.source_evaluation.evaluator.full_name or sess.source_evaluation.evaluator.username) if sess.source_evaluation.evaluator else '—' }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-auto d-flex align-items-center text-muted">
+    <i class="bi bi-arrow-right fs-4"></i>
+  </div>
+  <div class="col-auto">
+    <div class="card border-0 bg-light text-center px-3 py-2">
+      <div class="fw-bold text-{{ score_color(active_participant.total_score) if active_participant.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
+        {{ "%.1f"|format(active_participant.total_score) if active_participant.total_score is not none else '—' }}%
+      </div>
+      <div class="small text-muted">Калибровка<br>
+        <span class="text-dark">{{ (active_participant.user.full_name or active_participant.user.username) if active_participant.user else '—' }}</span>
+      </div>
+    </div>
+  </div>
+  {% if active_participant.general_comment %}
+  <div class="col-auto d-flex align-items-center">
+    <div class="card border-0 bg-light px-3 py-2" style="max-width:350px">
+      <div class="small text-muted mb-1">Комментарий участника</div>
+      <div class="small">{{ active_participant.general_comment }}</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Resolution form -->
+<form method="post" action="/calibration/{{ sess.id }}/resolve">
+  <input type="hidden" name="active_pid" value="{{ active_participant.id }}">
+
+  {% for bdata in blocks_data %}
+  {% if bdata.criteria %}
+  {% set block_mismatches = bdata.criteria | selectattr("match", "eq", false) | selectattr("both_na", "eq", false) | list | length %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">{{ bdata.block.display_name or bdata.block.name }}</span>
+      {% if block_mismatches > 0 %}
+        <span class="section-summary bg-danger-subtle text-danger">
+          <i class="bi bi-exclamation-circle me-1"></i>{{ block_mismatches }} расхождений
+        </span>
+      {% else %}
+        <span class="section-summary bg-success-subtle text-success">
+          <i class="bi bi-check-circle me-1"></i>Совпадают
+        </span>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead class="table-light sticky-hdr">
+          <tr>
+            <th style="width:45%">Критерий</th>
+            <th style="width:10%">Исходная</th>
+            <th style="width:10%">Калибровка</th>
+            <th style="width:8%" class="text-center">Итог</th>
+            <th>Решение (итоговый ответ)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cdata in bdata.criteria %}
+          {% set crit = cdata.criterion %}
+          {% set res = resolution_map.get(crit.id) %}
+          <tr class="{% if not cdata.match and not cdata.both_na %}mismatch-row{% elif cdata.both_na %}{% else %}match-row{% endif %}">
+            <td class="small align-middle">
+              {{ crit.text }}
+              <span class="text-muted">({{ crit.weight }})</span>
+            </td>
+            <td class="align-middle">
+              <div>
+                {% if cdata.source_value == 'yes' %}
+                  <span class="val-yes">Да</span>
+                {% elif cdata.source_value == 'no' %}
+                  <span class="val-no">Нет</span>
+                {% else %}
+                  <span class="val-na">○</span>
+                {% endif %}
+              </div>
+              {% if cdata.source_comment %}
+              <div class="text-muted" style="font-size:0.72rem">{{ cdata.source_comment }}</div>
+              {% endif %}
+            </td>
+            <td class="align-middle">
+              <div>
+                {% if cdata.calib_value == 'yes' %}
+                  <span class="val-yes">Да</span>
+                {% elif cdata.calib_value == 'no' %}
+                  <span class="val-no">Нет</span>
+                {% else %}
+                  <span class="val-na">○</span>
+                {% endif %}
+              </div>
+              {% if cdata.calib_comment %}
+              <div class="text-muted" style="font-size:0.72rem">{{ cdata.calib_comment }}</div>
+              {% endif %}
+            </td>
+            <td class="text-center align-middle">
+              {% if cdata.both_na %}
+                <span class="text-muted small">н/п</span>
+              {% elif cdata.match %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+              {% else %}
+                <i class="bi bi-x-circle-fill text-danger"></i>
+              {% endif %}
+            </td>
+            <td class="align-middle">
+              {% if not cdata.match and not cdata.both_na %}
+              <div class="d-flex gap-2 align-items-start flex-wrap">
+                <select name="final_value_{{ crit.id }}" class="form-select form-select-sm resolution-select">
+                  <option value="">— не указано —</option>
+                  <option value="yes" {% if res and res.final_value == 'yes' %}selected{% endif %}>Да</option>
+                  <option value="no"  {% if res and res.final_value == 'no'  %}selected{% endif %}>Нет</option>
+                  <option value="na"  {% if res and res.final_value == 'na'  %}selected{% endif %}>Н/П</option>
+                </select>
+                <input type="text" name="resolution_comment_{{ crit.id }}" class="form-control form-control-sm"
+                       placeholder="Пояснение решения"
+                       value="{{ res.comment or '' if res else '' }}"
+                       style="min-width:180px">
+              </div>
+              {% if res and res.final_value %}
+              <div class="text-muted mt-1" style="font-size:0.72rem">
+                <i class="bi bi-check me-1"></i>Сохранено:
+                {% if res.final_value == 'yes' %}<span class="text-success fw-semibold">Да</span>
+                {% elif res.final_value == 'no' %}<span class="text-danger fw-semibold">Нет</span>
+                {% else %}Н/П{% endif %}
+                {% if res.comment %} — {{ res.comment }}{% endif %}
+                {% if res.resolved_at %} · {{ res.resolved_at.strftime('%d.%m.%Y') }}{% endif %}
+              </div>
+              {% endif %}
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% if mismatch_count > 0 %}
+  <div class="d-flex gap-2 pb-4">
+    <button type="submit" class="btn btn-dark">
+      <i class="bi bi-save me-1"></i>Сохранить решения
+    </button>
+    <a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Назад к сессии</a>
+    {% if sess.status == 'open' %}
+    <form action="/calibration/{{ sess.id }}/close" method="post" class="m-0 ms-auto">
+      <button type="submit" class="btn btn-outline-secondary"
+              onclick="return confirm('Закрыть сессию?')">
+        <i class="bi bi-lock me-1"></i>Закрыть сессию
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="d-flex gap-2 pb-4">
+    <a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Назад к сессии</a>
+    {% if sess.status == 'open' %}
+    <form action="/calibration/{{ sess.id }}/close" method="post" class="m-0">
+      <button type="submit" class="btn btn-success"
+              onclick="return confirm('Закрыть сессию?')">
+        <i class="bi bi-lock me-1"></i>Закрыть сессию
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</form>
+{% endblock %}

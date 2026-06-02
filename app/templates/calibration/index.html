@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Калибровка — CallReview{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-bullseye me-2"></i>Калибровка</h5>
+  <a href="/calibration/new" class="btn btn-sm btn-dark">
+    <i class="bi bi-plus-lg me-1"></i>Новая сессия
+  </a>
+</div>
+
+{% if sessions %}
+<div class="card shadow-sm">
+  <table class="table table-hover table-sm mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Название</th>
+        <th>Оценка (источник)</th>
+        <th>Дата сессии</th>
+        <th>Участники</th>
+        <th>Статус</th>
+        <th>Создал</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      {% set done = s.participants | selectattr("status", "eq", "completed") | list | length %}
+      {% set total = s.participants | length %}
+      <tr>
+        <td class="text-muted small align-middle">{{ s.id }}</td>
+        <td class="align-middle fw-semibold">
+          <a href="/calibration/{{ s.id }}" class="text-decoration-none">{{ s.name }}</a>
+        </td>
+        <td class="align-middle small">
+          {% if s.source_evaluation %}
+            <a href="/evaluations/{{ s.source_evaluation.id }}" class="text-decoration-none" target="_blank">
+              #{{ s.source_evaluation.id }} — {{ s.source_evaluation.operator_name }}
+            </a>
+            {% if s.source_evaluation.checklist %}
+              <span class="text-muted"> · {{ s.source_evaluation.checklist.name }}</span>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td class="align-middle small text-muted">
+          {{ s.session_date.strftime('%d.%m.%Y') if s.session_date else '—' }}
+        </td>
+        <td class="align-middle small">
+          {% if total > 0 %}
+            <span class="{% if done == total %}text-success{% elif done > 0 %}text-warning{% else %}text-muted{% endif %}">
+              {{ done }} / {{ total }}
+            </span>
+            {% for p in s.participants %}
+              <span class="badge {% if p.status == 'completed' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %} ms-1"
+                    style="font-size:0.65rem">
+                {{ p.user.full_name or p.user.username if p.user else '?' }}
+              </span>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">нет участников</span>
+          {% endif %}
+        </td>
+        <td class="align-middle">
+          {% if s.status == 'closed' %}
+            <span class="badge bg-secondary-subtle text-secondary">Закрыта</span>
+          {% else %}
+            <span class="badge bg-success-subtle text-success">Открыта</span>
+          {% endif %}
+        </td>
+        <td class="align-middle small text-muted">
+          {{ (s.created_by.full_name or s.created_by.username) if s.created_by else '—' }}
+        </td>
+        <td class="text-end align-middle">
+          <a href="/calibration/{{ s.id }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye"></i>
+          </a>
+          {% if done > 0 %}
+          <a href="/calibration/{{ s.id }}/compare" class="btn btn-sm btn-outline-primary ms-1">
+            <i class="bi bi-bar-chart-steps me-1"></i>Сравнить
+          </a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="text-muted small mt-2">Показано: {{ sessions|length }}</div>
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-bullseye display-6 mb-2 d-block"></i>
+    <p class="mb-2">Калибровочных сессий пока нет</p>
+    <a href="/calibration/new" class="btn btn-sm btn-dark">Создать первую</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

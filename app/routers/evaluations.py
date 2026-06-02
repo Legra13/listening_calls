@@ -76,6 +76,7 @@ def evaluations_index(
     rated_from: str = "",
     rated_to: str = "",
     duplicates_only: str = "",
+    calibration_only: str = "",
     client_category: list[str] = Query(default=[]),
     sort: str = "id",
     dir: str = "desc",
@@ -133,6 +134,9 @@ def evaluations_index(
 
     if client_category:
         q = q.filter(Evaluation.client_category.in_(client_category))
+
+    if calibration_only == "1":
+        q = q.filter(Evaluation.is_calibration == True)
 
     if duplicates_only == "1":
         from sqlalchemy import and_, or_
@@ -208,6 +212,7 @@ def evaluations_index(
             "rated_from": rated_from,
             "rated_to": rated_to,
             "duplicates_only": duplicates_only,
+            "calibration_only": calibration_only,
             "client_category": client_category,
         },
         "sort": sort,
@@ -597,6 +602,26 @@ def evaluations_publish(
     evaluation.updated_at = datetime.utcnow()
     db.commit()
     flash(request, f"Оценка опубликована. Итог: {evaluation.total_score:.1f}%")
+    return RedirectResponse(f"/evaluations/{eval_id}", status_code=302)
+
+
+# ── Toggle calibration flag ───────────────────────────────────────────────────
+
+@router.post("/{eval_id}/toggle-calibration")
+def evaluations_toggle_calibration(
+    eval_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    evaluation = db.query(Evaluation).filter(Evaluation.id == eval_id).first()
+    if evaluation:
+        evaluation.is_calibration = not bool(evaluation.is_calibration)
+        db.commit()
+        if evaluation.is_calibration:
+            flash(request, "Оценка отмечена для калибровки")
+        else:
+            flash(request, "Отметка калибровки снята")
     return RedirectResponse(f"/evaluations/{eval_id}", status_code=302)
 
 

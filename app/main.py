@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import SECRET_KEY
 from app.database import create_tables
 from app.deps import NotAuthenticatedException
-from app.routers import api, auth, users, checklists, evaluations, reports, export
+from app.routers import api, auth, users, checklists, evaluations, reports, export, calibration
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ app.include_router(checklists.router)
 app.include_router(evaluations.router)
 app.include_router(reports.router)
 app.include_router(export.router)
+app.include_router(calibration.router)
 
 
 @app.exception_handler(NotAuthenticatedException)
@@ -106,6 +107,8 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE evaluations ADD COLUMN updated_at DATETIME"))
         if "deal_url" not in ev_cols:
             conn.execute(text("ALTER TABLE evaluations ADD COLUMN deal_url VARCHAR(300)"))
+        if "is_calibration" not in ev_cols:
+            conn.execute(text("ALTER TABLE evaluations ADD COLUMN is_calibration BOOLEAN DEFAULT 0"))
 
         dc_cols = _cols("deal_cache")
         if "presentation_date" not in dc_cols:

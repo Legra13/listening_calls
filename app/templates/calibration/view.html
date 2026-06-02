@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}{{ sess.name }} — Калибровка{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/calibration">Калибровка</a></li>
+    <li class="breadcrumb-item active">{{ sess.name }}</li>
+  </ol>
+</nav>
+
+<!-- Header -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row align-items-start">
+      <div class="col">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h5 class="mb-0">{{ sess.name }}</h5>
+          {% if sess.status == 'closed' %}
+            <span class="badge bg-secondary">Закрыта</span>
+          {% else %}
+            <span class="badge bg-success">Открыта</span>
+          {% endif %}
+        </div>
+        {% if sess.description %}
+        <p class="text-muted small mb-2">{{ sess.description }}</p>
+        {% endif %}
+        <div class="text-muted small">
+          {% if sess.session_date %}<i class="bi bi-calendar me-1"></i>{{ sess.session_date.strftime('%d.%m.%Y') }} ·{% endif %}
+          Создал: {{ (sess.created_by.full_name or sess.created_by.username) if sess.created_by else '—' }} ·
+          Создана: {{ sess.created_at.strftime('%d.%m.%Y') if sess.created_at else '—' }}
+        </div>
+      </div>
+      <div class="col-auto d-flex gap-2 flex-wrap">
+        {% set done_count = sess.participants | selectattr("status", "eq", "completed") | list | length %}
+        {% if done_count > 0 %}
+        <a href="/calibration/{{ sess.id }}/compare" class="btn btn-primary btn-sm">
+          <i class="bi bi-bar-chart-steps me-1"></i>Сравнить оценки
+        </a>
+        {% endif %}
+        {% if sess.status == 'open' %}
+        <form action="/calibration/{{ sess.id }}/close" method="post" class="m-0">
+          <button type="submit" class="btn btn-outline-secondary btn-sm"
+                  onclick="return confirm('Закрыть сессию?')">
+            <i class="bi bi-lock me-1"></i>Закрыть сессию
+          </button>
+        </form>
+        {% else %}
+        <form action="/calibration/{{ sess.id }}/reopen" method="post" class="m-0">
+          <button type="submit" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-unlock me-1"></i>Открыть повторно
+          </button>
+        </form>
+        {% endif %}
+        <form action="/calibration/{{ sess.id }}/delete" method="post" class="m-0">
+          <button type="submit" class="btn btn-outline-danger btn-sm"
+                  onclick="return confirm('Удалить сессию «{{ sess.name }}»?')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Source evaluation info -->
+<div class="card shadow-sm mb-3">
+  <div class="card-header bg-white py-2">
+    <span class="fw-semibold small"><i class="bi bi-clipboard-check me-2"></i>Исходная оценка</span>
+  </div>
+  <div class="card-body py-2">
+    {% set ev = sess.source_evaluation %}
+    {% if ev %}
+    <div class="row g-3 align-items-center">
+      <div class="col-auto">
+        <span class="text-muted small">Оценка:</span>
+        <a href="/evaluations/{{ ev.id }}" class="fw-semibold ms-1" target="_blank">#{{ ev.id }}</a>
+      </div>
+      <div class="col-auto">
+        <span class="text-muted small">Сотрудник:</span>
+        <span class="ms-1 fw-semibold">{{ ev.operator_name }}</span>
+      </div>
+      {% if ev.department %}
+      <div class="col-auto">
+        <span class="badge bg-secondary-subtle text-secondary">{{ ev.department }}</span>
+      </div>
+      {% endif %}
+      {% if ev.deal_id %}
+      <div class="col-auto">
+        <span class="text-muted small">Сделка:</span>
+        <a href="{{ ev.deal_url }}" target="_blank" class="ms-1">#{{ ev.deal_id }}</a>
+      </div>
+      {% endif %}
+      {% if ev.eval_date %}
+      <div class="col-auto">
+        <span class="text-muted small">Дата звонка:</span>
+        <span class="ms-1">{{ ev.eval_date.strftime('%d.%m.%Y') }}</span>
+      </div>
+      {% endif %}
+      {% if ev.checklist %}
+      <div class="col-auto">
+        <span class="text-muted small">Чек-лист:</span>
+        <span class="ms-1">{{ ev.checklist.name }}</span>
+      </div>
+      {% endif %}
+      {% if ev.total_score is not none %}
+      <div class="col-auto">
+        <span class="badge bg-{{ score_color(ev.total_score) }}-subtle text-{{ score_color(ev.total_score) }} fs-6">
+          {{ "%.1f"|format(ev.total_score) }}%
+        </span>
+      </div>
+      {% endif %}
+      <div class="col-auto">
+        <span class="text-muted small">Оценщик:</span>
+        <span class="ms-1">{{ (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else '—' }}</span>
+      </div>
+    </div>
+    {% else %}
+    <span class="text-muted">Оценка не найдена</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Participants -->
+<div class="card shadow-sm mb-3">
+  <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small"><i class="bi bi-people me-2"></i>Участники</span>
+    {% set done_count = sess.participants | selectattr("status", "eq", "completed") | list | length %}
+    <span class="text-muted small">{{ done_count }} / {{ sess.participants|length }} завершили</span>
+  </div>
+
+  {% if sess.participants %}
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Участник</th>
+          <th>Статус</th>
+          <th>Балл</th>
+          <th>Завершено</th>
+          <th>Комментарий</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in sess.participants %}
+        <tr>
+          <td class="align-middle fw-semibold">
+            {{ (p.user.full_name or p.user.username) if p.user else '?' }}
+          </td>
+          <td class="align-middle">
+            {% if p.status == 'completed' %}
+              <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Завершено</span>
+            {% else %}
+              <span class="badge bg-warning-subtle text-warning"><i class="bi bi-hourglass me-1"></i>Ожидает оценки</span>
+            {% endif %}
+          </td>
+          <td class="align-middle">
+            {% if p.total_score is not none %}
+              <span class="badge bg-{{ score_color(p.total_score) }}-subtle text-{{ score_color(p.total_score) }}">
+                {{ "%.1f"|format(p.total_score) }}%
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="align-middle small text-muted">
+            {{ p.completed_at.strftime('%d.%m.%Y %H:%M') if p.completed_at else '—' }}
+          </td>
+          <td class="align-middle small text-muted">
+            {{ p.general_comment or '—' }}
+          </td>
+          <td class="text-end align-middle">
+            {% if sess.status == 'open' or p.status == 'pending' %}
+            <a href="/calibration/{{ sess.id }}/evaluate/{{ p.id }}"
+               class="btn btn-sm {% if p.status == 'completed' %}btn-outline-secondary{% else %}btn-outline-primary{% endif %}">
+              {% if p.status == 'completed' %}
+                <i class="bi bi-pencil me-1"></i>Переоценить
+              {% else %}
+                <i class="bi bi-clipboard-plus me-1"></i>Оценить
+              {% endif %}
+            </a>
+            {% endif %}
+            {% if sess.status == 'open' %}
+            <form action="/calibration/{{ sess.id }}/remove-participant/{{ p.id }}" method="post" class="d-inline ms-1">
+              <button type="submit" class="btn btn-sm btn-outline-danger"
+                      onclick="return confirm('Удалить участника?')">
+                <i class="bi bi-x"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted small">Участники не добавлены</div>
+  {% endif %}
+
+  {% if sess.status == 'open' %}
+  <div class="card-footer bg-white">
+    <form action="/calibration/{{ sess.id }}/add-participant" method="post" class="d-flex gap-2 align-items-center">
+      <select name="user_id" class="form-select form-select-sm" style="width:250px" required>
+        <option value="">+ Добавить участника</option>
+        {% for u in users %}
+          {% if u.id not in existing_user_ids %}
+          <option value="{{ u.id }}">{{ u.full_name or u.username }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-person-plus me-1"></i>Добавить
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

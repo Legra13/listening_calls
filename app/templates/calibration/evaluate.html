@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Калибровка: {{ sess.name }} — Оценка{% endblock %}
+
+{% block styles %}
+<style>
+.score-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 28px; border-radius: 6px; border: 1.5px solid;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none;
+  transition: background 0.1s, color 0.1s;
+}
+.score-btn-0   { border-color: #dc3545; color: #dc3545; background: #fff; }
+.score-btn-0:hover { background: rgba(220,53,69,.1); }
+label:has(input.score-no:checked)  .score-btn-0 { background: #dc3545; color: #fff; }
+.score-btn-1   { border-color: #198754; color: #198754; background: #fff; }
+.score-btn-1:hover { background: rgba(25,135,84,.1); }
+label:has(input.score-yes:checked) .score-btn-1 { background: #198754; color: #fff; }
+.score-btn-na  { border-color: #adb5bd; color: #9ca3af; background: #fff; font-size: 1rem; }
+.score-btn-na:hover { background: rgba(108,117,125,.1); }
+label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #fff; border-color: #6c757d; }
+
+.crit-item {
+  border: 1px solid #e9ecef; border-radius: 6px;
+  padding: 9px 12px; margin-bottom: 5px; background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.crit-item.item-yes { border-color: #a3cfbb; background: rgba(25,135,84,.04); }
+.crit-item.item-no  { border-color: #f1aeb5; background: rgba(220,53,69,.04); }
+
+.block-header {
+  position: sticky; top: 62px; z-index: 40;
+  background: #f8f9fa; border-radius: 6px;
+  padding: 7px 12px; margin-bottom: 6px;
+  border: 1px solid #e9ecef;
+  display: flex; justify-content: space-between; align-items: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/calibration">Калибровка</a></li>
+    <li class="breadcrumb-item"><a href="/calibration/{{ sess.id }}">{{ sess.name }}</a></li>
+    <li class="breadcrumb-item active">Оценка участника</li>
+  </ol>
+</nav>
+
+<!-- Info block -->
+<div class="card shadow-sm mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <div>
+        <span class="text-muted small">Участник:</span>
+        <span class="fw-semibold ms-1">{{ (participant.user.full_name or participant.user.username) if participant.user else '?' }}</span>
+      </div>
+      <div>
+        <span class="text-muted small">Сотрудник:</span>
+        <span class="ms-1">{{ source_eval.operator_name }}</span>
+      </div>
+      {% if source_eval.department %}
+      <div>
+        <span class="badge bg-secondary-subtle text-secondary">{{ source_eval.department }}</span>
+      </div>
+      {% endif %}
+      {% if source_eval.deal_id %}
+      <div>
+        <span class="text-muted small">Сделка:</span>
+        <a href="{{ source_eval.deal_url }}" target="_blank" class="ms-1">#{{ source_eval.deal_id }}</a>
+      </div>
+      {% endif %}
+      {% if source_eval.eval_date %}
+      <div>
+        <span class="text-muted small">Дата звонка:</span>
+        <span class="ms-1">{{ source_eval.eval_date.strftime('%d.%m.%Y') }}</span>
+      </div>
+      {% endif %}
+      {% if source_eval.stage %}
+      <div>
+        <span class="text-muted small">Сделка:</span>
+        <span class="ms-1">{{ source_eval.stage }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="mt-2 text-muted small">
+      <i class="bi bi-eye-slash me-1"></i>
+      Оценивайте самостоятельно — ответы других участников скрыты до завершения сессии.
+    </div>
+  </div>
+</div>
+
+<!-- Evaluation form -->
+<form method="post" action="/calibration/{{ sess.id }}/evaluate/{{ participant.id }}">
+  {% for block in checklist.blocks %}
+  {% if block.criteria %}
+  <div class="mb-3">
+    <div class="block-header">
+      <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
+      {% if block.weight %}<span class="badge bg-secondary-subtle text-secondary">вес: {{ block.weight }}</span>{% endif %}
+    </div>
+
+    {% for crit in block.criteria %}
+    {% set existing = answer_map.get(crit.id) %}
+    {% set cur_val = existing.value if existing else "na" %}
+    <div class="crit-item {% if cur_val == 'yes' %}item-yes{% elif cur_val == 'no' %}item-no{% endif %}"
+         id="crit-{{ crit.id }}">
+      <div class="d-flex align-items-start gap-3">
+        <div class="flex-grow-1 small">
+          {{ crit.text }}
+          <span class="text-muted">({{ crit.weight }})</span>
+          {% if crit.description %}
+          <i class="bi bi-info-circle text-muted ms-1"
+             data-bs-toggle="tooltip" title="{{ crit.description }}"></i>
+          {% endif %}
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0" role="group">
+          <label class="m-0">
+            <input type="radio" class="d-none score-no" name="criterion_{{ crit.id }}" value="no"
+                   {% if cur_val == 'no' %}checked{% endif %}
+                   onchange="updateCritStyle({{ crit.id }}, 'no')">
+            <span class="score-btn score-btn-0">Нет</span>
+          </label>
+          <label class="m-0">
+            <input type="radio" class="d-none score-yes" name="criterion_{{ crit.id }}" value="yes"
+                   {% if cur_val == 'yes' %}checked{% endif %}
+                   onchange="updateCritStyle({{ crit.id }}, 'yes')">
+            <span class="score-btn score-btn-1">Да</span>
+          </label>
+          <label class="m-0">
+            <input type="radio" class="d-none score-na" name="criterion_{{ crit.id }}" value="na"
+                   {% if cur_val == 'na' %}checked{% endif %}
+                   onchange="updateCritStyle({{ crit.id }}, 'na')">
+            <span class="score-btn score-btn-na">○</span>
+          </label>
+        </div>
+      </div>
+      <div class="mt-2">
+        <input type="text" name="comment_{{ crit.id }}" class="form-control form-control-sm"
+               placeholder="Комментарий (опционально)"
+               value="{{ existing.comment or '' if existing else '' }}">
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <label class="form-label fw-semibold">Общий комментарий</label>
+      <textarea name="general_comment" class="form-control" rows="3"
+                placeholder="Общие впечатления, выводы...">{{ participant.general_comment or '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 pb-4">
+    <button type="submit" class="btn btn-dark">
+      <i class="bi bi-check-lg me-1"></i>Сохранить оценку
+    </button>
+    <a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateCritStyle(critId, val) {
+  const el = document.getElementById('crit-' + critId);
+  if (!el) return;
+  el.classList.remove('item-yes', 'item-no');
+  if (val === 'yes') el.classList.add('item-yes');
+  else if (val === 'no') el.classList.add('item-no');
+}
+</script>
+{% endblock %}

@@ -39,6 +39,7 @@
 | 4 | Форма оценки звонка | ✅ готово |
 | 5 | Аналитика `/reports` — 3 вкладки | ✅ готово |
 | 6 | Деплой на VPS Hostland | ✅ готово |
+| 7 | Калибровка звонков | ✅ готово |
 
 ---
 
@@ -166,6 +167,45 @@
 - Настраивается на странице `/checklists/{id}/settings` через чекбоксы
 - Список отделов загружается через `get_departments()` из `bitrix.py`
 - Если `departments` пустое — чек-лист доступен всем; фильтрация на стороне UI пока не реализована
+
+### Калибровка (`/calibration`)
+
+**Назначение:** сверка понимания чек-листа между сотрудником ОПП (регулярный оценщик) и внешним участником.
+
+**Флаг оценки:**
+- `Evaluation.is_calibration: Boolean` — отмечает оценку для калибровки
+- Миграция: `ALTER TABLE evaluations ADD COLUMN is_calibration BOOLEAN DEFAULT 0`
+- На странице просмотра оценки — кнопка «Отметить для калибровки» / «На калибровке»
+- При нажатии: кнопка «Создать сессию калибровки» (ведёт на `/calibration/new?eval_id=N`)
+- В списке оценок: красная точка у отмеченных + чекбокс-фильтр «Калибровка»
+
+**Сессии (`CalibrationSession`):**
+- Поля: name, description, session_date, source_evaluation_id, created_by_id, status (open/closed)
+- Список: `/calibration`, создание: `/calibration/new`
+- Просмотр: `/calibration/{id}` — список участников, их статус, кнопки
+
+**Участники (`CalibrationParticipant`):**
+- Добавляются при создании сессии или через форму на странице сессии
+- Каждый участник оценивает независимо: `/calibration/{id}/evaluate/{pid}`
+- Форма показывает инфо о сделке (но НЕ показывает ответы исходной оценки)
+- После заполнения создаются `CalibrationAnswerItem` записи, participant.status = "completed"
+
+**Сравнение (`/calibration/{id}/compare`):**
+- Выбор активного участника (вкладки если несколько)
+- Таблица: критерий | Исходная | Калибровка | Совпадение
+- Зелёная строка = совпадение, красная = расхождение
+- % совпадения в шапке
+- Поле решения для каждого расхождения: final_value (Да/Нет/Н/П) + комментарий
+- Сохраняется как `CalibrationItemResolution`
+
+**Новые модели:**
+- `CalibrationSession` — сессия
+- `CalibrationParticipant` — участник (user_id, total_score, answers)
+- `CalibrationAnswerItem` — ответы участника (criterion_id, value, comment)
+- `CalibrationItemResolution` — итоговое решение по расхождению
+
+**Роутер:** `app/routers/calibration.py`
+**Шаблоны:** `app/templates/calibration/` (index, new, view, evaluate, compare)
 
 ### Что вне MVP
 - Импорт исторических данных из Excel — отложено

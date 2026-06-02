@@ -45,6 +45,19 @@
           <a href="/evaluations/{{ ev.id }}/edit" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil me-1"></i>Редактировать
           </a>
+          <form action="/evaluations/{{ ev.id }}/toggle-calibration" method="post" class="m-0">
+            <button type="submit"
+                    class="btn btn-sm {% if ev.is_calibration %}btn-danger{% else %}btn-outline-secondary{% endif %}"
+                    title="{% if ev.is_calibration %}Снять отметку калибровки{% else %}Отметить для калибровки{% endif %}">
+              <i class="bi bi-bullseye me-1"></i>
+              {% if ev.is_calibration %}На калибровке{% else %}Отметить для калибровки{% endif %}
+            </button>
+          </form>
+          {% if ev.is_calibration %}
+          <a href="/calibration/new?eval_id={{ ev.id }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-plus me-1"></i>Создать сессию калибровки
+          </a>
+          {% endif %}
           <form action="/evaluations/{{ ev.id }}/delete" method="post"
                 onsubmit="return confirm('Удалить оценку #{{ ev.id }}?')" class="m-0">
             <button type="submit" class="btn btn-outline-danger btn-sm">

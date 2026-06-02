@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Новая калибровочная сессия — CallReview{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="/calibration">Калибровка</a></li>
+    <li class="breadcrumb-item active">Новая сессия</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Новая калибровочная сессия</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/calibration">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Название сессии <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" required
+                   placeholder="Например: Калибровка ТВК — май 2026">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Дата сессии</label>
+            <input type="date" name="session_date" class="form-control" style="width:200px">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Комментарий / цель</label>
+            <textarea name="description" class="form-control" rows="2"
+                      placeholder="Опциональный комментарий к сессии"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Исходная оценка <span class="text-danger">*</span>
+              <span class="text-muted fw-normal small">— оценка, по которой проводим калибровку</span>
+            </label>
+            {% if calibration_evals %}
+            <select name="source_evaluation_id" class="form-select" required>
+              <option value="">— выберите оценку —</option>
+              {% for ev in calibration_evals %}
+              <option value="{{ ev.id }}"
+                {% if preselected_eval and preselected_eval.id == ev.id %}selected{% endif %}>
+                #{{ ev.id }} · {{ ev.operator_name }}
+                {% if ev.eval_date %} · {{ ev.eval_date.strftime('%d.%m.%Y') }}{% endif %}
+                {% if ev.checklist %} · {{ ev.checklist.name }}{% endif %}
+                {% if ev.deal_id %} · сделка #{{ ev.deal_id }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Показаны оценки, отмеченные для калибровки.
+              <a href="/evaluations" target="_blank">Открыть список всех оценок</a>
+            </div>
+            {% else %}
+            <div class="alert alert-warning py-2">
+              Нет оценок, отмеченных для калибровки. Откройте любую оценку и нажмите
+              «Отметить на калибровку».
+              <a href="/evaluations" class="alert-link">Перейти к оценкам</a>
+            </div>
+            <input type="hidden" name="source_evaluation_id" value="">
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Участники сессии</label>
+            <div class="row g-2">
+              {% for u in users %}
+              <div class="col-auto">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox"
+                         name="participant_ids" value="{{ u.id }}"
+                         id="user_{{ u.id }}">
+                  <label class="form-check-label" for="user_{{ u.id }}">
+                    {{ u.full_name or u.username }}
+                    {% if u.email %}<span class="text-muted small"> · {{ u.email }}</span>{% endif %}
+                  </label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="form-text">Выбранные сотрудники получат доступ к форме оценки для калибровки.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-dark" {% if not calibration_evals %}disabled{% endif %}>
+              <i class="bi bi-check-lg me-1"></i>Создать сессию
+            </button>
+            <a href="/calibration" class="btn btn-outline-secondary">Отмена</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
