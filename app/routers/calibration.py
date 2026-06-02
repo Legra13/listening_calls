@@ -64,7 +64,16 @@ def _compute_comparison(source_eval: Evaluation, participant: CalibrationPartici
                 "match": sv_val == cv_val,
                 "both_na": both_na,
             })
-        blocks_data.append({"block": block, "criteria": criteria_data})
+        b_compared = sum(1 for c in criteria_data if not c["both_na"])
+        b_match    = sum(1 for c in criteria_data if c["match"] and not c["both_na"])
+        b_pct = round(b_match / b_compared * 100, 1) if b_compared > 0 else None
+        blocks_data.append({
+            "block": block,
+            "criteria": criteria_data,
+            "block_match_pct": b_pct,
+            "block_compared": b_compared,
+            "block_mismatch": b_compared - b_match if b_compared > 0 else 0,
+        })
 
     match_pct = round(total_match / total_compared * 100, 1) if total_compared > 0 else 100.0
     mismatch_count = sum(
