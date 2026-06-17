@@ -14,7 +14,7 @@
     <thead class="table-light">
       <tr>
         <th>Имя</th>
-        <th>Логин</th>
+        <th>Логин / Email</th>
         <th>Дата создания</th>
         <th>Статус</th>
         <th></th>
@@ -22,32 +22,54 @@
     </thead>
     <tbody>
       {% for user in users %}
-      <tr>
+      <tr class="{% if not user.is_active %}table-warning{% endif %}">
         <td>
           {{ user.full_name or '—' }}
           {% if user.id == current_user.id %}
             <span class="badge bg-secondary ms-1">вы</span>
           {% endif %}
+          {% if user.bitrix_id %}
+            <span class="badge bg-info-subtle text-info ms-1" title="Вход через Битрикс24">Б24</span>
+          {% endif %}
         </td>
-        <td class="text-muted small">{{ user.username }}</td>
+        <td class="text-muted small">
+          {{ user.username }}
+          {% if user.email %}<br><span class="text-muted">{{ user.email }}</span>{% endif %}
+        </td>
         <td class="text-muted small">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
         <td>
           {% if user.is_active %}
             <span class="badge bg-success-subtle text-success">активен</span>
           {% else %}
-            <span class="badge bg-secondary-subtle text-secondary">отключён</span>
+            <span class="badge bg-warning-subtle text-warning">ожидает активации</span>
           {% endif %}
         </td>
         <td class="text-end">
+          {% if user.id != current_user.id %}
+          <form action="/users/{{ user.id }}/toggle-active" method="post" class="d-inline">
+            {% if user.is_active %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Деактивировать">
+                <i class="bi bi-person-slash"></i>
+              </button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-success" title="Активировать">
+                <i class="bi bi-person-check"></i>
+              </button>
+            {% endif %}
+          </form>
+          {% endif %}
+          {% if not user.bitrix_id %}
           <button class="btn btn-sm btn-outline-secondary"
                   data-bs-toggle="modal"
-                  data-bs-target="#pwdModal{{ user.id }}">
+                  data-bs-target="#pwdModal{{ user.id }}"
+                  title="Сменить пароль">
             <i class="bi bi-key"></i>
           </button>
+          {% endif %}
           {% if user.id != current_user.id %}
           <form action="/users/{{ user.id }}/delete" method="post" class="d-inline"
                 onsubmit="return confirm('Удалить пользователя {{ user.username }}?')">
-            <button type="submit" class="btn btn-sm btn-outline-danger">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
               <i class="bi bi-trash"></i>
             </button>
           </form>

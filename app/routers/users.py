@@ -65,6 +65,25 @@ def users_change_password(
     return RedirectResponse("/users", status_code=302)
 
 
+@router.post("/{user_id}/toggle-active")
+def users_toggle_active(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if user_id == current_user.id:
+        flash(request, "Нельзя деактивировать себя", "danger")
+        return RedirectResponse("/users", status_code=302)
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.is_active = not user.is_active
+        db.commit()
+        status = "активирован" if user.is_active else "деактивирован"
+        flash(request, f"Пользователь «{user.full_name or user.username}» {status}")
+    return RedirectResponse("/users", status_code=302)
+
+
 @router.post("/{user_id}/delete")
 def users_delete(
     user_id: int,

@@ -249,6 +249,7 @@
     }
     .alert-error   { background: #FDE8E8; border: 1px solid #F5AEAE; color: #B03030; }
     .alert-success { background: #E8F8F3; border: 1px solid #9ADFC4; color: #007A5A; }
+    .alert-warning { background: #FFF8E8; border: 1px solid #F5D87A; color: #8A6800; }
 
     .login-footer {
       margin-top: 2rem;
@@ -281,8 +282,8 @@
     <div class="login-sub">Войдите в свой аккаунт, чтобы продолжить</div>
 
     {% if flash %}
-      <div class="alert-box {% if flash.category == 'danger' %}alert-error{% else %}alert-success{% endif %}">
-        {% if flash.category == 'danger' %}⚠{% else %}✓{% endif %}
+      <div class="alert-box {% if flash.category == 'danger' %}alert-error{% elif flash.category == 'warning' %}alert-warning{% else %}alert-success{% endif %}">
+        {% if flash.category == 'danger' %}⚠{% elif flash.category == 'warning' %}⏳{% else %}✓{% endif %}
         {{ flash.message }}
       </div>
     {% endif %}

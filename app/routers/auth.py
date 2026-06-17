@@ -139,7 +139,7 @@ def bitrix24_oauth_callback(
             email=email or None,
             bitrix_id=bitrix_id,
             password_hash=None,
-            is_active=True,
+            is_active=False,  # требует активации администратором
         )
         db.add(user)
         db.commit()
@@ -152,7 +152,7 @@ def bitrix24_oauth_callback(
         db.commit()
 
     if not user.is_active:
-        flash(request, "Ваш аккаунт отключён. Обратитесь к администратору.", "danger")
+        flash(request, "Ваш аккаунт ожидает активации. Обратитесь к администратору.", "warning")
         return RedirectResponse("/login", status_code=302)
 
     request.session["user_id"] = user.id
