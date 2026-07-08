@@ -317,7 +317,9 @@ async def evaluations_create(
     action = (form.get("action") or "publish").strip()
     status = "draft" if action == "save_draft" else "published"
 
-    # Duplicate check: same deal_id + checklist + phone (None counts as its own "slot")
+    # Duplicate check: same deal_id + checklist + phone + evaluator (None phone counts
+    # as its own "slot"). Evaluator is part of the key so calibration works — one deal
+    # can be evaluated by different users; only the SAME user is blocked from double-publishing.
     dup_id: int | None = None
     if status == "published" and deal_id:
         dup = (
@@ -327,6 +329,7 @@ async def evaluations_create(
                 Evaluation.checklist_id == checklist_id,
                 Evaluation.status == "published",
                 Evaluation.phone == phone,
+                Evaluation.evaluator_id == current_user.id,
             )
             .first()
         )
@@ -539,6 +542,8 @@ async def evaluations_update(
     action = (form.get("action") or "publish").strip()
     new_status = "draft" if action == "save_draft" else "published"
 
+    # Duplicate key includes evaluator so calibration works (different users may evaluate
+    # the same deal); only the SAME user is blocked from double-publishing one deal.
     dup_id: int | None = None
     if new_status == "published" and evaluation.deal_id:
         dup = (
@@ -549,6 +554,7 @@ async def evaluations_update(
                 Evaluation.status == "published",
                 Evaluation.id != eval_id,
                 Evaluation.phone == phone,
+                Evaluation.evaluator_id == evaluation.evaluator_id,
             )
             .first()
         )
