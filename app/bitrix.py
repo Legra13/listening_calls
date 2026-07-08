@@ -33,9 +33,41 @@ _ENUMERATIONS_TABLE = "b24-entera-bitrix24-ru-enumerations"
 _PRESENTATION_FIELD_RENEWAL = "UF_CRM_1654694803"  # Продление дата "Провели презентацию"
 _PRESENTATION_FIELD_GENERAL = "UF_CRM_1560328872"  # Дата презентации (ОП и прочие отделы)
 
+# Определение «отдела продления» через дерево оргструктуры Битрикс, а не по названию:
+# все отделы продления — потомки узла «Продление» (ID 121). Это устойчиво к
+# переименованиям и автоматически подхватывает новые «Отдел продления N» под тем же
+# родителем. Единственная зашитая величина — стабильный ID корня.
+_RENEWAL_ROOT_DEPT_ID = 121
+
+_renewal_dept_ids_cache: set[int] | None = None
+
+
+def _renewal_dept_ids(conn) -> set[int]:
+    """ID отделов продления: узел «Продление» и все его потомки (любой глубины).
+    Результат кешируется на процесс — оргструктура меняется редко."""
+    global _renewal_dept_ids_cache
+    if _renewal_dept_ids_cache is not None:
+        return _renewal_dept_ids_cache
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT ID, PARENT FROM `{_DEPTS_TABLE}`")
+        rows = cur.fetchall()
+    children: dict[int, list[int]] = {}
+    for r in rows:
+        children.setdefault(r["PARENT"], []).append(r["ID"])
+    result: set[int] = set()
+    stack = [_RENEWAL_ROOT_DEPT_ID]
+    while stack:
+        d = stack.pop()
+        if d in result:
+            continue
+        result.add(d)
+        stack.extend(children.get(d, []))
+    _renewal_dept_ids_cache = result
+    return result
+
 
 def _is_renewal_department(name: str | None) -> bool:
-    """True, если отдел относится к продлению (Продление / Отдел продления N)."""
+    """Запасной вариант по названию, если ID-дерево недоступно."""
     return bool(name) and "продлени" in name.lower()
 
 
@@ -132,12 +164,22 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     if dept_row:
                         department = dept_row["NAME"]
 
-            # Выбор поля даты презентации по отделу: продление → своё поле,
-            # остальные → общая "Дата презентации". Если приоритетное поле пусто —
-            # берём второе как запасной вариант.
+            # Продление определяем по дереву оргструктуры (устойчиво к переименованиям);
+            # при недоступности дерева — запасная сверка по названию отдела.
+            is_renewal = False
+            if dept_ids:
+                try:
+                    is_renewal = int(dept_ids[0]) in _renewal_dept_ids(conn)
+                except Exception:
+                    is_renewal = _is_renewal_department(department)
+            elif department:
+                is_renewal = _is_renewal_department(department)
+
+            # Выбор поля даты презентации: продление → своё поле, остальные (ОП и др.)
+            # → общая "Дата презентации". Пустое приоритетное поле → второе как запас.
             pres_renewal = _to_date(row.get(_PRESENTATION_FIELD_RENEWAL))
             pres_general = _to_date(row.get(_PRESENTATION_FIELD_GENERAL))
-            if _is_renewal_department(department):
+            if is_renewal:
                 presentation_date = pres_renewal or pres_general
             else:
                 presentation_date = pres_general or pres_renewal

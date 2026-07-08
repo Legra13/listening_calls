@@ -20,10 +20,11 @@ from app.models import DealCache
 from app.bitrix import (
     _get_connection,
     _to_date,
-    _is_renewal_department,
+    _renewal_dept_ids,
     _PRESENTATION_FIELD_RENEWAL,
     _PRESENTATION_FIELD_GENERAL,
     _DEALS_TABLE,
+    _DEPTS_TABLE,
 )
 
 
@@ -38,6 +39,16 @@ def main() -> None:
         pres_map: dict[str, tuple] = {}
         conn = _get_connection()
         try:
+            # Названия отделов продления из дерева оргструктуры (в кеше хранится имя отдела)
+            renewal_ids = _renewal_dept_ids(conn)
+            with conn.cursor() as cur:
+                placeholders = ",".join(["%s"] * len(renewal_ids)) or "NULL"
+                cur.execute(
+                    f"SELECT NAME FROM `{_DEPTS_TABLE}` WHERE ID IN ({placeholders})",
+                    list(renewal_ids),
+                )
+                renewal_names = {r["NAME"] for r in cur.fetchall() if r.get("NAME")}
+
             CHUNK = 500
             for i in range(0, len(deal_ids), CHUNK):
                 chunk = deal_ids[i : i + CHUNK]
@@ -62,7 +73,7 @@ def main() -> None:
             if pair is None:
                 continue  # сделки нет в Битрикс
             pres_renewal, pres_general = pair
-            if _is_renewal_department(e.department):
+            if e.department in renewal_names:
                 new_val = pres_renewal or pres_general
             else:
                 new_val = pres_general or pres_renewal
