@@ -215,6 +215,20 @@
 **Роутер:** `app/routers/calibration.py`
 **Шаблоны:** `app/templates/calibration/` (index, new, view, evaluate, compare)
 
+**Несколько сделок в одной сессии (08.07.2026):**
+- Сессия теперь может содержать несколько сделок (оценок-источников), все по одному чек-листу.
+- Новые модели:
+  - `CalibrationSessionEval` — сделка в составе сессии (`session_id`, `source_evaluation_id`, `order_index`)
+  - `CalibrationParticipantEval` — прогресс/итог участника по одной сделке сессии (`total_score`, `general_comment`, `status`, `completed_at`)
+- `CalibrationSession.checklist_id` — чек-лист сессии; `source_evaluation_id` оставлен для совместимости (= первая сделка).
+- `CalibrationAnswerItem.session_eval_id` и `CalibrationItemResolution.session_eval_id` — привязка ответа/итога к конкретной сделке (NULL = legacy, единственная сделка).
+- Миграция и идемпотентный бэкфилл старых сессий (одна сделка → одна запись) — в `_run_migrations()` (`app/main.py`); таблицы создаёт `create_tables()`.
+- Маршруты: `POST /calibration/{id}/add-deal`, `POST /calibration/{id}/remove-deal/{session_eval_id}`; оценка и сравнение теперь по `session_eval_id`:
+  - `GET/POST /calibration/{id}/evaluate/{pid}/{session_eval_id}` — после сохранения ведёт к следующей незаполненной сделке, затем назад в сессию
+  - `GET /calibration/{id}/compare?pid=&se=` — сводка совпадения по всем сделкам + детализация по выбранной сделке
+- Guard-ветки: нельзя удалить единственную сделку; нельзя добавить дубль/сделку другого чек-листа; закрытую сессию менять нельзя; при удалении первичной сделки `source_evaluation_id` переназначается на оставшуюся.
+- Проверено e2e (08.07.2026): создание мультисделочной сессии, оценка обеих сделок, per-deal % совпадения, resolve, add/remove-deal, close — всё корректно.
+
 ### Что вне MVP
 - Импорт исторических данных из Excel — отложено
 - Роли пользователей (admin / reviewer) — отложено
@@ -243,7 +257,7 @@
 ```
 app/
   main.py          — точка входа FastAPI
-  models.py        — SQLAlchemy-модели (User, Checklist, Block, Criterion, Evaluation, EvaluationItem, DealCache)
+  models.py        — SQLAlchemy-модели (User, Checklist, Block, Criterion, Evaluation, EvaluationItem, DealCache; калибровка: CalibrationSession, CalibrationSessionEval, CalibrationParticipant, CalibrationParticipantEval, CalibrationAnswerItem, CalibrationItemResolution)
   analytics.py     — логика отчётов (prep_rows, compute_kpi, compute_tab1/2/3)
   auth.py          — bcrypt-авторизация
   bitrix.py        — интеграция с MySQL Битрикс24
