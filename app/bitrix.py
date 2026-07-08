@@ -25,6 +25,28 @@ _DEPTS_TABLE  = "b24-entera-bitrix24-ru-departments"
 _CATEGORY_FIELD = "UF_CRM_1690299302751"
 _ENUMERATIONS_TABLE = "b24-entera-bitrix24-ru-enumerations"
 
+# Поля даты презентации в сделке различаются по отделам:
+#   - Отделы продления → "Продление дата 'Провели презентацию'"
+#   - Остальные отделы (ОП и др.) → общая "Дата презентации"
+# Раньше жёстко использовалось только поле продления, из-за чего у ОП
+# в форму подставлялась дата создания сделки вместо даты презентации.
+_PRESENTATION_FIELD_RENEWAL = "UF_CRM_1654694803"  # Продление дата "Провели презентацию"
+_PRESENTATION_FIELD_GENERAL = "UF_CRM_1560328872"  # Дата презентации (ОП и прочие отделы)
+
+
+def _is_renewal_department(name: str | None) -> bool:
+    """True, если отдел относится к продлению (Продление / Отдел продления N)."""
+    return bool(name) and "продлени" in name.lower()
+
+
+def _to_date(raw) -> date | None:
+    """Приводит значение поля Битрикс к date (или None)."""
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, date):
+        return raw
+    return None
+
 
 @dataclass
 class DealInfo:
@@ -72,7 +94,8 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     f"""
                     SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID,
                            d.ASSIGNED_BY_ID, d.DATE_CREATE, d.CLOSEDATE,
-                           d.UF_CRM_1654694803,
+                           d.{_PRESENTATION_FIELD_RENEWAL},
+                           d.{_PRESENTATION_FIELD_GENERAL},
                            d.{_CATEGORY_FIELD},
                            u.NAME, u.LAST_NAME, u.UF_DEPARTMENT
                     FROM `{_DEALS_TABLE}` d
@@ -109,12 +132,15 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
                     if dept_row:
                         department = dept_row["NAME"]
 
-            raw_pres = row.get("UF_CRM_1654694803")
-            presentation_date: date | None = None
-            if isinstance(raw_pres, date):
-                presentation_date = raw_pres
-            elif isinstance(raw_pres, datetime):
-                presentation_date = raw_pres.date()
+            # Выбор поля даты презентации по отделу: продление → своё поле,
+            # остальные → общая "Дата презентации". Если приоритетное поле пусто —
+            # берём второе как запасной вариант.
+            pres_renewal = _to_date(row.get(_PRESENTATION_FIELD_RENEWAL))
+            pres_general = _to_date(row.get(_PRESENTATION_FIELD_GENERAL))
+            if _is_renewal_department(department):
+                presentation_date = pres_renewal or pres_general
+            else:
+                presentation_date = pres_general or pres_renewal
 
             raw_close = row.get("CLOSEDATE")
             close_date: date | None = None

@@ -35,8 +35,10 @@ def deal_lookup(
     Возвращает JSON с данными для автозаполнения формы оценки.
     """
     # Кеш
-    # Порог: записи до этой даты закешированы без presentation_date → нужно обновить
-    _PDATE_MIGRATION = datetime(2026, 5, 21, 12, 0, 0)
+    # Порог: записи до этой даты закешированы со старой логикой presentation_date
+    # (только поле продления) → при пустой дате перезапрашиваем из Битрикс.
+    # 2026-07-08: добавлен выбор поля даты презентации по отделу (ОП vs продление).
+    _PDATE_MIGRATION = datetime(2026, 7, 8, 12, 0, 0)
 
     cached = db.query(DealCache).filter(DealCache.deal_id == deal_id).first()
     if cached:
