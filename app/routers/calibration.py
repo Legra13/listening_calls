@@ -110,6 +110,32 @@ def _answers_by_eval(participant: CalibrationParticipant) -> dict[int | None, li
     return grouped
 
 
+def _participant_own_evals(
+    db: Session, participant: CalibrationParticipant,
+    source_eval: Evaluation, checklist_id: int | None,
+) -> list[Evaluation]:
+    """Собственные (уже созданные) опубликованные оценки участника по той же сделке и чек-листу.
+
+    Позволяет участнику подставить свою готовую оценку в форму калибровки вместо
+    заполнения заново. Исходную оценку сессии исключаем. Свежие — первыми.
+    """
+    if not source_eval or not source_eval.deal_id:
+        return []
+    q = (
+        db.query(Evaluation)
+        .options(joinedload(Evaluation.items))
+        .filter(
+            Evaluation.evaluator_id == participant.user_id,
+            Evaluation.deal_id == source_eval.deal_id,
+            Evaluation.status == "published",
+            Evaluation.id != source_eval.id,
+        )
+    )
+    if checklist_id:
+        q = q.filter(Evaluation.checklist_id == checklist_id)
+    return q.order_by(Evaluation.created_at.desc()).all()
+
+
 def _load_session(db: Session, session_id: int) -> CalibrationSession | None:
     return (
         db.query(CalibrationSession)
@@ -534,6 +560,7 @@ def calibration_evaluate_form(
     participant_id: int,
     session_eval_id: int,
     request: Request,
+    prefill: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -554,6 +581,20 @@ def calibration_evaluate_form(
     pe = next((x for x in participant.participant_evals if x.session_eval_id == session_eval_id), None)
     gen_comment = pe.general_comment if pe else None
 
+    # Собственные готовые оценки участника по этой сделке — можно подставить в форму
+    own_evals = _participant_own_evals(db, participant, session_eval.source_evaluation, sess.checklist_id)
+    prefilled_from = None
+    if prefill:
+        src = next((e for e in own_evals if e.id == prefill), None)
+        if src:
+            # Подставляем ответы (и общий комментарий) из готовой оценки —
+            # ничего не сохраняем, пользователь проверит и нажмёт «Сохранить».
+            # EvaluationItem дуально совместим с шаблоном (.value / .comment).
+            answer_map = {it.criterion_id: it for it in src.items}
+            if src.general_comment:
+                gen_comment = src.general_comment
+            prefilled_from = src
+
     # Навигация по сделкам
     ordered = sess.session_evals
     idx = next((i for i, se in enumerate(ordered) if se.id == session_eval_id), 0)
@@ -570,6 +611,8 @@ def calibration_evaluate_form(
         "checklist": sess.checklist,
         "answer_map": answer_map,
         "gen_comment": gen_comment,
+        "own_evals": own_evals,
+        "prefilled_from": prefilled_from,
         "deal_index": idx + 1,
         "deal_total": len(ordered),
         "prev_se": prev_se,
