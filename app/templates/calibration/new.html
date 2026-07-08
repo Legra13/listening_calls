@@ -37,24 +37,30 @@
 
           <div class="mb-3">
             <label class="form-label fw-semibold">
-              Исходная оценка <span class="text-danger">*</span>
-              <span class="text-muted fw-normal small">— оценка, по которой проводим калибровку</span>
+              Сделки для калибровки <span class="text-danger">*</span>
+              <span class="text-muted fw-normal small">— можно выбрать несколько (по одному чек-листу)</span>
             </label>
             {% if calibration_evals %}
-            <select name="source_evaluation_id" class="form-select" required>
-              <option value="">— выберите оценку —</option>
+            <div class="border rounded p-2" style="max-height:320px;overflow-y:auto">
               {% for ev in calibration_evals %}
-              <option value="{{ ev.id }}"
-                {% if preselected_eval and preselected_eval.id == ev.id %}selected{% endif %}>
-                #{{ ev.id }} · {{ ev.operator_name }}
-                {% if ev.eval_date %} · {{ ev.eval_date.strftime('%d.%m.%Y') }}{% endif %}
-                {% if ev.checklist %} · {{ ev.checklist.name }}{% endif %}
-                {% if ev.deal_id %} · сделка #{{ ev.deal_id }}{% endif %}
-              </option>
+              <div class="form-check">
+                <input class="form-check-input calib-eval" type="checkbox"
+                       name="source_evaluation_ids" value="{{ ev.id }}"
+                       data-checklist="{{ ev.checklist_id or '' }}"
+                       id="eval_{{ ev.id }}"
+                       {% if preselected_eval and preselected_eval.id == ev.id %}checked{% endif %}>
+                <label class="form-check-label" for="eval_{{ ev.id }}">
+                  #{{ ev.id }} · {{ ev.operator_name }}
+                  {% if ev.eval_date %} · {{ ev.eval_date.strftime('%d.%m.%Y') }}{% endif %}
+                  <span class="badge bg-light text-dark border">{{ ev.checklist.name if ev.checklist else '—' }}</span>
+                  {% if ev.deal_id %} · сделка #{{ ev.deal_id }}{% endif %}
+                </label>
+              </div>
               {% endfor %}
-            </select>
+            </div>
             <div class="form-text">
-              Показаны оценки, отмеченные для калибровки.
+              Показаны оценки, отмеченные для калибровки. Все сделки сессии должны быть
+              по одному чек-листу — после выбора первой остальные чек-листы блокируются.
               <a href="/evaluations" target="_blank">Открыть список всех оценок</a>
             </div>
             {% else %}
@@ -63,7 +69,6 @@
               «Отметить на калибровку».
               <a href="/evaluations" class="alert-link">Перейти к оценкам</a>
             </div>
-            <input type="hidden" name="source_evaluation_id" value="">
             {% endif %}
           </div>
 
@@ -98,4 +103,21 @@
     </div>
   </div>
 </div>
+
+<script>
+// Ограничиваем выбор сделок одним чек-листом: после выбора первой блокируем остальные
+(function () {
+  const boxes = Array.from(document.querySelectorAll('.calib-eval'));
+  function refresh() {
+    const checked = boxes.filter(b => b.checked);
+    const activeCl = checked.length ? checked[0].dataset.checklist : null;
+    boxes.forEach(b => {
+      b.disabled = activeCl !== null && b.dataset.checklist !== activeCl;
+      b.closest('.form-check').style.opacity = b.disabled ? '0.4' : '1';
+    });
+  }
+  boxes.forEach(b => b.addEventListener('change', refresh));
+  refresh();
+})();
+</script>
 {% endblock %}

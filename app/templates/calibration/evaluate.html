@@ -49,10 +49,30 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
 <!-- Info block -->
 <div class="card shadow-sm mb-3 border-primary border-opacity-25">
   <div class="card-header bg-primary bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
-    <span class="fw-semibold small"><i class="bi bi-bullseye me-2 text-primary"></i>Калибровочная оценка — {{ sess.name }}</span>
+    <span class="fw-semibold small">
+      <i class="bi bi-bullseye me-2 text-primary"></i>{{ sess.name }} —
+      участник: {{ (participant.user.full_name or participant.user.username) if participant.user else '?' }}
+    </span>
     <span class="badge bg-warning text-dark"><i class="bi bi-eye-slash me-1"></i>Оценивайте независимо</span>
   </div>
   <div class="card-body py-2">
+    {% if deal_total > 1 %}
+    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+      <div>
+        {% if prev_se %}
+        <a href="/calibration/{{ sess.id }}/evaluate/{{ participant.id }}/{{ prev_se.id }}"
+           class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i> Пред. сделка</a>
+        {% endif %}
+      </div>
+      <span class="badge bg-primary-subtle text-primary">Сделка {{ deal_index }} из {{ deal_total }}</span>
+      <div>
+        {% if next_se %}
+        <a href="/calibration/{{ sess.id }}/evaluate/{{ participant.id }}/{{ next_se.id }}"
+           class="btn btn-sm btn-outline-secondary">След. сделка <i class="bi bi-chevron-right"></i></a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     <div class="row g-3 align-items-center">
       <div class="col-auto">
         <div class="text-muted small mb-1">Вы оцениваете:</div>
@@ -86,7 +106,7 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
 </div>
 
 <!-- Evaluation form -->
-<form method="post" action="/calibration/{{ sess.id }}/evaluate/{{ participant.id }}">
+<form method="post" action="/calibration/{{ sess.id }}/evaluate/{{ participant.id }}/{{ session_eval.id }}">
   {% for block in checklist.blocks %}
   {% if block.criteria %}
   <div class="mb-3">
@@ -145,7 +165,7 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
     <div class="card-body">
       <label class="form-label fw-semibold">Общий комментарий</label>
       <textarea name="general_comment" class="form-control" rows="3"
-                placeholder="Общие впечатления, выводы...">{{ participant.general_comment or '' }}</textarea>
+                placeholder="Общие впечатления, выводы...">{{ gen_comment or '' }}</textarea>
     </div>
   </div>
 

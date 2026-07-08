@@ -98,6 +98,7 @@
         <th>#</th>
         <th>Название</th>
         <th>Дата</th>
+        <th>Сделки</th>
         <th>Участники</th>
         <th>Статус</th>
         <th></th>
@@ -115,6 +116,7 @@
         <td class="align-middle small text-muted">
           {{ s.session_date.strftime('%d.%m.%Y') if s.session_date else '—' }}
         </td>
+        <td class="align-middle small text-muted">{{ s.session_evals | length }}</td>
         <td class="align-middle small">
           <span class="{% if done == total and total > 0 %}text-success{% elif done > 0 %}text-warning{% else %}text-muted{% endif %}">
             {{ done }}/{{ total }} оценили

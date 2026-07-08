@@ -24,8 +24,9 @@
 {% endblock %}
 
 {% block content %}
-{% set source_name = (sess.source_evaluation.evaluator.full_name or sess.source_evaluation.evaluator.username) if sess.source_evaluation.evaluator else 'Неизвестно' %}
-{% set calib_name  = (active_participant.user.full_name or active_participant.user.username) if active_participant.user else 'Неизвестно' %}
+{% set active_ev = active_se.source_evaluation if active_se else None %}
+{% set source_name = (active_ev.evaluator.full_name or active_ev.evaluator.username) if active_ev and active_ev.evaluator else 'Исходная' %}
+{% set calib_name  = (active_participant.user.full_name or active_participant.user.username) if active_participant and active_participant.user else '—' %}
 
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb small">
@@ -35,25 +36,72 @@
   </ol>
 </nav>
 
-<!-- Header -->
+<!-- Summary across all deals -->
+<div class="card shadow-sm mb-3">
+  <div class="card-header bg-white py-2">
+    <span class="fw-semibold small"><i class="bi bi-people me-2"></i>Сводка: совпадение с исходной оценкой по всем сделкам</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Участник</th>
+          <th style="width:140px">Заполнено сделок</th>
+          <th style="width:160px">Общее совпадение</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary %}
+        <tr>
+          <td class="fw-semibold">{{ (row.participant.user.full_name or row.participant.user.username) if row.participant.user else '?' }}</td>
+          <td>{{ row.deals_done }} / {{ row.deals_total }}</td>
+          <td>
+            {% if row.match_pct is not none %}
+            <span class="fw-bold text-{{ score_color(row.match_pct) }}">{{ row.match_pct }}%</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Deal selector -->
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+  <span class="text-muted small">Сделка:</span>
+  {% for se in ordered_evals %}
+  <a href="/calibration/{{ sess.id }}/compare?se={{ se.id }}"
+     class="btn btn-sm {% if active_se and se.id == active_se.id %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    {{ loop.index }}. {{ se.source_evaluation.operator_name if se.source_evaluation else '—' }}
+    {% if se.source_evaluation and se.source_evaluation.deal_id %}<span class="opacity-75">#{{ se.source_evaluation.deal_id }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% if not active_participant %}
+<div class="alert alert-warning">
+  По выбранной сделке ещё нет заполненных калибровочных оценок.
+</div>
+<a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Назад к сессии</a>
+{% else %}
+
+<!-- Detail header for selected deal -->
 <div class="card shadow-sm mb-3">
   <div class="card-body">
     <div class="row align-items-center">
       <div class="col">
-        <h5 class="mb-1">{{ sess.name }}</h5>
+        <h6 class="mb-1">Разрез по сделке</h6>
         <div class="text-muted small">
           Исходная оценка:
-          <a href="/evaluations/{{ sess.source_evaluation.id }}" target="_blank" class="fw-semibold">
-            #{{ sess.source_evaluation.id }} — {{ sess.source_evaluation.operator_name }}
+          <a href="/evaluations/{{ active_ev.id }}" target="_blank" class="fw-semibold">
+            #{{ active_ev.id }} — {{ active_ev.operator_name }}
           </a>
-          {% if sess.source_evaluation.checklist %}
-           · {{ sess.source_evaluation.checklist.name }}
+          {% if active_ev.deal_id %}
+           · Сделка <a href="{{ active_ev.deal_url }}" target="_blank">#{{ active_ev.deal_id }}</a>
           {% endif %}
-          {% if sess.source_evaluation.deal_id %}
-           · Сделка <a href="{{ sess.source_evaluation.deal_url }}" target="_blank">#{{ sess.source_evaluation.deal_id }}</a>
-          {% endif %}
-          {% if sess.source_evaluation.eval_date %}
-           · {{ sess.source_evaluation.eval_date.strftime('%d.%m.%Y') }}
+          {% if active_ev.eval_date %}
+           · {{ active_ev.eval_date.strftime('%d.%m.%Y') }}
           {% endif %}
         </div>
       </div>
@@ -74,17 +122,14 @@
   </div>
 </div>
 
-<!-- Participant selector -->
-{% if completed_participants | length > 1 %}
+<!-- Participant selector (within selected deal) -->
+{% if participants_for_se | length > 1 %}
 <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
   <span class="text-muted small">Участник:</span>
-  {% for p in completed_participants %}
-  <a href="/calibration/{{ sess.id }}/compare?pid={{ p.id }}"
+  {% for p in participants_for_se %}
+  <a href="/calibration/{{ sess.id }}/compare?se={{ active_se.id }}&pid={{ p.id }}"
      class="btn btn-sm {% if p.id == active_participant.id %}btn-dark{% else %}btn-outline-secondary{% endif %}">
     {{ (p.user.full_name or p.user.username) if p.user else '?' }}
-    {% if p.total_score is not none %}
-      <span class="ms-1 opacity-75">{{ "%.0f"|format(p.total_score) }}%</span>
-    {% endif %}
   </a>
   {% endfor %}
 </div>
@@ -94,8 +139,8 @@
 <div class="row g-3 mb-3">
   <div class="col-auto">
     <div class="card border-0 bg-light text-center px-3 py-2">
-      <div class="fw-bold text-{{ score_color(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
-        {{ "%.1f"|format(sess.source_evaluation.total_score) if sess.source_evaluation.total_score is not none else '—' }}%
+      <div class="fw-bold text-{{ score_color(active_ev.total_score) if active_ev.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
+        {{ "%.1f"|format(active_ev.total_score) if active_ev.total_score is not none else '—' }}%
       </div>
       <div class="small text-muted">Исходная оценка</div>
       <div class="small fw-semibold text-dark">{{ source_name }}</div>
@@ -104,20 +149,21 @@
   <div class="col-auto d-flex align-items-center text-muted">
     <i class="bi bi-arrow-right fs-4"></i>
   </div>
+  {% set pe = active_participant.participant_evals | selectattr("session_eval_id", "eq", active_se.id) | first %}
   <div class="col-auto">
     <div class="card border-0 bg-light text-center px-3 py-2">
-      <div class="fw-bold text-{{ score_color(active_participant.total_score) if active_participant.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
-        {{ "%.1f"|format(active_participant.total_score) if active_participant.total_score is not none else '—' }}%
+      <div class="fw-bold text-{{ score_color(pe.total_score) if pe and pe.total_score is not none else 'secondary' }}" style="font-size:1.4rem">
+        {{ "%.1f"|format(pe.total_score) if pe and pe.total_score is not none else '—' }}%
       </div>
       <div class="small text-muted">Калибровка</div>
       <div class="small fw-semibold text-dark">{{ calib_name }}</div>
     </div>
   </div>
-  {% if active_participant.general_comment %}
+  {% if pe and pe.general_comment %}
   <div class="col-auto d-flex align-items-center">
     <div class="card border-0 bg-light px-3 py-2" style="max-width:350px">
       <div class="small text-muted mb-1">Комментарий участника</div>
-      <div class="small">{{ active_participant.general_comment }}</div>
+      <div class="small">{{ pe.general_comment }}</div>
     </div>
   </div>
   {% endif %}
@@ -126,6 +172,7 @@
 <!-- Resolution form -->
 <form method="post" action="/calibration/{{ sess.id }}/resolve">
   <input type="hidden" name="active_pid" value="{{ active_participant.id }}">
+  <input type="hidden" name="session_eval_id" value="{{ active_se.id }}">
 
   {% for bdata in blocks_data %}
   {% if bdata.criteria %}
@@ -244,11 +291,12 @@
   {% endif %}
   {% endfor %}
 
-  {% if mismatch_count > 0 %}
   <div class="d-flex gap-2 pb-4">
+    {% if mismatch_count > 0 %}
     <button type="submit" class="btn btn-dark">
       <i class="bi bi-save me-1"></i>Сохранить решения
     </button>
+    {% endif %}
     <a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Назад к сессии</a>
     {% if sess.status == 'open' %}
     <form action="/calibration/{{ sess.id }}/close" method="post" class="m-0 ms-auto">
@@ -259,19 +307,6 @@
     </form>
     {% endif %}
   </div>
-  {% else %}
-  <div class="d-flex gap-2 pb-4">
-    <a href="/calibration/{{ sess.id }}" class="btn btn-outline-secondary">Назад к сессии</a>
-    {% if sess.status == 'open' %}
-    <form action="/calibration/{{ sess.id }}/close" method="post" class="m-0">
-      <button type="submit" class="btn btn-success"
-              onclick="return confirm('Закрыть сессию?')">
-        <i class="bi bi-lock me-1"></i>Закрыть сессию
-      </button>
-    </form>
-    {% endif %}
-  </div>
-  {% endif %}
-
 </form>
+{% endif %}
 {% endblock %}

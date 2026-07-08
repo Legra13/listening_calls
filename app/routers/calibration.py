@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models import (
     Block, Checklist, Criterion, Evaluation, User,
-    CalibrationSession, CalibrationParticipant,
-    CalibrationAnswerItem, CalibrationItemResolution,
+    CalibrationSession, CalibrationSessionEval, CalibrationParticipant,
+    CalibrationParticipantEval, CalibrationAnswerItem, CalibrationItemResolution,
 )
 from app.deps import get_current_user, flash, pop_flash
 from app.scoring import calculate_scores, score_color
@@ -32,10 +32,10 @@ def _comment_text(raw: str | None) -> str | None:
     return raw.strip() or None
 
 
-def _compute_comparison(source_eval: Evaluation, participant: CalibrationParticipant, checklist: Checklist):
-    """Сравнивает оценку источника и ответы участника калибровки."""
+def _compute_comparison(source_eval: Evaluation, answers: list, checklist: Checklist):
+    """Сравнивает оценку источника и ответы участника (по одной сделке)."""
     source_map = {item.criterion_id: item for item in source_eval.items}
-    calib_map = {a.criterion_id: a for a in participant.answers}
+    calib_map = {a.criterion_id: a for a in answers}
 
     blocks_data = []
     total_compared = 0
@@ -83,6 +83,56 @@ def _compute_comparison(source_eval: Evaluation, participant: CalibrationPartici
     return blocks_data, match_pct, mismatch_count
 
 
+def _match_counts(source_eval: Evaluation, answers: list, checklist: Checklist) -> tuple[int, int]:
+    """Возвращает (сравнено, совпало) по одной сделке — для сводного %."""
+    source_map = {item.criterion_id: item for item in source_eval.items}
+    calib_map = {a.criterion_id: a for a in answers}
+    compared = matched = 0
+    for block in checklist.blocks:
+        for crit in block.criteria:
+            sv = source_map.get(crit.id)
+            cv = calib_map.get(crit.id)
+            sv_val = sv.value if sv else "na"
+            cv_val = cv.value if cv else "na"
+            if sv_val == "na" and cv_val == "na":
+                continue
+            compared += 1
+            if sv_val == cv_val:
+                matched += 1
+    return compared, matched
+
+
+def _answers_by_eval(participant: CalibrationParticipant) -> dict[int | None, list]:
+    """Группирует ответы участника по session_eval_id."""
+    grouped: dict[int | None, list] = {}
+    for a in participant.answers:
+        grouped.setdefault(a.session_eval_id, []).append(a)
+    return grouped
+
+
+def _load_session(db: Session, session_id: int) -> CalibrationSession | None:
+    return (
+        db.query(CalibrationSession)
+        .options(
+            joinedload(CalibrationSession.checklist)
+                .joinedload(Checklist.blocks).joinedload(Block.criteria),
+            joinedload(CalibrationSession.session_evals).options(
+                joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.items),
+                joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.evaluator),
+            ),
+            joinedload(CalibrationSession.created_by),
+            joinedload(CalibrationSession.participants).options(
+                joinedload(CalibrationParticipant.user),
+                joinedload(CalibrationParticipant.answers),
+                joinedload(CalibrationParticipant.participant_evals),
+            ),
+            joinedload(CalibrationSession.resolutions),
+        )
+        .filter(CalibrationSession.id == session_id)
+        .first()
+    )
+
+
 # ── List ──────────────────────────────────────────────────────────────────────
 
 @router.get("")
@@ -91,7 +141,6 @@ def calibration_index(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Все оценки, отмеченные для калибровки
     marked_evals = (
         db.query(Evaluation)
         .filter(Evaluation.is_calibration == True, Evaluation.status == "published")
@@ -103,20 +152,22 @@ def calibration_index(
         .all()
     )
 
-    # Сессии, привязанные к этим оценкам
     sessions = (
         db.query(CalibrationSession)
         .options(
             joinedload(CalibrationSession.created_by),
+            joinedload(CalibrationSession.checklist),
+            joinedload(CalibrationSession.session_evals),
             joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
         )
         .order_by(CalibrationSession.id.desc())
         .all()
     )
-    # Карта eval_id → список сессий
+    # Карта eval_id → сессии, в которых сделка участвует
     sessions_by_eval: dict[int, list] = {}
     for s in sessions:
-        sessions_by_eval.setdefault(s.source_evaluation_id, []).append(s)
+        for se in s.session_evals:
+            sessions_by_eval.setdefault(se.source_evaluation_id, []).append(s)
 
     return templates.TemplateResponse("calibration/index.html", {
         "request": request,
@@ -143,7 +194,7 @@ def calibration_new(
         .filter(Evaluation.is_calibration == True, Evaluation.status == "published")
         .options(joinedload(Evaluation.checklist))
         .order_by(Evaluation.id.desc())
-        .limit(200)
+        .limit(300)
         .all()
     )
     users = (
@@ -175,23 +226,35 @@ async def calibration_create(
     name = (form.get("name") or "").strip()
     description = (form.get("description") or "").strip() or None
     session_date_str = (form.get("session_date") or "").strip()
-    source_eval_id_str = (form.get("source_evaluation_id") or "").strip()
+    source_eval_ids = form.getlist("source_evaluation_ids")
     participant_ids = form.getlist("participant_ids")
 
-    if not name or not source_eval_id_str:
-        flash(request, "Укажите название и исходную оценку", "danger")
+    if not name or not source_eval_ids:
+        flash(request, "Укажите название и хотя бы одну сделку", "danger")
         return RedirectResponse("/calibration/new", status_code=302)
 
-    try:
-        source_eval_id = int(source_eval_id_str)
-    except ValueError:
-        flash(request, "Неверный ID оценки", "danger")
+    # Разбор и загрузка выбранных оценок
+    eval_ids: list[int] = []
+    for s in source_eval_ids:
+        try:
+            eval_ids.append(int(s))
+        except ValueError:
+            pass
+    eval_ids = list(dict.fromkeys(eval_ids))  # уникальные, с сохранением порядка
+
+    evals = db.query(Evaluation).filter(Evaluation.id.in_(eval_ids)).all()
+    evals_by_id = {e.id: e for e in evals}
+    ordered_evals = [evals_by_id[i] for i in eval_ids if i in evals_by_id]
+    if not ordered_evals:
+        flash(request, "Выбранные оценки не найдены", "danger")
         return RedirectResponse("/calibration/new", status_code=302)
 
-    source_eval = db.query(Evaluation).filter(Evaluation.id == source_eval_id).first()
-    if not source_eval:
-        flash(request, "Оценка не найдена", "danger")
+    # Все сделки сессии должны быть по одному чек-листу
+    checklist_ids = {e.checklist_id for e in ordered_evals}
+    if len(checklist_ids) > 1:
+        flash(request, "Все сделки сессии должны быть по одному чек-листу", "danger")
         return RedirectResponse("/calibration/new", status_code=302)
+    checklist_id = ordered_evals[0].checklist_id
 
     session_date = None
     if session_date_str:
@@ -204,12 +267,20 @@ async def calibration_create(
         name=name,
         description=description,
         session_date=session_date,
-        source_evaluation_id=source_eval_id,
+        source_evaluation_id=ordered_evals[0].id,
+        checklist_id=checklist_id,
         created_by_id=current_user.id,
         status="open",
     )
     db.add(sess)
     db.flush()
+
+    for idx, ev in enumerate(ordered_evals):
+        db.add(CalibrationSessionEval(
+            session_id=sess.id,
+            source_evaluation_id=ev.id,
+            order_index=idx,
+        ))
 
     for uid_str in participant_ids:
         try:
@@ -219,7 +290,7 @@ async def calibration_create(
             pass
 
     db.commit()
-    flash(request, f"Сессия «{name}» создана")
+    flash(request, f"Сессия «{name}» создана ({len(ordered_evals)} сделок)")
     return RedirectResponse(f"/calibration/{sess.id}", status_code=302)
 
 
@@ -232,17 +303,7 @@ def calibration_view(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    sess = (
-        db.query(CalibrationSession)
-        .options(
-            joinedload(CalibrationSession.source_evaluation).joinedload(Evaluation.checklist),
-            joinedload(CalibrationSession.source_evaluation).joinedload(Evaluation.evaluator),
-            joinedload(CalibrationSession.created_by),
-            joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
-        )
-        .filter(CalibrationSession.id == session_id)
-        .first()
-    )
+    sess = _load_session(db, session_id)
     if not sess:
         flash(request, "Сессия не найдена", "danger")
         return RedirectResponse("/calibration", status_code=302)
@@ -253,8 +314,44 @@ def calibration_view(
         .order_by(User.full_name, User.username)
         .all()
     )
-    # Exclude already-added participants
     existing_user_ids = {p.user_id for p in sess.participants}
+
+    # Оценки-источники этого чек-листа, ещё не добавленные в сессию (для добавления сделки)
+    in_session_eval_ids = {se.source_evaluation_id for se in sess.session_evals}
+    available_evals = []
+    if sess.checklist_id:
+        available_evals = (
+            db.query(Evaluation)
+            .filter(
+                Evaluation.is_calibration == True,
+                Evaluation.status == "published",
+                Evaluation.checklist_id == sess.checklist_id,
+            )
+            .order_by(Evaluation.id.desc())
+            .limit(300)
+            .all()
+        )
+        available_evals = [e for e in available_evals if e.id not in in_session_eval_ids]
+
+    # Матрица: (participant_id, session_eval_id) → participant_eval
+    pe_map = {}
+    for p in sess.participants:
+        for pe in p.participant_evals:
+            pe_map[(p.id, pe.session_eval_id)] = pe
+
+    # Прогресс участника в целом
+    total_deals = len(sess.session_evals)
+    participant_progress = {}
+    for p in sess.participants:
+        done = sum(
+            1 for se in sess.session_evals
+            if pe_map.get((p.id, se.id)) and pe_map[(p.id, se.id)].status == "completed"
+        )
+        participant_progress[p.id] = {"done": done, "total": total_deals}
+
+    any_completed = any(
+        pe.status == "completed" for p in sess.participants for pe in p.participant_evals
+    )
 
     return templates.TemplateResponse("calibration/view.html", {
         "request": request,
@@ -262,12 +359,16 @@ def calibration_view(
         "sess": sess,
         "users": users,
         "existing_user_ids": existing_user_ids,
+        "available_evals": available_evals,
+        "pe_map": pe_map,
+        "participant_progress": participant_progress,
+        "any_completed": any_completed,
         "score_color": score_color,
         "flash": pop_flash(request),
     })
 
 
-# ── Add participant ────────────────────────────────────────────────────────────
+# ── Participants ────────────────────────────────────────────────────────────────
 
 @router.post("/{session_id}/add-participant")
 async def calibration_add_participant(
@@ -299,8 +400,6 @@ async def calibration_add_participant(
     return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
 
-# ── Remove participant ─────────────────────────────────────────────────────────
-
 @router.post("/{session_id}/remove-participant/{participant_id}")
 def calibration_remove_participant(
     session_id: int,
@@ -324,91 +423,188 @@ def calibration_remove_participant(
     return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
 
-# ── Evaluate ──────────────────────────────────────────────────────────────────
+# ── Deals (session evals) ───────────────────────────────────────────────────────
 
-@router.get("/{session_id}/evaluate/{participant_id}")
-def calibration_evaluate_form(
+@router.post("/{session_id}/add-deal")
+async def calibration_add_deal(
     session_id: int,
-    participant_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    participant = (
-        db.query(CalibrationParticipant)
-        .options(joinedload(CalibrationParticipant.answers))
-        .filter(
-            CalibrationParticipant.id == participant_id,
-            CalibrationParticipant.session_id == session_id,
-        )
-        .first()
-    )
-    if not participant:
-        flash(request, "Участник не найден", "danger")
+    form = await request.form()
+    eval_id_str = (form.get("evaluation_id") or "").strip()
+    sess = db.query(CalibrationSession).filter(CalibrationSession.id == session_id).first()
+    if not sess or sess.status == "closed":
+        flash(request, "Нельзя изменить закрытую сессию", "warning")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+    try:
+        eval_id = int(eval_id_str)
+    except ValueError:
+        flash(request, "Неверная сделка", "danger")
         return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
-    sess = (
-        db.query(CalibrationSession)
-        .options(
-            joinedload(CalibrationSession.source_evaluation).options(
-                joinedload(Evaluation.checklist).joinedload(Checklist.blocks).joinedload(Block.criteria),
-            ),
-        )
-        .filter(CalibrationSession.id == session_id)
-        .first()
-    )
+    ev = db.query(Evaluation).filter(Evaluation.id == eval_id).first()
+    if not ev:
+        flash(request, "Оценка не найдена", "danger")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+    if sess.checklist_id and ev.checklist_id != sess.checklist_id:
+        flash(request, "Сделка должна быть по тому же чек-листу, что и сессия", "danger")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
-    answer_map = {a.criterion_id: a for a in participant.answers}
+    existing = db.query(CalibrationSessionEval).filter(
+        CalibrationSessionEval.session_id == session_id,
+        CalibrationSessionEval.source_evaluation_id == eval_id,
+    ).first()
+    if existing:
+        flash(request, "Эта сделка уже в сессии", "warning")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+    max_order = db.query(CalibrationSessionEval).filter(
+        CalibrationSessionEval.session_id == session_id
+    ).count()
+    db.add(CalibrationSessionEval(
+        session_id=session_id,
+        source_evaluation_id=eval_id,
+        order_index=max_order,
+    ))
+    db.commit()
+    flash(request, "Сделка добавлена в сессию")
+    return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+
+@router.post("/{session_id}/remove-deal/{session_eval_id}")
+def calibration_remove_deal(
+    session_id: int,
+    session_eval_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sess = db.query(CalibrationSession).filter(CalibrationSession.id == session_id).first()
+    if not sess or sess.status == "closed":
+        flash(request, "Нельзя изменить закрытую сессию", "warning")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+    se = db.query(CalibrationSessionEval).filter(
+        CalibrationSessionEval.id == session_eval_id,
+        CalibrationSessionEval.session_id == session_id,
+    ).first()
+    if not se:
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+    total = db.query(CalibrationSessionEval).filter(
+        CalibrationSessionEval.session_id == session_id
+    ).count()
+    if total <= 1:
+        flash(request, "Нельзя удалить единственную сделку сессии", "warning")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+    removed_source_eval_id = se.source_evaluation_id
+
+    # Явно чистим связанные ответы и итоги по этой сделке (answers каскадятся по participant)
+    db.query(CalibrationAnswerItem).filter(
+        CalibrationAnswerItem.session_eval_id == session_eval_id
+    ).delete(synchronize_session=False)
+    db.query(CalibrationItemResolution).filter(
+        CalibrationItemResolution.session_eval_id == session_eval_id
+    ).delete(synchronize_session=False)
+    # participant_evals каскадятся по session_eval
+    db.delete(se)
+
+    # Если удалили первичную сделку — переназначаем source_evaluation_id
+    if sess.source_evaluation_id == removed_source_eval_id:
+        remaining = db.query(CalibrationSessionEval).filter(
+            CalibrationSessionEval.session_id == session_id,
+            CalibrationSessionEval.id != session_eval_id,
+        ).order_by(CalibrationSessionEval.order_index).first()
+        if remaining:
+            sess.source_evaluation_id = remaining.source_evaluation_id
+
+    db.commit()
+    flash(request, "Сделка удалена из сессии")
+    return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+
+# ── Evaluate ──────────────────────────────────────────────────────────────────
+
+@router.get("/{session_id}/evaluate/{participant_id}/{session_eval_id}")
+def calibration_evaluate_form(
+    session_id: int,
+    participant_id: int,
+    session_eval_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sess = _load_session(db, session_id)
+    if not sess:
+        flash(request, "Сессия не найдена", "danger")
+        return RedirectResponse("/calibration", status_code=302)
+
+    participant = next((p for p in sess.participants if p.id == participant_id), None)
+    session_eval = next((se for se in sess.session_evals if se.id == session_eval_id), None)
+    if not participant or not session_eval:
+        flash(request, "Участник или сделка не найдены", "danger")
+        return RedirectResponse(f"/calibration/{session_id}", status_code=302)
+
+    answers_by_eval = _answers_by_eval(participant)
+    answer_map = {a.criterion_id: a for a in answers_by_eval.get(session_eval_id, [])}
+
+    pe = next((x for x in participant.participant_evals if x.session_eval_id == session_eval_id), None)
+    gen_comment = pe.general_comment if pe else None
+
+    # Навигация по сделкам
+    ordered = sess.session_evals
+    idx = next((i for i, se in enumerate(ordered) if se.id == session_eval_id), 0)
+    prev_se = ordered[idx - 1] if idx > 0 else None
+    next_se = ordered[idx + 1] if idx < len(ordered) - 1 else None
 
     return templates.TemplateResponse("calibration/evaluate.html", {
         "request": request,
         "current_user": current_user,
         "sess": sess,
         "participant": participant,
-        "source_eval": sess.source_evaluation,
-        "checklist": sess.source_evaluation.checklist,
+        "session_eval": session_eval,
+        "source_eval": session_eval.source_evaluation,
+        "checklist": sess.checklist,
         "answer_map": answer_map,
+        "gen_comment": gen_comment,
+        "deal_index": idx + 1,
+        "deal_total": len(ordered),
+        "prev_se": prev_se,
+        "next_se": next_se,
         "flash": pop_flash(request),
     })
 
 
-@router.post("/{session_id}/evaluate/{participant_id}")
+@router.post("/{session_id}/evaluate/{participant_id}/{session_eval_id}")
 async def calibration_evaluate_save(
     session_id: int,
     participant_id: int,
+    session_eval_id: int,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    participant = (
-        db.query(CalibrationParticipant)
-        .filter(
-            CalibrationParticipant.id == participant_id,
-            CalibrationParticipant.session_id == session_id,
-        )
-        .first()
-    )
-    if not participant:
+    sess = _load_session(db, session_id)
+    if not sess:
+        return RedirectResponse("/calibration", status_code=302)
+
+    participant = next((p for p in sess.participants if p.id == participant_id), None)
+    session_eval = next((se for se in sess.session_evals if se.id == session_eval_id), None)
+    if not participant or not session_eval:
         return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
-    sess = (
-        db.query(CalibrationSession)
-        .options(
-            joinedload(CalibrationSession.source_evaluation).options(
-                joinedload(Evaluation.checklist).joinedload(Checklist.blocks).joinedload(Block.criteria),
-            ),
-        )
-        .filter(CalibrationSession.id == session_id)
-        .first()
-    )
-
     form = await request.form()
-    checklist = sess.source_evaluation.checklist
+    checklist = sess.checklist
     all_criteria = [c for block in checklist.blocks for c in block.criteria]
 
+    # Удаляем прежние ответы участника по ЭТОЙ сделке
     db.query(CalibrationAnswerItem).filter(
-        CalibrationAnswerItem.participant_id == participant_id
-    ).delete()
+        CalibrationAnswerItem.participant_id == participant_id,
+        CalibrationAnswerItem.session_eval_id == session_eval_id,
+    ).delete(synchronize_session=False)
 
     items_raw = []
     for crit in all_criteria:
@@ -418,6 +614,7 @@ async def calibration_evaluate_save(
         comment = (form.get(f"comment_{crit.id}") or "").strip() or None
         db.add(CalibrationAnswerItem(
             participant_id=participant_id,
+            session_eval_id=session_eval_id,
             criterion_id=crit.id,
             value=value,
             comment=comment,
@@ -425,12 +622,45 @@ async def calibration_evaluate_save(
         items_raw.append((crit.id, value, comment))
 
     total_score, _ = calculate_scores(items_raw, checklist)
-    participant.total_score = total_score
-    participant.general_comment = (form.get("general_comment") or "").strip() or None
-    participant.status = "completed"
-    participant.completed_at = datetime.utcnow()
+
+    # Upsert прогресса участника по сделке
+    pe = db.query(CalibrationParticipantEval).filter(
+        CalibrationParticipantEval.participant_id == participant_id,
+        CalibrationParticipantEval.session_eval_id == session_eval_id,
+    ).first()
+    if not pe:
+        pe = CalibrationParticipantEval(
+            participant_id=participant_id,
+            session_eval_id=session_eval_id,
+        )
+        db.add(pe)
+    pe.total_score = total_score
+    pe.general_comment = (form.get("general_comment") or "").strip() or None
+    pe.status = "completed"
+    pe.completed_at = datetime.utcnow()
+    db.flush()  # autoflush выключен — фиксируем pe, чтобы попал в подсчёт ниже
+
+    # Общий статус участника: completed, если заполнены все сделки
+    completed_evals = db.query(CalibrationParticipantEval).filter(
+        CalibrationParticipantEval.participant_id == participant_id,
+        CalibrationParticipantEval.status == "completed",
+    ).count()
+    total_deals = len(sess.session_evals)
+    participant.status = "completed" if completed_evals >= total_deals else "pending"
+    if participant.status == "completed":
+        participant.completed_at = datetime.utcnow()
 
     db.commit()
+
+    # Переход к следующей незаполненной сделке или назад к сессии
+    ordered = sess.session_evals
+    idx = next((i for i, se in enumerate(ordered) if se.id == session_eval_id), 0)
+    if idx < len(ordered) - 1:
+        nxt = ordered[idx + 1]
+        flash(request, f"Сохранено ({total_score:.1f}%). Сделка {idx + 2} из {len(ordered)}.")
+        return RedirectResponse(
+            f"/calibration/{session_id}/evaluate/{participant_id}/{nxt.id}", status_code=302
+        )
     flash(request, f"Оценка сохранена. Итог: {total_score:.1f}%")
     return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
@@ -442,55 +672,80 @@ def calibration_compare(
     session_id: int,
     request: Request,
     pid: int | None = None,
+    se: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    sess = (
-        db.query(CalibrationSession)
-        .options(
-            joinedload(CalibrationSession.source_evaluation).options(
-                joinedload(Evaluation.checklist).joinedload(Checklist.blocks).joinedload(Block.criteria),
-                joinedload(Evaluation.items),
-                joinedload(Evaluation.evaluator),
-            ),
-            joinedload(CalibrationSession.created_by),
-            joinedload(CalibrationSession.participants).options(
-                joinedload(CalibrationParticipant.user),
-                joinedload(CalibrationParticipant.answers),
-            ),
-            joinedload(CalibrationSession.resolutions),
-        )
-        .filter(CalibrationSession.id == session_id)
-        .first()
-    )
+    sess = _load_session(db, session_id)
     if not sess:
         flash(request, "Сессия не найдена", "danger")
         return RedirectResponse("/calibration", status_code=302)
 
-    completed_participants = [p for p in sess.participants if p.status == "completed"]
-    if not completed_participants:
+    checklist = sess.checklist
+    ordered_evals = sess.session_evals
+
+    # Есть ли хоть один заполненный ответ
+    any_completed = any(
+        pe.status == "completed" for p in sess.participants for pe in p.participant_evals
+    )
+    if not any_completed:
         flash(request, "Нет завершённых оценок для сравнения", "warning")
         return RedirectResponse(f"/calibration/{session_id}", status_code=302)
 
-    # Select participant to compare (default to first completed)
-    active_pid = pid
-    if active_pid is None:
-        active_pid = completed_participants[0].id
+    # Сводка: по каждому участнику — общий % совпадения по всем сделкам
+    summary = []
+    for p in sess.participants:
+        answers_by_eval = _answers_by_eval(p)
+        total_compared = total_matched = 0
+        deals_done = 0
+        for se_obj in ordered_evals:
+            ans = answers_by_eval.get(se_obj.id, [])
+            if not ans:
+                continue
+            deals_done += 1
+            c, m = _match_counts(se_obj.source_evaluation, ans, checklist)
+            total_compared += c
+            total_matched += m
+        pct = round(total_matched / total_compared * 100, 1) if total_compared > 0 else None
+        summary.append({
+            "participant": p,
+            "match_pct": pct,
+            "deals_done": deals_done,
+            "deals_total": len(ordered_evals),
+        })
 
-    active_participant = next((p for p in completed_participants if p.id == active_pid), completed_participants[0])
+    # Детализация по выбранной сделке + участнику
+    active_se = next((x for x in ordered_evals if x.id == se), None) or (ordered_evals[0] if ordered_evals else None)
+    # Участники, заполнившие выбранную сделку
+    def _did(p, se_id):
+        return any(a.session_eval_id == se_id for a in p.answers)
+    participants_for_se = [p for p in sess.participants if active_se and _did(p, active_se.id)]
 
-    checklist = sess.source_evaluation.checklist
-    blocks_data, match_pct, mismatch_count = _compute_comparison(
-        sess.source_evaluation, active_participant, checklist
-    )
+    active_participant = None
+    if participants_for_se:
+        active_participant = next((p for p in participants_for_se if p.id == pid), participants_for_se[0])
 
-    resolution_map = {r.criterion_id: r for r in sess.resolutions}
+    blocks_data, match_pct, mismatch_count = [], None, 0
+    if active_participant and active_se:
+        ans = [a for a in active_participant.answers if a.session_eval_id == active_se.id]
+        blocks_data, match_pct, mismatch_count = _compute_comparison(
+            active_se.source_evaluation, ans, checklist
+        )
+
+    # Итоги (resolutions) по выбранной сделке
+    resolution_map = {
+        r.criterion_id: r for r in sess.resolutions
+        if active_se and r.session_eval_id == active_se.id
+    }
 
     return templates.TemplateResponse("calibration/compare.html", {
         "request": request,
         "current_user": current_user,
         "sess": sess,
-        "completed_participants": completed_participants,
+        "ordered_evals": ordered_evals,
+        "summary": summary,
+        "active_se": active_se,
+        "participants_for_se": participants_for_se,
         "active_participant": active_participant,
         "blocks_data": blocks_data,
         "match_pct": match_pct,
@@ -510,14 +765,22 @@ async def calibration_resolve(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    sess = db.query(CalibrationSession).filter(CalibrationSession.id == session_id).first()
+    sess = db.query(CalibrationSession).options(
+        joinedload(CalibrationSession.resolutions)
+    ).filter(CalibrationSession.id == session_id).first()
     if not sess:
         return RedirectResponse("/calibration", status_code=302)
 
     form = await request.form()
+    try:
+        se_id = int((form.get("session_eval_id") or "").strip())
+    except ValueError:
+        se_id = None
 
-    # Read all criterion keys from form
-    existing = {r.criterion_id: r for r in sess.resolutions}
+    existing = {
+        r.criterion_id: r for r in sess.resolutions
+        if r.session_eval_id == se_id
+    }
 
     for key in form:
         if key.startswith("final_value_"):
@@ -540,6 +803,7 @@ async def calibration_resolve(
             elif final_value or comment:
                 db.add(CalibrationItemResolution(
                     session_id=session_id,
+                    session_eval_id=se_id,
                     criterion_id=crit_id,
                     final_value=final_value,
                     comment=comment,
@@ -550,11 +814,15 @@ async def calibration_resolve(
     db.commit()
     flash(request, "Итоги сохранены")
 
-    # Redirect back to compare with same participant
     pid = (form.get("active_pid") or "").strip()
     redirect_url = f"/calibration/{session_id}/compare"
+    params = []
     if pid:
-        redirect_url += f"?pid={pid}"
+        params.append(f"pid={pid}")
+    if se_id:
+        params.append(f"se={se_id}")
+    if params:
+        redirect_url += "?" + "&".join(params)
     return RedirectResponse(redirect_url, status_code=302)
 
 

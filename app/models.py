@@ -137,7 +137,10 @@ class CalibrationSession(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     session_date: Mapped[datetime | None] = mapped_column(DateTime)
+    # Первая (первичная) сделка сессии — оставлена для совместимости; список сделок в session_evals
     source_evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id"), nullable=False)
+    # Чек-лист сессии: все сделки сессии оцениваются по нему
+    checklist_id: Mapped[int | None] = mapped_column(ForeignKey("checklists.id"), nullable=True)
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     # status: "open" | "closed"
     status: Mapped[str] = mapped_column(String(20), default="open")
@@ -145,12 +148,33 @@ class CalibrationSession(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     source_evaluation: Mapped["Evaluation"] = relationship(foreign_keys=[source_evaluation_id])
+    checklist: Mapped["Checklist | None"] = relationship(foreign_keys=[checklist_id])
     created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
+    session_evals: Mapped[list["CalibrationSessionEval"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan",
+        order_by="CalibrationSessionEval.order_index",
+    )
     participants: Mapped[list["CalibrationParticipant"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
     resolutions: Mapped[list["CalibrationItemResolution"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class CalibrationSessionEval(Base):
+    """Сделка (оценка-источник) в составе сессии калибровки."""
+    __tablename__ = "calibration_session_evals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("calibration_sessions.id"), nullable=False)
+    source_evaluation_id: Mapped[int] = mapped_column(ForeignKey("evaluations.id"), nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+    session: Mapped["CalibrationSession"] = relationship(back_populates="session_evals")
+    source_evaluation: Mapped["Evaluation"] = relationship(foreign_keys=[source_evaluation_id])
+    participant_evals: Mapped[list["CalibrationParticipantEval"]] = relationship(
+        back_populates="session_eval", cascade="all, delete-orphan"
     )
 
 
@@ -160,6 +184,7 @@ class CalibrationParticipant(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("calibration_sessions.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    # Legacy-поля (одна сделка на сессию); теперь прогресс хранится в participant_evals
     total_score: Mapped[float | None] = mapped_column(Float)
     general_comment: Mapped[str | None] = mapped_column(Text)
     # status: "pending" | "completed"
@@ -172,6 +197,26 @@ class CalibrationParticipant(Base):
     answers: Mapped[list["CalibrationAnswerItem"]] = relationship(
         back_populates="participant", cascade="all, delete-orphan"
     )
+    participant_evals: Mapped[list["CalibrationParticipantEval"]] = relationship(
+        back_populates="participant", cascade="all, delete-orphan"
+    )
+
+
+class CalibrationParticipantEval(Base):
+    """Прогресс/итог участника по одной сделке сессии."""
+    __tablename__ = "calibration_participant_evals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    participant_id: Mapped[int] = mapped_column(ForeignKey("calibration_participants.id"), nullable=False)
+    session_eval_id: Mapped[int] = mapped_column(ForeignKey("calibration_session_evals.id"), nullable=False)
+    total_score: Mapped[float | None] = mapped_column(Float)
+    general_comment: Mapped[str | None] = mapped_column(Text)
+    # status: "pending" | "completed"
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    participant: Mapped["CalibrationParticipant"] = relationship(back_populates="participant_evals")
+    session_eval: Mapped["CalibrationSessionEval"] = relationship(back_populates="participant_evals")
 
 
 class CalibrationAnswerItem(Base):
@@ -179,6 +224,8 @@ class CalibrationAnswerItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     participant_id: Mapped[int] = mapped_column(ForeignKey("calibration_participants.id"), nullable=False)
+    # Сделка, к которой относится ответ (NULL — legacy, единственная сделка сессии)
+    session_eval_id: Mapped[int | None] = mapped_column(ForeignKey("calibration_session_evals.id"), nullable=True)
     criterion_id: Mapped[int] = mapped_column(ForeignKey("criteria.id"), nullable=False)
     # value: "yes" | "no" | "na"
     value: Mapped[str] = mapped_column(String(3), nullable=False)
@@ -193,6 +240,8 @@ class CalibrationItemResolution(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("calibration_sessions.id"), nullable=False)
+    # Сделка, к которой относится итог (NULL — legacy, единственная сделка сессии)
+    session_eval_id: Mapped[int | None] = mapped_column(ForeignKey("calibration_session_evals.id"), nullable=True)
     criterion_id: Mapped[int] = mapped_column(ForeignKey("criteria.id"), nullable=False)
     # final_value: "yes" | "no" | "na"
     final_value: Mapped[str | None] = mapped_column(String(3))

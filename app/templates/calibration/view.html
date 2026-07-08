@@ -32,8 +32,7 @@
         </div>
       </div>
       <div class="col-auto d-flex gap-2 flex-wrap">
-        {% set done_count = sess.participants | selectattr("status", "eq", "completed") | list | length %}
-        {% if done_count > 0 %}
+        {% if any_completed %}
         <a href="/calibration/{{ sess.id }}/compare" class="btn btn-primary btn-sm">
           <i class="bi bi-bar-chart-steps me-1"></i>Сравнить оценки
         </a>
@@ -63,131 +62,141 @@
   </div>
 </div>
 
-<!-- Source evaluation info -->
-<div class="card shadow-sm mb-3">
-  <div class="card-header bg-white py-2">
-    <span class="fw-semibold small"><i class="bi bi-clipboard-check me-2"></i>Исходная оценка</span>
-  </div>
-  <div class="card-body py-2">
-    {% set ev = sess.source_evaluation %}
-    {% if ev %}
-    <div class="row g-3 align-items-center">
-      <div class="col-auto">
-        <span class="text-muted small">Оценка:</span>
-        <a href="/evaluations/{{ ev.id }}" class="fw-semibold ms-1" target="_blank">#{{ ev.id }}</a>
-      </div>
-      <div class="col-auto">
-        <span class="text-muted small">Сотрудник:</span>
-        <span class="ms-1 fw-semibold">{{ ev.operator_name }}</span>
-      </div>
-      {% if ev.department %}
-      <div class="col-auto">
-        <span class="badge bg-secondary-subtle text-secondary">{{ ev.department }}</span>
-      </div>
-      {% endif %}
-      {% if ev.deal_id %}
-      <div class="col-auto">
-        <span class="text-muted small">Сделка:</span>
-        <a href="{{ ev.deal_url }}" target="_blank" class="ms-1">#{{ ev.deal_id }}</a>
-      </div>
-      {% endif %}
-      {% if ev.eval_date %}
-      <div class="col-auto">
-        <span class="text-muted small">Дата звонка:</span>
-        <span class="ms-1">{{ ev.eval_date.strftime('%d.%m.%Y') }}</span>
-      </div>
-      {% endif %}
-      {% if ev.checklist %}
-      <div class="col-auto">
-        <span class="text-muted small">Чек-лист:</span>
-        <span class="ms-1">{{ ev.checklist.name }}</span>
-      </div>
-      {% endif %}
-      {% if ev.total_score is not none %}
-      <div class="col-auto">
-        <span class="badge bg-{{ score_color(ev.total_score) }}-subtle text-{{ score_color(ev.total_score) }} fs-6">
-          {{ "%.1f"|format(ev.total_score) }}%
-        </span>
-      </div>
-      {% endif %}
-      <div class="col-auto">
-        <span class="text-muted small">Оценщик:</span>
-        <span class="ms-1">{{ (ev.evaluator.full_name or ev.evaluator.username) if ev.evaluator else '—' }}</span>
-      </div>
-    </div>
-    {% else %}
-    <span class="text-muted">Оценка не найдена</span>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Participants -->
+<!-- Deals in session -->
 <div class="card shadow-sm mb-3">
   <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-    <span class="fw-semibold small"><i class="bi bi-people me-2"></i>Участники</span>
-    {% set done_count = sess.participants | selectattr("status", "eq", "completed") | list | length %}
-    <span class="text-muted small">{{ done_count }} / {{ sess.participants|length }} завершили</span>
+    <span class="fw-semibold small"><i class="bi bi-clipboard-check me-2"></i>Сделки в сессии
+      <span class="text-muted">({{ sess.session_evals|length }})</span></span>
+    {% if sess.checklist %}<span class="text-muted small">Чек-лист: {{ sess.checklist.name }}</span>{% endif %}
   </div>
-
-  {% if sess.participants %}
   <div class="table-responsive">
-    <table class="table table-sm mb-0">
+    <table class="table table-sm mb-0 align-middle">
       <thead class="table-light">
         <tr>
-          <th>Участник</th>
-          <th>Статус</th>
-          <th>Балл</th>
-          <th>Завершено</th>
-          <th>Комментарий</th>
+          <th style="width:40px">#</th>
+          <th>Сотрудник</th>
+          <th>Отдел</th>
+          <th>Сделка</th>
+          <th>Дата звонка</th>
+          <th>Итог источника</th>
+          <th>Оценщик</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for p in sess.participants %}
+        {% for se in sess.session_evals %}
+        {% set ev = se.source_evaluation %}
         <tr>
-          <td class="align-middle fw-semibold">
-            {{ (p.user.full_name or p.user.username) if p.user else '?' }}
+          <td class="text-muted">{{ loop.index }}</td>
+          <td class="fw-semibold">{{ ev.operator_name if ev else '—' }}</td>
+          <td class="small text-muted">{{ ev.department if ev and ev.department else '—' }}</td>
+          <td>
+            {% if ev and ev.deal_id %}<a href="{{ ev.deal_url }}" target="_blank">#{{ ev.deal_id }}</a>
+            {% else %}<a href="/evaluations/{{ ev.id }}" target="_blank">оценка #{{ ev.id }}</a>{% endif %}
           </td>
-          <td class="align-middle">
-            {% if p.status == 'completed' %}
-              <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Завершено</span>
-            {% else %}
-              <span class="badge bg-warning-subtle text-warning"><i class="bi bi-hourglass me-1"></i>Ожидает оценки</span>
-            {% endif %}
-          </td>
-          <td class="align-middle">
-            {% if p.total_score is not none %}
-              <span class="badge bg-{{ score_color(p.total_score) }}-subtle text-{{ score_color(p.total_score) }}">
-                {{ "%.1f"|format(p.total_score) }}%
-              </span>
+          <td class="small">{{ ev.eval_date.strftime('%d.%m.%Y') if ev and ev.eval_date else '—' }}</td>
+          <td>
+            {% if ev and ev.total_score is not none %}
+            <span class="badge bg-{{ score_color(ev.total_score) }}-subtle text-{{ score_color(ev.total_score) }}">
+              {{ "%.1f"|format(ev.total_score) }}%</span>
             {% else %}—{% endif %}
           </td>
-          <td class="align-middle small text-muted">
-            {{ p.completed_at.strftime('%d.%m.%Y %H:%M') if p.completed_at else '—' }}
-          </td>
-          <td class="align-middle small text-muted">
-            {{ p.general_comment or '—' }}
-          </td>
-          <td class="text-end align-middle">
-            {% if sess.status == 'open' or p.status == 'pending' %}
-            <a href="/calibration/{{ sess.id }}/evaluate/{{ p.id }}"
-               class="btn btn-sm {% if p.status == 'completed' %}btn-outline-secondary{% else %}btn-outline-primary{% endif %}">
-              {% if p.status == 'completed' %}
-                <i class="bi bi-pencil me-1"></i>Переоценить
-              {% else %}
-                <i class="bi bi-clipboard-plus me-1"></i>Оценить
-              {% endif %}
-            </a>
-            {% endif %}
-            {% if sess.status == 'open' %}
-            <form action="/calibration/{{ sess.id }}/remove-participant/{{ p.id }}" method="post" class="d-inline ms-1">
+          <td class="small text-muted">{{ (ev.evaluator.full_name or ev.evaluator.username) if ev and ev.evaluator else '—' }}</td>
+          <td class="text-end">
+            {% if sess.status == 'open' and sess.session_evals|length > 1 %}
+            <form action="/calibration/{{ sess.id }}/remove-deal/{{ se.id }}" method="post" class="d-inline">
               <button type="submit" class="btn btn-sm btn-outline-danger"
-                      onclick="return confirm('Удалить участника?')">
+                      onclick="return confirm('Удалить сделку из сессии? Ответы участников по ней будут удалены.')">
                 <i class="bi bi-x"></i>
               </button>
             </form>
             {% endif %}
           </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if sess.status == 'open' %}
+  <div class="card-footer bg-white">
+    {% if available_evals %}
+    <form action="/calibration/{{ sess.id }}/add-deal" method="post" class="d-flex gap-2 align-items-center">
+      <select name="evaluation_id" class="form-select form-select-sm" style="max-width:420px" required>
+        <option value="">+ Добавить сделку (того же чек-листа)</option>
+        {% for ev in available_evals %}
+        <option value="{{ ev.id }}">
+          #{{ ev.id }} · {{ ev.operator_name }}{% if ev.eval_date %} · {{ ev.eval_date.strftime('%d.%m.%Y') }}{% endif %}{% if ev.deal_id %} · сделка #{{ ev.deal_id }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-outline-dark"><i class="bi bi-plus-lg me-1"></i>Добавить</button>
+    </form>
+    {% else %}
+    <span class="text-muted small">Нет других оценок этого чек-листа, отмеченных для калибровки.</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Matrix: deals × participants -->
+<div class="card shadow-sm mb-3">
+  <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small"><i class="bi bi-grid-3x3 me-2"></i>Прогресс: сделки × участники</span>
+    {% set done_count = sess.participants | selectattr("status", "eq", "completed") | list | length %}
+    <span class="text-muted small">{{ done_count }} / {{ sess.participants|length }} участников завершили всё</span>
+  </div>
+
+  {% if sess.participants %}
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 align-middle text-center">
+      <thead class="table-light">
+        <tr>
+          <th class="text-start" style="min-width:160px">Сделка \ Участник</th>
+          {% for p in sess.participants %}
+          <th style="min-width:130px">
+            {{ (p.user.full_name or p.user.username) if p.user else '?' }}
+            <div class="fw-normal text-muted small">
+              {{ participant_progress[p.id].done }}/{{ participant_progress[p.id].total }}
+            </div>
+            {% if sess.status == 'open' %}
+            <form action="/calibration/{{ sess.id }}/remove-participant/{{ p.id }}" method="post" class="d-inline">
+              <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                      onclick="return confirm('Удалить участника? Его ответы будут удалены.')"
+                      title="Удалить участника"><i class="bi bi-x-circle"></i></button>
+            </form>
+            {% endif %}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for se in sess.session_evals %}
+        {% set ev = se.source_evaluation %}
+        <tr>
+          <td class="text-start small">
+            <span class="text-muted">{{ loop.index }}.</span>
+            {{ ev.operator_name if ev else '—' }}
+            {% if ev and ev.deal_id %}<span class="text-muted">· #{{ ev.deal_id }}</span>{% endif %}
+          </td>
+          {% for p in sess.participants %}
+          {% set pe = pe_map.get((p.id, se.id)) %}
+          <td>
+            {% if pe and pe.status == 'completed' %}
+              <a href="/calibration/{{ sess.id }}/evaluate/{{ p.id }}/{{ se.id }}"
+                 class="text-decoration-none" title="Переоценить">
+                <span class="badge bg-{{ score_color(pe.total_score) }}-subtle text-{{ score_color(pe.total_score) }}">
+                  {{ "%.1f"|format(pe.total_score) }}%</span>
+              </a>
+            {% elif sess.status == 'open' %}
+              <a href="/calibration/{{ sess.id }}/evaluate/{{ p.id }}/{{ se.id }}"
+                 class="btn btn-sm btn-outline-primary py-0 px-2">
+                <i class="bi bi-clipboard-plus"></i> оценить
+              </a>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          {% endfor %}
         </tr>
         {% endfor %}
       </tbody>

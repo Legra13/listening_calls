@@ -114,4 +114,53 @@ def _run_migrations():
         if "presentation_date" not in dc_cols:
             conn.execute(text("ALTER TABLE deal_cache ADD COLUMN presentation_date DATETIME"))
 
+        # Калибровка по нескольким сделкам: новые колонки + бэкфилл существующих сессий.
+        # Таблицы calibration_session_evals / calibration_participant_evals создаёт create_tables().
+        cs_cols = _cols("calibration_sessions")
+        if "checklist_id" not in cs_cols:
+            conn.execute(text("ALTER TABLE calibration_sessions ADD COLUMN checklist_id INTEGER"))
+        cai_cols = _cols("calibration_answer_items")
+        if "session_eval_id" not in cai_cols:
+            conn.execute(text("ALTER TABLE calibration_answer_items ADD COLUMN session_eval_id INTEGER"))
+        cir_cols = _cols("calibration_item_resolutions")
+        if "session_eval_id" not in cir_cols:
+            conn.execute(text("ALTER TABLE calibration_item_resolutions ADD COLUMN session_eval_id INTEGER"))
+
         conn.commit()
+
+        # Бэкфилл: одна сделка на сессию → одна запись в calibration_session_evals.
+        # Идемпотентно: выполняется только если session_evals ещё пуст.
+        se_count = conn.execute(text("SELECT COUNT(*) FROM calibration_session_evals")).scalar()
+        if se_count == 0:
+            conn.execute(text(
+                "INSERT INTO calibration_session_evals (session_id, source_evaluation_id, order_index) "
+                "SELECT id, source_evaluation_id, 0 FROM calibration_sessions"
+            ))
+            conn.execute(text(
+                "UPDATE calibration_sessions SET checklist_id = "
+                "(SELECT e.checklist_id FROM evaluations e WHERE e.id = calibration_sessions.source_evaluation_id) "
+                "WHERE checklist_id IS NULL"
+            ))
+            # Ответы участников → session_eval своей сессии (у каждой сессии ровно одна сделка)
+            conn.execute(text(
+                "UPDATE calibration_answer_items SET session_eval_id = ("
+                "  SELECT se.id FROM calibration_session_evals se "
+                "  JOIN calibration_participants p ON p.session_id = se.session_id "
+                "  WHERE p.id = calibration_answer_items.participant_id) "
+                "WHERE session_eval_id IS NULL"
+            ))
+            conn.execute(text(
+                "UPDATE calibration_item_resolutions SET session_eval_id = ("
+                "  SELECT se.id FROM calibration_session_evals se "
+                "  WHERE se.session_id = calibration_item_resolutions.session_id) "
+                "WHERE session_eval_id IS NULL"
+            ))
+            # Прогресс участников → participant_evals
+            conn.execute(text(
+                "INSERT INTO calibration_participant_evals "
+                "(participant_id, session_eval_id, total_score, general_comment, status, completed_at) "
+                "SELECT p.id, se.id, p.total_score, p.general_comment, p.status, p.completed_at "
+                "FROM calibration_participants p "
+                "JOIN calibration_session_evals se ON se.session_id = p.session_id"
+            ))
+            conn.commit()
