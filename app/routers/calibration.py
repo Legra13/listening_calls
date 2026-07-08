@@ -110,6 +110,43 @@ def _answers_by_eval(participant: CalibrationParticipant) -> dict[int | None, li
     return grouped
 
 
+def _session_match_pcts(sess: CalibrationSession):
+    """% совпадения участников с исходными оценками по сессии.
+
+    Требует полностью загруженную сессию (checklist.blocks.criteria,
+    session_evals.source_evaluation.items, participants.answers).
+    Возвращает:
+      pe_match:   {(participant_id, session_eval_id): pct|None} — по каждой сделке
+      part_match: {participant_id: pct|None} — общий по участнику (все его сделки)
+      session_avg: float|None — средний % по участникам (итог сессии)
+    """
+    checklist = sess.checklist
+    pe_match: dict = {}
+    part_match: dict = {}
+    if not checklist:
+        return pe_match, part_match, None
+    se_source = {se.id: se.source_evaluation for se in sess.session_evals}
+    per_part_pcts = []
+    for p in sess.participants:
+        answers_by_eval = _answers_by_eval(p)
+        p_compared = p_matched = 0
+        for se in sess.session_evals:
+            ans = answers_by_eval.get(se.id, [])
+            src = se_source.get(se.id)
+            if not ans or not src:
+                continue
+            c, m = _match_counts(src, ans, checklist)
+            pe_match[(p.id, se.id)] = round(m / c * 100, 1) if c > 0 else None
+            p_compared += c
+            p_matched += m
+        pct = round(p_matched / p_compared * 100, 1) if p_compared > 0 else None
+        part_match[p.id] = pct
+        if pct is not None:
+            per_part_pcts.append(pct)
+    session_avg = round(sum(per_part_pcts) / len(per_part_pcts), 1) if per_part_pcts else None
+    return pe_match, part_match, session_avg
+
+
 def _participant_own_evals(
     db: Session, participant: CalibrationParticipant,
     source_eval: Evaluation, checklist_id: int | None,
@@ -182,9 +219,12 @@ def calibration_index(
         db.query(CalibrationSession)
         .options(
             joinedload(CalibrationSession.created_by),
-            joinedload(CalibrationSession.checklist),
-            joinedload(CalibrationSession.session_evals),
+            joinedload(CalibrationSession.checklist)
+                .joinedload(Checklist.blocks).joinedload(Block.criteria),
+            joinedload(CalibrationSession.session_evals)
+                .joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.items),
             joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
+            joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.answers),
         )
         .order_by(CalibrationSession.id.desc())
         .all()
@@ -195,12 +235,19 @@ def calibration_index(
         for se in s.session_evals:
             sessions_by_eval.setdefault(se.source_evaluation_id, []).append(s)
 
+    # Сводный % совпадения по каждой сессии (среднее по участникам)
+    session_match: dict[int, float | None] = {}
+    for s in sessions:
+        _, _, avg = _session_match_pcts(s)
+        session_match[s.id] = avg
+
     return templates.TemplateResponse("calibration/index.html", {
         "request": request,
         "current_user": current_user,
         "marked_evals": marked_evals,
         "sessions_by_eval": sessions_by_eval,
         "all_sessions": sessions,
+        "session_match": session_match,
         "score_color": score_color,
         "flash": pop_flash(request),
     })
@@ -379,6 +426,9 @@ def calibration_view(
         pe.status == "completed" for p in sess.participants for pe in p.participant_evals
     )
 
+    # % совпадения с исходными оценками: по сделке и общий по участнику
+    pe_match, part_match, session_avg = _session_match_pcts(sess)
+
     return templates.TemplateResponse("calibration/view.html", {
         "request": request,
         "current_user": current_user,
@@ -389,6 +439,9 @@ def calibration_view(
         "pe_map": pe_map,
         "participant_progress": participant_progress,
         "any_completed": any_completed,
+        "pe_match": pe_match,
+        "part_match": part_match,
+        "session_avg": session_avg,
         "score_color": score_color,
         "flash": pop_flash(request),
     })

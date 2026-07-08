@@ -100,6 +100,7 @@
         <th>Дата</th>
         <th>Сделки</th>
         <th>Участники</th>
+        <th>Совпадение</th>
         <th>Статус</th>
         <th></th>
       </tr>
@@ -117,10 +118,27 @@
           {{ s.session_date.strftime('%d.%m.%Y') if s.session_date else '—' }}
         </td>
         <td class="align-middle small text-muted">{{ s.session_evals | length }}</td>
-        <td class="align-middle small">
-          <span class="{% if done == total and total > 0 %}text-success{% elif done > 0 %}text-warning{% else %}text-muted{% endif %}">
-            {{ done }}/{{ total }} оценили
-          </span>
+        <td class="align-middle small" style="max-width:260px">
+          {% if s.participants %}
+            {% for p in s.participants %}
+            <span class="badge bg-light text-dark border me-1 mb-1 fw-normal">
+              {{ (p.user.full_name or p.user.username) if p.user else '?' }}
+            </span>
+            {% endfor %}
+            <span class="{% if done == total and total > 0 %}text-success{% elif done > 0 %}text-warning{% else %}text-muted{% endif %} d-block mt-1" style="font-size:0.72rem">
+              {{ done }}/{{ total }} оценили
+            </span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td class="align-middle">
+          {% set smatch = session_match.get(s.id) %}
+          {% if smatch is not none %}
+            <span class="badge bg-{{ score_color(smatch) }}-subtle text-{{ score_color(smatch) }}">{{ smatch }}%</span>
+          {% else %}
+            <span class="text-muted small">—</span>
+          {% endif %}
         </td>
         <td class="align-middle">
           {% if s.status == 'closed' %}
