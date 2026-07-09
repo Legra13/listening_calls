@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from app.database import get_db
 from app.models import (
     Block, Checklist, Criterion, Evaluation, User,
@@ -178,18 +178,18 @@ def _load_session(db: Session, session_id: int) -> CalibrationSession | None:
         db.query(CalibrationSession)
         .options(
             joinedload(CalibrationSession.checklist)
-                .joinedload(Checklist.blocks).joinedload(Block.criteria),
-            joinedload(CalibrationSession.session_evals).options(
-                joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.items),
+                .selectinload(Checklist.blocks).selectinload(Block.criteria),
+            selectinload(CalibrationSession.session_evals).options(
+                joinedload(CalibrationSessionEval.source_evaluation).selectinload(Evaluation.items),
                 joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.evaluator),
             ),
             joinedload(CalibrationSession.created_by),
-            joinedload(CalibrationSession.participants).options(
+            selectinload(CalibrationSession.participants).options(
                 joinedload(CalibrationParticipant.user),
-                joinedload(CalibrationParticipant.answers),
-                joinedload(CalibrationParticipant.participant_evals),
+                selectinload(CalibrationParticipant.answers),
+                selectinload(CalibrationParticipant.participant_evals),
             ),
-            joinedload(CalibrationSession.resolutions),
+            selectinload(CalibrationSession.resolutions),
         )
         .filter(CalibrationSession.id == session_id)
         .first()
@@ -220,11 +220,11 @@ def calibration_index(
         .options(
             joinedload(CalibrationSession.created_by),
             joinedload(CalibrationSession.checklist)
-                .joinedload(Checklist.blocks).joinedload(Block.criteria),
-            joinedload(CalibrationSession.session_evals)
-                .joinedload(CalibrationSessionEval.source_evaluation).joinedload(Evaluation.items),
-            joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
-            joinedload(CalibrationSession.participants).joinedload(CalibrationParticipant.answers),
+                .selectinload(Checklist.blocks).selectinload(Block.criteria),
+            selectinload(CalibrationSession.session_evals)
+                .joinedload(CalibrationSessionEval.source_evaluation).selectinload(Evaluation.items),
+            selectinload(CalibrationSession.participants).joinedload(CalibrationParticipant.user),
+            selectinload(CalibrationSession.participants).selectinload(CalibrationParticipant.answers),
         )
         .order_by(CalibrationSession.id.desc())
         .all()

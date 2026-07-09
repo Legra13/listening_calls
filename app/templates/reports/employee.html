@@ -3,9 +3,11 @@
 
 {% block styles %}
 <style>
-  .crit-yes  { background: #dcfce7; color: #166534; }
-  .crit-no   { background: #fee2e2; color: #991b1b; }
-  .crit-na   { background: #f1f5f9; color: #94a3b8; }
+  /* !important — иначе Bootstrap .table задаёт cell background через var(--bs-table-bg)
+     с большей специфичностью и подсветка выбранного значения не видна */
+  .crit-yes  { background: #dcfce7 !important; color: #166534 !important; }
+  .crit-no   { background: #fee2e2 !important; color: #991b1b !important; }
+  .crit-na   { background: #f1f5f9 !important; color: #94a3b8 !important; }
   .hm-th-group { background: #f8fafc; font-size: 0.72rem; text-align: center; border-bottom: 1px solid #dee2e6; }
   .sticky-col { position: sticky; left: 0; background: #fff; z-index: 2; }
   .sticky-col-light { position: sticky; left: 0; background: #f8f9fa; z-index: 2; }

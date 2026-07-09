@@ -109,6 +109,11 @@
 
 Логика расчётов описана в `logic_summary.md`.
 
+**Фикс подсветки в разрезе «детально по критериям» (09.07.2026):**
+- Симптом: в отчёте «Результаты сотрудников» в разрезе критериев выбранное значение (Да/Нет/Н-П) не подсвечивалось на странице.
+- Причина: ячейки использовали CSS-классы `.crit-yes/.crit-no/.crit-na` (специфичность 0,1,0), а Bootstrap `.table > :not(caption) > * > *` (0,1,1) задаёт `background-color: var(--bs-table-bg)` и перебивал их. Режим «группы» работал, т.к. использует inline `style=heat_style(...)` (всегда выигрывает).
+- Фикс: `!important` на `background`/`color` у `.crit-*` в `app/templates/reports/employee.html`. XLSX-выгрузка красила корректно и раньше (`_FILL_YES/_NO/_NA`).
+
 ### Авторизация через Битрикс24 (OAuth2)
 - Реализован OAuth2-вход через `https://entera.bitrix24.ru/oauth/authorize/`
 - Маршруты: `GET /auth/bitrix24` (старт), `GET /auth/bitrix24/callback` (обработка кода)
@@ -243,6 +248,12 @@
 - `calibration_index`: подгрузка расширена до полного графа (`checklist.blocks.criteria`, `session_evals.source_evaluation.items`, `participants.answers`), в шаблон идёт `session_match {session_id: avg}`. `index.html` — колонка «Совпадение» + бейджи участников.
 - `calibration_view`: передаёт `pe_match`, `part_match`, `session_avg`. `view.html` — в матрице «сделки × участники» ячейка показывает % совпадения (крупно, цвет по `score_color`) и балл (мелко); в шапке участника — его общий %.
 - Проверено e2e (08.07.2026): `/calibration` и `/calibration/5` отдают 200; значения из рендера совпали с прямым вызовом `_session_match_pcts` — сессия 5 (мультисделочная): per-deal 47.1%/3.3%, участник 26.6%, средний 26.6%; сессии 3/4: 84.8%/73.3%.
+
+**Производительность: 504 при открытии `/calibration` и медленное сохранение (09.07.2026):**
+- Симптомы: список калибровок отдавал 504; результат калибровки долго сохранялся.
+- Причина: `_load_session()` и `calibration_index()` грузили сессию через `joinedload` сразу по трём независимым коллекциям (`checklist→blocks→criteria`, `session_evals→source_evaluation→items`, `participants→answers`) — SQLAlchemy склеивал их в один SQL-join → **декартово произведение** строк. Замер на 5 сессиях: `joinedload` 20.4 с против `selectinload` 0.037 с (×550). Сохранение медленное по той же причине: POST `evaluate` вызывает `_load_session`, затем редиректит на страницу сессии/сравнения.
+- Фикс: коллекции грузятся через `selectinload` (отдельные `SELECT … IN`), many-to-one (`created_by`, `user`, `evaluator`, `source_evaluation`, `checklist`) — по-прежнему `joinedload`. Изменены `_load_session()` и `calibration_index()` в `calibration.py`; добавлен импорт `selectinload`.
+- Проверено: `/calibration`, `/calibration/{id}`, `/compare` — 0.02–0.09 с, статус 200.
 
 ### Что вне MVP
 - Импорт исторических данных из Excel — отложено
