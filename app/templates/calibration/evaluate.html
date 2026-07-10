@@ -29,11 +29,17 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
 
 .block-header {
   position: sticky; top: 62px; z-index: 40;
-  background: #f8f9fa; border-radius: 6px;
-  padding: 7px 12px; margin-bottom: 6px;
-  border: 1px solid #e9ecef;
+  background: #212529; color: #fff; border-radius: 6px;
+  padding: 9px 14px; margin-bottom: 8px;
+  border: 1px solid #212529; border-left: 5px solid #0d6efd;
+  box-shadow: 0 2px 4px rgba(0,0,0,.12);
   display: flex; justify-content: space-between; align-items: center;
 }
+.block-header .block-title {
+  font-size: 0.95rem; font-weight: 700; letter-spacing: .2px;
+  text-transform: uppercase;
+}
+.block-header .badge { background: rgba(255,255,255,.18) !important; color: #fff !important; }
 </style>
 {% endblock %}
 
@@ -138,8 +144,8 @@ label:has(input.score-na:checked)  .score-btn-na { background: #6c757d; color: #
   {% if block.criteria %}
   <div class="mb-3">
     <div class="block-header">
-      <span class="fw-semibold small">{{ block.display_name or block.name }}</span>
-      {% if block.weight %}<span class="badge bg-secondary-subtle text-secondary">вес: {{ block.weight }}</span>{% endif %}
+      <span class="block-title">{{ block.display_name or block.name }}</span>
+      {% if block.weight %}<span class="badge">вес: {{ block.weight }}</span>{% endif %}
     </div>
 
     {% for crit in block.criteria %}
