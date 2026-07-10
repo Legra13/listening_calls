@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import SECRET_KEY
 from app.database import create_tables
 from app.deps import NotAuthenticatedException
-from app.routers import api, auth, users, checklists, evaluations, reports, export, calibration
+from app.routers import api, auth, users, checklists, evaluations, reports, export, calibration, help
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ app.include_router(evaluations.router)
 app.include_router(reports.router)
 app.include_router(export.router)
 app.include_router(calibration.router)
+app.include_router(help.router)
 
 
 @app.exception_handler(NotAuthenticatedException)

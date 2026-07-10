@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Инструкция — CallReview{% endblock %}
+
+{% block styles %}
+<style>
+.help-toc {
+  position: sticky; top: 76px;
+  border: 1px solid #e9ecef; border-radius: 10px;
+  padding: 14px 16px; background: #fff;
+}
+.help-toc a {
+  display: block; padding: 4px 0; color: #495057; text-decoration: none;
+  font-size: 0.9rem; border-left: 2px solid transparent; padding-left: 10px;
+}
+.help-toc a:hover { color: #0d6efd; border-left-color: #0d6efd; }
+.help-section { scroll-margin-top: 76px; }
+.help-section h4 {
+  border-bottom: 2px solid #0d6efd; padding-bottom: 8px; margin-bottom: 16px;
+  display: inline-block;
+}
+.help-card { border: 1px solid #e9ecef; border-radius: 10px; }
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; background: #0d6efd; color: #fff;
+  font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+}
+.pill {
+  display: inline-block; padding: 1px 9px; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 600;
+}
+.pill-yes { background: rgba(25,135,84,.12); color: #146c43; }
+.pill-no  { background: rgba(220,53,69,.12); color: #b02a37; }
+.pill-na  { background: rgba(108,117,125,.14); color: #6c757d; }
+.help-hero {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+  color: #fff; border-radius: 14px; padding: 26px 30px;
+}
+kbd.route {
+  background: #f1f3f5; border: 1px solid #dee2e6; border-radius: 5px;
+  padding: 1px 7px; font-family: monospace; color: #495057; font-size: 0.85rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="help-hero mb-4">
+  <h3 class="mb-1"><i class="bi bi-question-circle me-2"></i>Как работать с CallReview</h3>
+  <p class="mb-0 opacity-75">
+    Внутренний инструмент оценки звонков: чек-листы, оценки, аналитика и калибровка.
+    Ниже — пошаговое руководство по каждому разделу.
+  </p>
+</div>
+
+<div class="row g-4">
+  <!-- Оглавление -->
+  <div class="col-lg-3 d-none d-lg-block">
+    <nav class="help-toc">
+      <div class="fw-semibold small text-muted text-uppercase mb-2">Содержание</div>
+      <a href="#start"><i class="bi bi-play-circle me-1"></i>С чего начать</a>
+      <a href="#checklists"><i class="bi bi-list-check me-1"></i>Чек-листы</a>
+      <a href="#evaluations"><i class="bi bi-clipboard-check me-1"></i>Оценка звонка</a>
+      <a href="#list"><i class="bi bi-funnel me-1"></i>Список оценок и фильтры</a>
+      <a href="#reports"><i class="bi bi-bar-chart-line me-1"></i>Отчёты</a>
+      <a href="#calibration"><i class="bi bi-bullseye me-1"></i>Калибровка</a>
+      <a href="#faq"><i class="bi bi-life-preserver me-1"></i>Частые вопросы</a>
+    </nav>
+  </div>
+
+  <!-- Контент -->
+  <div class="col-lg-9">
+
+    <!-- С чего начать -->
+    <section id="start" class="help-section mb-5">
+      <h4><i class="bi bi-play-circle me-2"></i>С чего начать</h4>
+      <p>Работа в сервисе строится вокруг четырёх разделов в верхнем меню:</p>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="help-card p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-list-check text-primary me-1"></i>Чек-листы</div>
+            <div class="small text-muted">Шаблоны оценки: блоки и критерии с весами. Создаются один раз, потом по ним оцениваются звонки.</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="help-card p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-clipboard-check text-primary me-1"></i>Оценки</div>
+            <div class="small text-muted">Заполнение чек-листа по конкретному звонку/сделке. Основная ежедневная работа.</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="help-card p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-bar-chart-line text-primary me-1"></i>Отчёты</div>
+            <div class="small text-muted">Аналитика по сотрудникам, блокам, связь оценок с результатом сделки.</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="help-card p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-bullseye text-primary me-1"></i>Калибровка</div>
+            <div class="small text-muted">Сверка понимания чек-листа: несколько человек оценивают одну сделку и сравнивают ответы.</div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-light border mt-3 mb-0 small">
+        <i class="bi bi-info-circle text-primary me-1"></i>
+        Типичный порядок: <strong>создать чек-лист → оценивать по нему звонки → смотреть отчёты → калибровать спорные оценки</strong>.
+      </div>
+    </section>
+
+    <!-- Чек-листы -->
+    <section id="checklists" class="help-section mb-5">
+      <h4><i class="bi bi-list-check me-2"></i>Чек-листы</h4>
+      <p>Чек-лист — это шаблон оценки. Структура: <strong>Чек-лист → Блоки → Критерии</strong>.
+         У каждого блока и критерия есть вес, из которого складывается итоговый балл.</p>
+
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">1</div>
+        <div><strong>Создание.</strong> Раздел <kbd class="route">Чек-листы</kbd> → «Создать чек-лист». Задайте название и способ расчёта итога:
+          <span class="pill pill-na">взвешенный</span> (критерии с бо́льшим весом влияют сильнее) или
+          <span class="pill pill-na">среднее</span>.
+        </div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">2</div>
+        <div><strong>Блоки и критерии.</strong> На странице редактирования добавляйте блоки (например «ЛПР-ность», «Боль и детализация»), внутри — критерии. У критерия можно указать вес и описание-подсказку.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">3</div>
+        <div><strong>Настройки.</strong> На вкладке настроек можно привязать чек-лист к отделам и посмотреть, кто и когда его создавал/менял.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">4</div>
+        <div><strong>Публикация / архив.</strong> Готовый чек-лист публикуется и становится доступен в форме оценки. Неактуальные — отправляйте в архив (обычно одновременно активны 2–3 чек-листа).</div>
+      </div>
+      <div class="alert alert-light border mb-0 small">
+        <i class="bi bi-people text-primary me-1"></i>
+        Создавать и редактировать чек-листы может любой пользователь — разграничения ролей нет.
+      </div>
+    </section>
+
+    <!-- Оценка -->
+    <section id="evaluations" class="help-section mb-5">
+      <h4><i class="bi bi-clipboard-check me-2"></i>Оценка звонка</h4>
+      <p>Раздел <kbd class="route">Оценки</kbd> → «Новая оценка».</p>
+
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">1</div>
+        <div><strong>Найдите сделку в Битрикс24.</strong> Поиск по <strong>ID сделки</strong> или <strong>имени оператора</strong>. После выбора автоматически подтянутся: сотрудник, отдел, дата звонка, ссылка на сделку, категория клиента и результат сделки.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">2</div>
+        <div><strong>Выберите чек-лист</strong>, по которому оцениваете.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">3</div>
+        <div><strong>Проставьте ответы</strong> по каждому критерию:
+          <span class="pill pill-yes">Да</span>
+          <span class="pill pill-no">Нет</span>
+          <span class="pill pill-na">Н/П</span> (не применимо — не влияет на балл).
+          К любому критерию можно добавить комментарий (в т.ч. с флагом и таймкодом момента в звонке).
+        </div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">4</div>
+        <div><strong>Сохраните.</strong> Две кнопки:
+          <span class="pill pill-yes">Опубликовать</span> — оценка попадёт в аналитику;
+          <span class="pill pill-na">Сохранить черновик</span> — оценка сохранится, но <strong>не</strong> будет учитываться в отчётах, пока вы её не опубликуете.
+        </div>
+      </div>
+
+      <div class="alert alert-light border small">
+        <div class="mb-2"><i class="bi bi-lightbulb text-warning me-1"></i><strong>Полезно знать</strong></div>
+        <ul class="mb-0 ps-3">
+          <li><strong>Дата звонка</strong> подставляется из Битрикс (дата презентации, а при её отсутствии — дата создания сделки) и остаётся редактируемой.</li>
+          <li><strong>Дата оценки</strong> проставляется автоматически при сохранении.</li>
+          <li><strong>Телефон</strong> — необязательное поле. Нужно, если по одной сделке было несколько звонков: телефон различает их.</li>
+          <li>Нельзя дважды опубликовать оценку одной и той же сделки по одному чек-листу — повтор сохранится как черновик с предупреждением.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Список оценок -->
+    <section id="list" class="help-section mb-5">
+      <h4><i class="bi bi-funnel me-2"></i>Список оценок и фильтры</h4>
+      <p>В разделе <kbd class="route">Оценки</kbd> — все оценки с фильтрами и сортировкой.</p>
+      <ul>
+        <li><strong>Фильтры:</strong> сотрудник, отдел, чек-лист, оценщик, сделка, результат сделки, статус (опубликовано / черновик), период, отметка «на калибровке».</li>
+        <li><strong>Сортировка</strong> — по клику на заголовок колонки (номер, сотрудник, отдел, дата, итог, результат); фильтры при этом сохраняются.</li>
+        <li><strong>Результат сделки</strong> (Won / Lost / в работе) подтягивается из Битрикс автоматически — вручную вводить не нужно.</li>
+        <li>Оценку можно открыть, отредактировать, удалить, экспортировать в XLSX или отметить для калибровки.</li>
+      </ul>
+    </section>
+
+    <!-- Отчёты -->
+    <section id="reports" class="help-section mb-5">
+      <h4><i class="bi bi-bar-chart-line me-2"></i>Отчёты</h4>
+      <p>Два отчёта, переключаются в шапке раздела <kbd class="route">Отчёты</kbd>. В аналитику попадают только <strong>опубликованные</strong> оценки.</p>
+
+      <div class="help-card p-3 mb-3">
+        <div class="fw-semibold mb-2">1. Общие показатели <span class="text-muted small">(/reports)</span></div>
+        <ul class="small mb-0">
+          <li><strong>Тепловая карта</strong> — средние баллы сотрудников по блокам.</li>
+          <li><strong>Корреляция</strong> — связь баллов блоков с результатом сделки.</li>
+          <li><strong>По сотрудникам</strong> — Won / Lost / Win Rate по уровням выполнения.</li>
+          <li>Внизу: категория клиента vs оценка, оценка vs исход сделки, оценка vs скорость закрытия.</li>
+        </ul>
+      </div>
+
+      <div class="help-card p-3 mb-3">
+        <div class="fw-semibold mb-2">2. Результаты сотрудников <span class="text-muted small">(/reports/employee)</span></div>
+        <ul class="small mb-0">
+          <li>Расширенные фильтры: период звонка/оценки, отделы, сотрудники, чек-лист, кто оценивал, стадия сделки.</li>
+          <li>Настройки вида: проценты или баллы; разрез по группам или детально по критериям; показывать комментарии.</li>
+          <li>Сводная тепловая карта по сотрудникам + строка «Команда» и детализация по каждой оценке со ссылкой на сделку.</li>
+        </ul>
+      </div>
+      <div class="alert alert-light border mb-0 small">
+        <i class="bi bi-download text-primary me-1"></i>Отчёты выгружаются в XLSX с сохранением цветовой подсветки.
+      </div>
+    </section>
+
+    <!-- Калибровка -->
+    <section id="calibration" class="help-section mb-5">
+      <h4><i class="bi bi-bullseye me-2"></i>Калибровка</h4>
+      <p>Калибровка нужна, чтобы сверить, одинаково ли разные люди понимают чек-лист.
+         Несколько участников независимо оценивают одну и ту же сделку, затем ответы сравниваются с исходной оценкой.</p>
+
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">1</div>
+        <div><strong>Отметьте оценку для калибровки.</strong> На странице оценки — кнопка «Отметить для калибровки». Такие оценки помечаются красной точкой в списке.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">2</div>
+        <div><strong>Создайте сессию.</strong> Раздел <kbd class="route">Калибровка</kbd> → «Новая сессия»: название, дата, одна или несколько сделок (все по одному чек-листу) и участники.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">3</div>
+        <div><strong>Участники оценивают независимо.</strong> Каждый заполняет форму по сделке, <em>не видя</em> исходных ответов.
+          Если у участника уже есть своя опубликованная оценка этой сделки — её можно подставить в форму одной кнопкой (и проверить перед сохранением).</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">4</div>
+        <div><strong>Сравните.</strong> На странице сессии — матрица «сделки × участники» с <strong>% совпадения</strong> (цветная заливка: зелёный / жёлтый / красный). Кнопка «Сравнить оценки» открывает детальный разбор по критериям.</div>
+      </div>
+      <div class="d-flex gap-3 mb-3">
+        <div class="step-num">5</div>
+        <div><strong>Разберите расхождения.</strong> По каждому несовпадению можно зафиксировать итоговый правильный ответ и пояснение. Когда закончили — закройте сессию.</div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="help-section mb-4">
+      <h4><i class="bi bi-life-preserver me-2"></i>Частые вопросы</h4>
+      <div class="accordion" id="faqAcc">
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+              Оценка не появилась в отчётах — почему?
+            </button>
+          </h2>
+          <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAcc">
+            <div class="accordion-body small">Скорее всего, оценка сохранена как <strong>черновик</strong>. В аналитику попадают только опубликованные оценки. Откройте оценку и нажмите «Опубликовать».</div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+              Не даёт опубликовать оценку — сохраняется черновиком
+            </button>
+          </h2>
+          <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAcc">
+            <div class="accordion-body small">По этой сделке и чек-листу уже есть опубликованная оценка. Чтобы оценить второй звонок по той же сделке — заполните поле <strong>Телефон</strong>, оно различает звонки.</div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+              В чём разница между «Да / Нет / Н/П»?
+            </button>
+          </h2>
+          <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAcc">
+            <div class="accordion-body small">
+              <span class="pill pill-yes">Да</span> — критерий выполнен, <span class="pill pill-no">Нет</span> — не выполнен (снижает балл),
+              <span class="pill pill-na">Н/П</span> — критерий неприменим к этому звонку и <strong>не учитывается</strong> в расчёте.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+              Зачем нужна калибровка?
+            </button>
+          </h2>
+          <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAcc">
+            <div class="accordion-body small">Чтобы оценки были объективными: если два оценщика по одному звонку ставят разные ответы, значит критерий понимается по-разному. Калибровка выявляет такие расхождения и помогает договориться о едином понимании.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="text-center text-muted small pb-4">
+      Остались вопросы по инструменту — обратитесь к руководителю ОПП.
+    </div>
+
+  </div>
+</div>
+{% endblock %}
