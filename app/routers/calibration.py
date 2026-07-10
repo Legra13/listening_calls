@@ -32,6 +32,10 @@ def _comment_text(raw: str | None) -> str | None:
     return raw.strip() or None
 
 
+# Доступно в шаблонах: превращает JSON-комментарий (или plain) в читаемый текст
+templates.env.filters["comment_text"] = _comment_text
+
+
 class _PrefillAnswer:
     """Ответ-заглушка для подстановки в форму калибровки: value + читаемый comment.
 
