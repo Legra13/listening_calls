@@ -255,6 +255,15 @@
 - Фикс: коллекции грузятся через `selectinload` (отдельные `SELECT … IN`), many-to-one (`created_by`, `user`, `evaluator`, `source_evaluation`, `checklist`) — по-прежнему `joinedload`. Изменены `_load_session()` и `calibration_index()` в `calibration.py`; добавлен импорт `selectinload`.
 - Проверено: `/calibration`, `/calibration/{id}`, `/compare` — 0.02–0.09 с, статус 200.
 
+**Фикс сырого JSON в комментариях при подстановке своей оценки (10.07.2026):**
+- Симптом: при подстановке собственной готовой оценки в форму калибровки (`?prefill=`) в поле комментария критерия появлялись «непонятные символы» — сырой JSON вида `[{"text": "...", "flag": "", "time": ""}]`.
+- Причина: `EvaluationItem.comment` хранится как JSON-массив (rich-комментарии с флагом/таймкодом), а поле комментария в форме калибровки — plain text (`CalibrationAnswerItem.comment`). Prefill подставлял `EvaluationItem` напрямую (`.comment` → сырой JSON в `value` инпута).
+- Фикс: класс-заглушка `_PrefillAnswer(value, comment)` в `calibration.py`; при prefill комментарий прогоняется через `_comment_text()` (JSON → читаемый текст). Обычные (не-prefill) ответы калибровки не затронуты — они и так plain text.
+
+**Более очевидная тепловая заливка в матрице сессии (10.07.2026):**
+- В `view.html` матрица «сделки × участники» раньше показывала % совпадения бледным бейджем `-subtle`.
+- Теперь ячейка целиком заливается по `score_color(match%)` (классы `.match-cell-danger/warning/success` в `{% block styles %}`), % показан крупно (`.match-pct`). Красный/жёлтый/зелёный видны сразу.
+
 ### Что вне MVP
 - Импорт исторических данных из Excel — отложено
 - Роли пользователей (admin / reviewer) — отложено

@@ -32,6 +32,20 @@ def _comment_text(raw: str | None) -> str | None:
     return raw.strip() or None
 
 
+class _PrefillAnswer:
+    """Ответ-заглушка для подстановки в форму калибровки: value + читаемый comment.
+
+    EvaluationItem.comment хранится как JSON-массив ([{"text": ...}]), а поле
+    комментария в форме калибровки — plain text. Прогоняем через _comment_text,
+    чтобы в форму не попал сырой JSON.
+    """
+    __slots__ = ("value", "comment")
+
+    def __init__(self, value: str, comment: str | None):
+        self.value = value
+        self.comment = comment
+
+
 def _compute_comparison(source_eval: Evaluation, answers: list, checklist: Checklist):
     """Сравнивает оценку источника и ответы участника (по одной сделке)."""
     source_map = {item.criterion_id: item for item in source_eval.items}
@@ -642,8 +656,11 @@ def calibration_evaluate_form(
         if src:
             # Подставляем ответы (и общий комментарий) из готовой оценки —
             # ничего не сохраняем, пользователь проверит и нажмёт «Сохранить».
-            # EvaluationItem дуально совместим с шаблоном (.value / .comment).
-            answer_map = {it.criterion_id: it for it in src.items}
+            # Комментарии EvaluationItem хранятся как JSON — конвертируем в plain text.
+            answer_map = {
+                it.criterion_id: _PrefillAnswer(it.value, _comment_text(it.comment))
+                for it in src.items
+            }
             if src.general_comment:
                 gen_comment = src.general_comment
             prefilled_from = src

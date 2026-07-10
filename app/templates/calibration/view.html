@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 {% block title %}{{ sess.name }} — Калибровка{% endblock %}
 
+{% block styles %}
+<style>
+/* Тепловая заливка ячеек матрицы «сделки × участники» — по % совпадения */
+.match-cell-danger  { background: rgba(220,53,69,.20) !important; }
+.match-cell-warning { background: rgba(255,193,7,.28) !important; }
+.match-cell-success { background: rgba(25,135,84,.22) !important; }
+.match-cell-danger:hover  { background: rgba(220,53,69,.32) !important; }
+.match-cell-warning:hover { background: rgba(255,193,7,.42) !important; }
+.match-cell-success:hover { background: rgba(25,135,84,.34) !important; }
+/* Крупный процент совпадения внутри ячейки */
+.match-pct {
+  display: inline-block; font-weight: 700; font-size: 1.05rem; line-height: 1.1;
+  padding: 1px 8px; border-radius: 6px;
+}
+.match-pct-danger  { color: #b02a37; }
+.match-pct-warning { color: #997404; }
+.match-pct-success { color: #146c43; }
+</style>
+{% endblock %}
+
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb small">
@@ -187,13 +207,14 @@
           </td>
           {% for p in sess.participants %}
           {% set pe = pe_map.get((p.id, se.id)) %}
-          <td>
+          {% set m = pe_match.get((p.id, se.id)) if pe and pe.status == 'completed' else none %}
+          <td class="{% if m is not none %}match-cell-{{ score_color(m) }}{% endif %}">
             {% if pe and pe.status == 'completed' %}
-              {% set m = pe_match.get((p.id, se.id)) %}
               <a href="/calibration/{{ sess.id }}/evaluate/{{ p.id }}/{{ se.id }}"
                  class="text-decoration-none" title="Переоценить">
                 {% if m is not none %}
-                <span class="badge bg-{{ score_color(m) }}-subtle text-{{ score_color(m) }}">{{ m }}% совпад.</span>
+                <span class="match-pct match-pct-{{ score_color(m) }}">{{ m }}%</span>
+                <div class="text-muted" style="font-size:0.68rem">совпадение</div>
                 {% else %}
                 <span class="badge bg-secondary-subtle text-secondary">—</span>
                 {% endif %}
