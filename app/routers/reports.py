@@ -288,10 +288,12 @@ def reports_plan(
     last_day = monthrange(year, month)[1]
     month_end = datetime(year, month, last_day, 23, 59, 59)
 
+    # План/факт считаем по дате проведения оценки (created_at) — сколько
+    # оценок аналитик сделал за месяц, а не по дате звонка (eval_date).
     q = db.query(Evaluation).filter(
         Evaluation.status == "published",
-        Evaluation.eval_date >= month_start,
-        Evaluation.eval_date <= month_end,
+        Evaluation.created_at >= month_start,
+        Evaluation.created_at <= month_end,
     )
     if cl_id:
         q = q.filter(Evaluation.checklist_id == cl_id)

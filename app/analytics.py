@@ -816,9 +816,15 @@ def compute_plan_fact(
 ) -> dict:
     """План/факт по сотрудникам.
 
+    Основная тепловая карта «Оценки по дням» строится по дате проведения
+    оценки (Evaluation.created_at) — сколько оценок аналитик сделал в каждый
+    день. Ожидается, что evaluations уже отфильтрованы по created_at в пределах
+    (year, month).
+
     pres_dates: {evaluation_id: datetime|None} — дата презентации из карточки
     сделки (DealCache.presentation_date). Используется для второй тепловой
-    карты «дни презентаций». Если не передано — берётся eval_date оценки.
+    карты «Дни презентаций». Если не передано / пусто — берётся eval_date
+    оценки (дата звонка из формы) как запасной вариант.
     """
     pres_dates = pres_dates or {}
     days_in_month = monthrange(year, month)[1]
@@ -833,9 +839,14 @@ def compute_plan_fact(
                 "by_day": _Counter(),
                 "pres_by_day": _Counter(),
             }
-        if ev.eval_date:
-            by_emp[name]["by_day"][ev.eval_date.day] += 1
+        # «Оценки по дням» — по дате проведения оценки (created_at),
+        # т.е. когда аналитик реально сделал оценку.
+        ed = ev.created_at
+        if ed and ed.year == year and ed.month == month:
+            by_emp[name]["by_day"][ed.day] += 1
 
+        # «Дни презентаций» — дата презентации/звонка: presentation_date из
+        # карточки сделки, при отсутствии — eval_date (дата звонка из формы).
         pd = pres_dates.get(ev.id) or ev.eval_date
         if pd:
             if pd.year == year and pd.month == month:
