@@ -810,21 +810,44 @@ from calendar import monthrange
 from collections import Counter as _Counter
 
 
-def compute_plan_fact(evaluations: list, year: int, month: int, target_total: int) -> dict:
+def compute_plan_fact(
+    evaluations: list, year: int, month: int, target_total: int,
+    pres_dates: dict | None = None,
+) -> dict:
+    """План/факт по сотрудникам.
+
+    pres_dates: {evaluation_id: datetime|None} — дата презентации из карточки
+    сделки (DealCache.presentation_date). Используется для второй тепловой
+    карты «дни презентаций». Если не передано — берётся eval_date оценки.
+    """
+    pres_dates = pres_dates or {}
     days_in_month = monthrange(year, month)[1]
     by_emp: dict[str, dict] = {}
+    pres_out_of_month = 0  # презентации, попавшие в другой месяц
 
     for ev in evaluations:
         name = ev.operator_name
         if name not in by_emp:
-            by_emp[name] = {"dept": ev.department, "by_day": _Counter()}
+            by_emp[name] = {
+                "dept": ev.department,
+                "by_day": _Counter(),
+                "pres_by_day": _Counter(),
+            }
         if ev.eval_date:
             by_emp[name]["by_day"][ev.eval_date.day] += 1
+
+        pd = pres_dates.get(ev.id) or ev.eval_date
+        if pd:
+            if pd.year == year and pd.month == month:
+                by_emp[name]["pres_by_day"][pd.day] += 1
+            else:
+                pres_out_of_month += 1
 
     rows = []
     for name in sorted(by_emp.keys()):
         data = by_emp[name]
         cal = [data["by_day"].get(d, 0) for d in range(1, days_in_month + 1)]
+        pres_cal = [data["pres_by_day"].get(d, 0) for d in range(1, days_in_month + 1)]
         fact = sum(cal)
         rows.append({
             "name": name,
@@ -832,14 +855,19 @@ def compute_plan_fact(evaluations: list, year: int, month: int, target_total: in
             "fact": fact,
             "days_count": sum(1 for c in cal if c > 0),
             "calendar": cal,
+            "pres_calendar": pres_cal,
+            "pres_fact": sum(pres_cal),
         })
 
     total_fact = sum(r["fact"] for r in rows)
+    total_pres = sum(r["pres_fact"] for r in rows)
     return {
         "rows": rows,
         "days_in_month": days_in_month,
         "days_labels": list(range(1, days_in_month + 1)),
         "total_fact": total_fact,
+        "total_pres": total_pres,
+        "pres_out_of_month": pres_out_of_month,
         "total_plan": target_total,
         "total_pct": round(total_fact / target_total * 100) if target_total else 0,
     }

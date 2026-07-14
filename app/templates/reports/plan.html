@@ -207,7 +207,7 @@
 
 {# ── Сводка команды ────────────────────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
-  <div class="col-sm-4">
+  <div class="col-sm-6 col-lg-3">
     <div class="card shadow-sm h-100 text-center">
       <div class="card-body py-3">
         <div class="display-6 fw-bold text-primary">{{ report.total_fact }}</div>
@@ -215,7 +215,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-6 col-lg-3">
     <div class="card shadow-sm h-100 text-center">
       <div class="card-body py-3">
         {% if report.total_plan %}
@@ -230,7 +230,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-6 col-lg-3">
     <div class="card shadow-sm h-100 text-center">
       <div class="card-body py-3">
         {% if pace_target is not none %}
@@ -243,6 +243,14 @@
         <div class="display-6 fw-bold text-secondary">—</div>
         <div class="text-muted small">план не задан</div>
         {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card shadow-sm h-100 text-center">
+      <div class="card-body py-3">
+        <div class="display-6 fw-bold text-success">{{ calibrations_done }}</div>
+        <div class="text-muted small">калибровок завершено за месяц</div>
       </div>
     </div>
   </div>
@@ -288,23 +296,45 @@
 
 {# ── Календарь активности ──────────────────────────────────────────────────── #}
 <div class="card shadow-sm">
-  <div class="card-header py-2 fw-semibold small">
-    <i class="bi bi-calendar3 me-2"></i>Активность по дням — {{ month }}/{{ year }}
-    <span class="text-muted fw-normal ms-3" style="font-size:0.7rem">
+  <div class="card-header py-2 d-flex flex-wrap align-items-center gap-2">
+    <span class="fw-semibold small">
+      <i class="bi bi-calendar3 me-2"></i><span id="calTitle">Оценки по дням</span> — {{ month }}/{{ year }}
+    </span>
+
+    {# Переключатель режима #}
+    <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Режим календаря">
+      <button type="button" class="btn btn-primary" id="btnCalEvals" onclick="switchCal('evals')">
+        <i class="bi bi-clipboard-check me-1"></i>Оценки по дням
+      </button>
+      <button type="button" class="btn btn-outline-primary" id="btnCalPres" onclick="switchCal('pres')">
+        <i class="bi bi-easel me-1"></i>Дни презентаций
+      </button>
+    </div>
+
+    <span class="text-muted fw-normal w-100" style="font-size:0.7rem" id="calLegendEvals">
       <span class="badge" style="background:#bbf7d0;color:#15803d">1</span> 1 оценка
       <span class="badge ms-1" style="background:#86efac;color:#15803d">2</span> 2 оценки
       <span class="badge ms-1" style="background:#4ade80;color:#14532d">3+</span> 3+ оценки
     </span>
+    <span class="text-muted fw-normal w-100 d-none" style="font-size:0.7rem" id="calLegendPres">
+      Дата презентации сделки (из карточки Битрикс24), чью оценку провели в этом месяце.
+      <span class="badge" style="background:#bbf7d0;color:#15803d">1</span> 1
+      <span class="badge ms-1" style="background:#86efac;color:#15803d">2</span> 2
+      <span class="badge ms-1" style="background:#4ade80;color:#14532d">3+</span> 3+ презентаций
+      {% if report.pres_out_of_month %}
+      · <span class="text-warning">{{ report.pres_out_of_month }} презентаций вне выбранного месяца не показаны</span>
+      {% endif %}
+    </span>
   </div>
-  <div class="card-body p-0">
+
+  {# ── Календарь: оценки по дням (по eval_date) ── #}
+  <div class="card-body p-0" id="calEvals">
     <div class="table-responsive">
       <table class="table table-bordered mb-0" style="font-size:0.75rem; table-layout:fixed; min-width: {{ 160 + report.days_in_month * 29 }}px">
         <thead class="table-light">
           <tr>
             <th style="width:160px; min-width:160px">Сотрудник</th>
             {% for d in report.days_labels %}
-            {% set dow = (namespace(v=0)) %}
-            {# Определяем день недели через Jinja: используем date() #}
             <th class="cal-cell text-center p-0
               {% if today_day == d %}cal-today{% endif %}"
               style="width:28px"
@@ -358,6 +388,68 @@
       </table>
     </div>
   </div>
+
+  {# ── Календарь: дни презентаций (по presentation_date из DealCache) ── #}
+  <div class="card-body p-0 d-none" id="calPres">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0" style="font-size:0.75rem; table-layout:fixed; min-width: {{ 160 + report.days_in_month * 29 }}px">
+        <thead class="table-light">
+          <tr>
+            <th style="width:160px; min-width:160px">Сотрудник</th>
+            {% for d in report.days_labels %}
+            <th class="cal-cell text-center p-0
+              {% if today_day == d %}cal-today{% endif %}"
+              style="width:28px"
+              title="{{ d }}/{{ month }}/{{ year }}">
+              {{ d }}
+            </th>
+            {% endfor %}
+            <th class="text-center" style="width:45px">Итог</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.rows %}
+          <tr>
+            <td class="sticky-col fw-semibold" style="font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="{{ row.name }}">{{ row.name }}</td>
+            {% for cnt in row.pres_calendar %}
+            <td class="cal-cell p-0
+              {% if cnt == 0 %}cal-0
+              {% elif cnt == 1 %}cal-1
+              {% elif cnt == 2 %}cal-2
+              {% else %}cal-3p{% endif %}
+              {% if today_day == loop.index %}cal-today{% endif %}"
+              title="{{ cnt }} презент. — день {{ loop.index }}">
+              {% if cnt > 0 %}{{ cnt }}{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center fw-semibold">{{ row.pres_fact }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td class="fw-bold">Команда</td>
+            {% for d in report.days_labels %}
+            {% set di = loop.index0 %}
+            {% set day_total = namespace(v=0) %}
+            {% for row in report.rows %}{% set day_total.v = day_total.v + row.pres_calendar[di] %}{% endfor %}
+            <td class="cal-cell p-0 fw-semibold text-center
+              {% if day_total.v == 0 %}cal-0
+              {% elif day_total.v <= 2 %}cal-1
+              {% elif day_total.v <= 4 %}cal-2
+              {% else %}cal-3p{% endif %}
+              {% if today_day == d %}cal-today{% endif %}"
+              title="{{ day_total.v }} всего — день {{ d }}">
+              {% if day_total.v > 0 %}{{ day_total.v }}{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center fw-bold">{{ report.total_pres }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
 </div>
 
 {% endif %}{# /report.rows #}
@@ -377,5 +469,20 @@ document.getElementById('planFilterForm').addEventListener('submit', function (e
   params.set('month', m);
   window.location.href = '/reports/plan?' + params.toString();
 });
+
+/* Переключатель календаря: оценки по дням / дни презентаций */
+function switchCal(mode) {
+  const isPres = mode === 'pres';
+  const $ = (id) => document.getElementById(id);
+  $('calEvals').classList.toggle('d-none', isPres);
+  $('calPres').classList.toggle('d-none', !isPres);
+  $('calLegendEvals').classList.toggle('d-none', isPres);
+  $('calLegendPres').classList.toggle('d-none', !isPres);
+  $('calTitle').textContent = isPres ? 'Дни презентаций' : 'Оценки по дням';
+  $('btnCalEvals').classList.toggle('btn-primary', !isPres);
+  $('btnCalEvals').classList.toggle('btn-outline-primary', isPres);
+  $('btnCalPres').classList.toggle('btn-primary', isPres);
+  $('btnCalPres').classList.toggle('btn-outline-primary', !isPres);
+}
 </script>
 {% endblock %}

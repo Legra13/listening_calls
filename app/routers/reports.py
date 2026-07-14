@@ -7,7 +7,10 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
-from app.models import Block, Checklist, Criterion, Evaluation, EvaluationTarget, User
+from app.models import (
+    Block, Checklist, Criterion, Evaluation, EvaluationTarget, User,
+    CalibrationSession, DealCache,
+)
 from app.deps import get_current_user, pop_flash
 from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
@@ -298,7 +301,29 @@ def reports_plan(
         q = q.filter(Evaluation.evaluator_id == ev_id)
 
     evaluations = q.all()
-    report = compute_plan_fact(evaluations, year, month, target_total)
+
+    # Дата презентации из карточки сделки (DealCache) — для тепловой карты «дни презентаций»
+    deal_ids = {ev.deal_id for ev in evaluations if ev.deal_id}
+    pres_by_deal: dict[str, datetime] = {}
+    if deal_ids:
+        for dc in db.query(DealCache).filter(DealCache.deal_id.in_(deal_ids)).all():
+            if dc.presentation_date:
+                pres_by_deal[dc.deal_id] = dc.presentation_date
+    pres_dates = {
+        ev.id: pres_by_deal.get(ev.deal_id) for ev in evaluations if ev.deal_id
+    }
+
+    report = compute_plan_fact(evaluations, year, month, target_total, pres_dates)
+
+    # Калибровки, завершённые (закрытые) за выбранный месяц
+    cal_q = db.query(CalibrationSession).filter(CalibrationSession.status == "closed")
+    if cl_id:
+        cal_q = cal_q.filter(CalibrationSession.checklist_id == cl_id)
+    calibrations_done = 0
+    for sess in cal_q.all():
+        d = sess.session_date or sess.updated_at or sess.created_at
+        if d and d.year == year and d.month == month:
+            calibrations_done += 1
 
     # Pace: expected fact by today within this month
     pace_target = None
@@ -319,6 +344,7 @@ def reports_plan(
         "evaluator_id": ev_id,
         "report": report,
         "pace_target": pace_target,
+        "calibrations_done": calibrations_done,
         "today_day": today.day if (year == today.year and month == today.month) else None,
     })
 
