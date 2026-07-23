@@ -224,6 +224,42 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
         raise ConnectionError(f"Ошибка подключения к Битрикс: {exc}") from exc
 
 
+def get_deal_stages_bulk(deal_ids: list[str | int]) -> dict[str, dict]:
+    """
+    Пакетно получает актуальную стадию и дату закрытия по списку сделок —
+    для ежедневной синхронизации статусов. Один SQL-запрос на чанк.
+
+    Возвращает {deal_id(str): {"stage": str, "close_date": date|None}}.
+    Сделки, не найденные в Битрикс, в результат не попадают.
+    """
+    ids = [str(int(d)) for d in deal_ids if str(d).strip().isdigit()]
+    if not ids:
+        return {}
+
+    result: dict[str, dict] = {}
+    conn = _get_connection()
+    try:
+        CHUNK = 500
+        for i in range(0, len(ids), CHUNK):
+            chunk = ids[i:i + CHUNK]
+            placeholders = ",".join(["%s"] * len(chunk))
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT ID, STAGE_SEMANTIC_ID, CLOSEDATE "
+                    f"FROM `{_DEALS_TABLE}` WHERE ID IN ({placeholders})",
+                    tuple(int(x) for x in chunk),
+                )
+                for row in cur.fetchall():
+                    semantic = row.get("STAGE_SEMANTIC_ID") or "P"
+                    result[str(row["ID"])] = {
+                        "stage": SEMANTIC_TO_STAGE.get(semantic, "в работе"),
+                        "close_date": _to_date(row.get("CLOSEDATE")),
+                    }
+        return result
+    finally:
+        conn.close()
+
+
 def get_departments() -> list[dict]:
     """Возвращает список отделов из Битрикс24."""
     try:
