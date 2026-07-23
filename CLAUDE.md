@@ -130,6 +130,7 @@
 
 - Все «инсайт»-отчёты берут одинаковый набор query-параметров (`checklist_id, departments, operators, date_from, date_to, stage`); `_load_insight` выбирает активный чек-лист (явный или самый частый) и считает KPI по строкам этого чек-листа.
 - `employee.html` и `plan.html` переведены на `_shell.html` (extends изменён, `content`→`report_body`, `styles`→`report_styles`, верхние карточки-навигация удалены — их заменяет боковое меню).
+- **Авто-применение переключателей (23.07.2026):** в «Результаты сотрудников» переключатели «Отображение» (`display_mode` %/Баллы) и «Критерии» (`group_mode` Группы/Детально) — radio внутри формы фильтров; раньше эффект появлялся только после клика «Применить», из-за чего казалось, что «кнопки не работают». Добавлен авто-сабмит `#empFilterForm` при изменении `display_mode`/`group_mode`/`show_comments` (через `form.reportValidity()` перед `submit()`). Скрипт в `{% block scripts %}` employee.html.
 
 **`compute_correlation_detailed(rows, checklist)`** (`analytics.py`): корреляция с исходом на уровне блоков и вложенных критериев.
 - Блок-агрегат совместим с `compute_tab2` (по `block_scores`); критерии — «достижение» = 100/0 для да/нет (или доля для `range`), NA исключается (`_crit_achievement`).

@@ -532,6 +532,17 @@ document.getElementById('selectAllOps')?.addEventListener('click', function () {
   updateOpCount();
 });
 
+/* Мгновенное применение переключателей «Отображение» и «Критерии» —
+   форма фильтров сабмитится сразу при выборе, без клика по «Применить» */
+['display_mode', 'group_mode', 'show_comments'].forEach(name => {
+  document.querySelectorAll('#empFilterForm [name="' + name + '"]').forEach(el => {
+    el.addEventListener('change', () => {
+      const form = document.getElementById('empFilterForm');
+      if (form.reportValidity()) form.submit();
+    });
+  });
+});
+
 /* Переключатель % / Баллы в сводной таблице */
 document.querySelectorAll('#summaryToggle button').forEach(btn => {
   btn.addEventListener('click', function () {
