@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title or "Отчёты" }} — Оценка звонков{% endblock %}
+
+{% block styles %}
+<style>
+  .rep-sidebar { position: sticky; top: 70px; }
+  .rep-sidebar .list-group-item {
+    border: none; border-radius: 8px; padding: .45rem .7rem;
+    font-size: .86rem; color: #334155; display: flex; align-items: center; gap: .55rem;
+  }
+  .rep-sidebar .list-group-item:hover { background: #f1f5f9; }
+  .rep-sidebar .list-group-item.active {
+    background: #eff6ff; color: #1d4ed8; font-weight: 600;
+  }
+  .rep-sidebar .list-group-item.active i { color: #1d4ed8; }
+  .rep-sidebar i { font-size: 1.05rem; color: #94a3b8; width: 1.1rem; text-align: center; }
+  .rep-group-label {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+    color: #94a3b8; font-weight: 600; padding: .5rem .7rem .25rem;
+  }
+</style>
+{% block report_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+{% set path = request.url.path %}
+<div class="row g-3">
+
+  {# ── Боковое меню отчётов ─────────────────────────────────────────────── #}
+  <div class="col-12 col-lg-2">
+    <div class="rep-sidebar">
+      <div class="fw-bold mb-2 px-1" style="font-size:.95rem">
+        <i class="bi bi-bar-chart-line me-1"></i>Отчёты
+      </div>
+      <div class="list-group">
+
+        <div class="rep-group-label">Влияние на сделку</div>
+        <a href="/reports" class="list-group-item {% if path == '/reports' %}active{% endif %}">
+          <i class="bi bi-bullseye"></i>Оценка → Исход
+        </a>
+        <a href="/reports/correlation" class="list-group-item {% if path == '/reports/correlation' %}active{% endif %}">
+          <i class="bi bi-diagram-3"></i>Что влияет на исход
+        </a>
+        <a href="/reports/category" class="list-group-item {% if path == '/reports/category' %}active{% endif %}">
+          <i class="bi bi-tags"></i>Категория → оценка
+        </a>
+        <a href="/reports/speed" class="list-group-item {% if path == '/reports/speed' %}active{% endif %}">
+          <i class="bi bi-stopwatch"></i>Скорость закрытия
+        </a>
+
+        <div class="rep-group-label mt-2">Команда</div>
+        <a href="/reports/heatmap" class="list-group-item {% if path == '/reports/heatmap' %}active{% endif %}">
+          <i class="bi bi-grid-3x3"></i>Тепловая карта
+        </a>
+        <a href="/reports/employee" class="list-group-item {% if path == '/reports/employee' %}active{% endif %}">
+          <i class="bi bi-people"></i>Результаты сотрудников
+        </a>
+        <a href="/reports/plan" class="list-group-item {% if path == '/reports/plan' %}active{% endif %}">
+          <i class="bi bi-clipboard-check"></i>План / Факт
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Контент отчёта ───────────────────────────────────────────────────── #}
+  <div class="col-12 col-lg-10">
+    {% block report_body %}{% endblock %}
+  </div>
+
+</div>
+{% endblock %}

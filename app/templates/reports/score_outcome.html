@@ -1,0 +1,112 @@
+{% extends "reports/_shell.html" %}
+{% block title %}Оценка → Исход — Отчёты{% endblock %}
+
+{% block report_body %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-bullseye me-2 text-primary"></i>Оценка → Исход сделки</h5>
+    <div class="text-muted small">Как итоговый балл чек-листа связан с успешностью сделки</div>
+  </div>
+</div>
+
+{% include "reports/_filters.html" %}
+{% include "reports/_cl_bar.html" %}
+{% include "reports/_kpi.html" %}
+
+{% if score_outcome %}
+
+{% if top_insight %}
+<div class="mb-4 p-3 rounded-3 d-flex align-items-start gap-3"
+     style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #22c55e">
+  <span style="font-size:1.6rem;line-height:1.1">🎯</span>
+  <div>
+    <div class="fw-semibold">Чем выше оценка — тем выше шанс продажи</div>
+    <div class="small text-muted">
+      Win Rate в диапазоне <b>{{ top_insight.label_high }}</b> — <b>{{ top_insight.wr_high }}%</b>,
+      против <b>{{ top_insight.wr_low }}%</b> в диапазоне <b>{{ top_insight.label_low }}</b>
+      {% if top_insight.ratio_ok %}(в {{ top_insight.ratio }}× выше){% endif %}.
+      Всего закрытых сделок: {{ top_insight.total_closed }} из {{ top_insight.total_all }}.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="fw-semibold mb-2" style="font-size:.9rem">Исход по диапазонам оценки</div>
+      <canvas id="soChart" height="140"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="fw-semibold mb-2" style="font-size:.9rem">Win Rate по диапазонам</div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr class="small text-muted">
+            <th>Диапазон</th><th class="text-center">Оценок</th>
+            <th class="text-center">✅</th><th class="text-center">❌</th>
+            <th class="text-center">Win Rate</th>
+          </tr></thead>
+          <tbody>
+            {% for d in score_outcome %}
+            <tr>
+              <td class="fw-semibold">{{ d.range }}</td>
+              <td class="text-center">{{ d.total }}</td>
+              <td class="text-center text-success">{{ d.won }}</td>
+              <td class="text-center text-danger">{{ d.lost }}</td>
+              <td class="text-center">
+                {% if d.win_rate is not none %}
+                <span class="badge {% if d.win_rate >= 50 %}bg-success{% elif d.win_rate >= 30 %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ d.win_rate }}%</span>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="text-muted mt-2" style="font-size:.72rem">
+        Win Rate = успешные ÷ закрытые (без «в работе»).
+      </div>
+    </div></div>
+  </div>
+</div>
+
+{% elif kpi.count == 0 %}
+<div class="alert alert-secondary"><i class="bi bi-search me-2"></i>Нет данных по выбранным фильтрам.</div>
+{% else %}
+<div class="alert alert-secondary"><i class="bi bi-info-circle me-2"></i>Недостаточно данных для расчёта исходов.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+const soData = {{ score_outcome_json | safe }};
+const ctx = document.getElementById('soChart');
+if (ctx && soData.length) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: soData.map(d => d.range),
+      datasets: [
+        { label: 'Успешные %', data: soData.map(d => d.won_pct), backgroundColor: 'rgba(34,197,94,0.75)', stack: 's' },
+        { label: 'Не продали %', data: soData.map(d => d.lost_pct), backgroundColor: 'rgba(239,68,68,0.75)', stack: 's' },
+        { label: 'В работе %', data: soData.map(d => d.prog_pct), backgroundColor: 'rgba(148,163,184,0.6)', stack: 's' },
+        { label: 'Win Rate', data: soData.map(d => d.win_rate), type: 'line',
+          borderColor: 'rgb(37,99,235)', backgroundColor: 'rgb(37,99,235)',
+          borderWidth: 2, tension: 0.3, pointRadius: 4, yAxisID: 'y' },
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%' } }
+      },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+</script>
+{% endblock %}

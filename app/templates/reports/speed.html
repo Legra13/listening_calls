@@ -1,0 +1,68 @@
+{% extends "reports/_shell.html" %}
+{% block title %}Скорость закрытия — Отчёты{% endblock %}
+
+{% block report_body %}
+<div class="mb-3">
+  <h5 class="mb-0"><i class="bi bi-stopwatch me-2 text-primary"></i>Оценка → скорость закрытия</h5>
+  <div class="text-muted small">Среднее число дней от звонка до закрытия сделки по диапазонам оценки (только закрытые)</div>
+</div>
+
+{% include "reports/_filters.html" %}
+{% include "reports/_cl_bar.html" %}
+
+{% if closing_speed %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <canvas id="spdChart" height="150"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr class="small text-muted">
+            <th>Диапазон</th><th class="text-center">Закрытых</th>
+            <th class="text-center">Дней (Won)</th><th class="text-center">Дней (Lost)</th>
+          </tr></thead>
+          <tbody>
+            {% for d in closing_speed %}
+            <tr>
+              <td class="fw-semibold">{{ d.range }}</td>
+              <td class="text-center">{{ d.n }}</td>
+              <td class="text-center text-success">{% if d.avg_won is not none %}{{ d.avg_won }}{% else %}—{% endif %}</td>
+              <td class="text-center text-danger">{% if d.avg_lost is not none %}{{ d.avg_lost }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-secondary"><i class="bi bi-info-circle me-2"></i>Нет закрытых сделок с известными датами по выбранным фильтрам.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+const spdData = {{ closing_speed_json | safe }};
+const ctx = document.getElementById('spdChart');
+if (ctx && spdData.length) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: spdData.map(d => d.range),
+      datasets: [
+        { label: 'Won (дней)', data: spdData.map(d => d.avg_won), backgroundColor: 'rgba(34,197,94,0.7)' },
+        { label: 'Lost (дней)', data: spdData.map(d => d.avg_lost), backgroundColor: 'rgba(239,68,68,0.7)' },
+      ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: 'дней' } } },
+      plugins: { legend: { position: 'bottom' } } }
+  });
+}
+</script>
+{% endblock %}

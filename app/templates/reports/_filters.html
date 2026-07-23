@@ -1,0 +1,161 @@
+{# Общий блок фильтров для «инсайт»-отчётов. Требует: options, filters. #}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white d-flex align-items-center justify-content-between py-2"
+       role="button" data-bs-toggle="collapse" data-bs-target="#repFilters" aria-expanded="true">
+    <span class="fw-semibold" style="font-size:.9rem">
+      <i class="bi bi-funnel me-1"></i>Фильтры
+      {% set nsel = filters.departments|length + filters.operators|length %}
+      {% if filters.checklist_id or nsel or filters.stage or filters.date_from or filters.date_to %}
+        <span class="badge bg-primary-subtle text-primary ms-1">активны</span>
+      {% endif %}
+    </span>
+    <i class="bi bi-chevron-down"></i>
+  </div>
+  <div class="collapse show" id="repFilters">
+    <div class="card-body py-3">
+      <form method="get" id="filterForm">
+        <div class="row g-2 align-items-start">
+
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Чек-лист</label>
+            <select name="checklist_id" class="form-select form-select-sm">
+              <option value="">— Все чек-листы —</option>
+              {% for cl in options.checklists %}
+              <option value="{{ cl.id }}"
+                {% if filters.checklist_id and filters.checklist_id == cl.id %}selected{% endif %}>
+                {{ cl.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">
+              Отделы <span id="deptSelectedCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+            </label>
+            <div id="deptList"
+                 style="max-height:120px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+              {% for d in options.departments %}
+              <div class="form-check py-0">
+                <input class="form-check-input dept-cb" type="checkbox" name="departments"
+                       value="{{ d }}" id="dept_{{ loop.index }}"
+                       {% if d in filters.departments %}checked{% endif %}>
+                <label class="form-check-label" for="dept_{{ loop.index }}">{{ d }}</label>
+              </div>
+              {% endfor %}
+              {% if not options.departments %}<div class="text-muted small py-1">Нет данных</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">
+              Сотрудники <span id="opSelectedCount" class="text-muted fw-normal ms-1" style="font-size:0.7rem"></span>
+            </label>
+            <div id="opList"
+                 style="max-height:120px;overflow-y:auto;border:1px solid #dee2e6;border-radius:6px;padding:4px 8px;background:#fff;font-size:0.82rem">
+              {% for op in options.operators %}
+              <div class="form-check py-0 op-item" data-dept="{{ op.dept }}">
+                <input class="form-check-input op-cb" type="checkbox" name="operators"
+                       value="{{ op.name }}" id="op_{{ loop.index }}"
+                       {% if op.name in filters.operators %}checked{% endif %}>
+                <label class="form-check-label" for="op_{{ loop.index }}">
+                  {{ op.name }} <span class="text-muted">({{ op.count }})</span>
+                </label>
+              </div>
+              {% endfor %}
+              {% if not options.operators %}<div class="text-muted small py-1">Нет данных</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Стадия сделки</label>
+            <select name="stage" class="form-select form-select-sm">
+              <option value=""     {% if not filters.stage %}selected{% endif %}>— Все стадии —</option>
+              <option value="won"      {% if filters.stage == 'won' %}selected{% endif %}>✅ Успешна</option>
+              <option value="lost"     {% if filters.stage == 'lost' %}selected{% endif %}>❌ Не продали</option>
+              <option value="progress" {% if filters.stage == 'progress' %}selected{% endif %}>🔄 В работе</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Дата звонка с</label>
+            <input type="date" name="date_from" class="form-control form-control-sm"
+                   value="{{ filters.date_from.isoformat() if filters.date_from else '' }}">
+            <label class="form-label small fw-semibold mb-1 mt-2">по</label>
+            <input type="date" name="date_to" class="form-control form-control-sm"
+                   value="{{ filters.date_to.isoformat() if filters.date_to else '' }}">
+          </div>
+
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-funnel me-1"></i>Применить
+            </button>
+            <a href="{{ request.url.path }}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-x-lg me-1"></i>Сбросить
+            </a>
+            <div class="dropdown">
+              <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-file-earmark-excel me-1"></i>Скачать xlsx
+              </button>
+              <ul class="dropdown-menu">
+                <li><a id="export-reports-btn" href="#" class="dropdown-item small"><i class="bi bi-file-earmark-bar-graph me-1"></i>Аналитика (CallReview)</a></li>
+                <li><a id="export-qolio-btn" href="#" class="dropdown-item small"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Формат Qolio</a></li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function getCheckedDepts() {
+    return Array.from(document.querySelectorAll('.dept-cb:checked')).map(cb => cb.value);
+  }
+  function updateOpList() {
+    const depts = getCheckedDepts();
+    document.querySelectorAll('.op-item').forEach(item => {
+      const match = depts.length === 0 || depts.includes(item.dataset.dept);
+      item.style.display = match ? '' : 'none';
+      if (!match) item.querySelector('input').checked = false;
+    });
+    updateOpCount();
+  }
+  function updateDeptCount() {
+    const n = getCheckedDepts().length;
+    const el = document.getElementById('deptSelectedCount');
+    if (el) el.textContent = n > 0 ? `(выбрано: ${n})` : '';
+  }
+  function updateOpCount() {
+    const checked = document.querySelectorAll('.op-cb:checked').length;
+    const el = document.getElementById('opSelectedCount');
+    if (el) el.textContent = checked > 0 ? `(выбрано: ${checked})` : '';
+  }
+  document.querySelectorAll('.dept-cb').forEach(cb => cb.addEventListener('change', () => {
+    updateDeptCount(); updateOpList();
+  }));
+  document.querySelectorAll('.op-cb').forEach(cb => cb.addEventListener('change', updateOpCount));
+  updateDeptCount(); updateOpCount();
+
+  /* Экспорт xlsx — переносим текущие фильтры в URL */
+  function buildExportUrl(path) {
+    const form = document.getElementById('filterForm');
+    if (!form) return path;
+    const params = new URLSearchParams();
+    new FormData(form).forEach((v, k) => { if (v) params.append(k, v); });
+    return path + '?' + params.toString();
+  }
+  function updateHrefs() {
+    const r = document.getElementById('export-reports-btn');
+    const q = document.getElementById('export-qolio-btn');
+    if (r) r.href = buildExportUrl('/export/reports');
+    if (q) q.href = buildExportUrl('/export/qolio');
+  }
+  updateHrefs();
+  const ff = document.getElementById('filterForm');
+  if (ff) { ff.addEventListener('change', updateHrefs); ff.addEventListener('input', updateHrefs); }
+})();
+</script>

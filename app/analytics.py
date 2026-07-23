@@ -331,6 +331,99 @@ def compute_tab2(rows: list[dict], checklist: Checklist) -> list[dict]:
     return result
 
 
+# ── Корреляция «блоки + критерии → исход» (drill-down) ────────────────────────
+
+def _crit_achievement(val: str | None, crit) -> float | None:
+    """Достижение критерия в % (0–100). NA/пусто → None (исключается)."""
+    if val is None or val == "na":
+        return None
+    if getattr(crit, "score_type", "binary") == "range":
+        try:
+            mx = getattr(crit, "score_max", 5) or 5
+            return int(val) / mx * 100
+        except (ValueError, TypeError):
+            return None
+    return 100.0 if val == "yes" else 0.0
+
+
+def _corr_stats(pairs: list[tuple[float, object]]) -> dict:
+    """
+    pairs — список (achievement 0-100, ev). Считает статистику влияния на исход:
+    avg среди Won/Lost, Δ, Win Rate «выполнено»/«не выполнено» и разницу.
+    """
+    won = [(a, ev) for a, ev in pairs if ev.stage == WON]
+    lost = [(a, ev) for a, ev in pairs if ev.stage == LOST]
+    avg_won = _avg([a for a, _ in won]) if won else None
+    avg_lost = _avg([a for a, _ in lost]) if lost else None
+    delta = round(avg_won - avg_lost, 1) if (avg_won is not None and avg_lost is not None) else None
+
+    done = [ev for a, ev in pairs if a > 0]
+    not_done = [ev for a, ev in pairs if a == 0.0]
+    wr_done = _wr([{"ev": e} for e in done])
+    wr_not_done = _wr([{"ev": e} for e in not_done])
+    wr_impact = round(wr_done - wr_not_done, 1) if (wr_done is not None and wr_not_done is not None) else None
+
+    return {
+        "avg_won": avg_won, "avg_lost": avg_lost, "delta": delta,
+        "wr_done": wr_done, "wr_not_done": wr_not_done, "wr_impact": wr_impact,
+        "n": len(pairs),
+    }
+
+
+def compute_correlation_detailed(rows: list[dict], checklist: Checklist) -> list[dict]:
+    """
+    Корреляция с исходом сделки на уровне блоков и вложенных критериев.
+    Для каждого блока — агрегат по его баллу (как compute_tab2), внутри — критерии,
+    где «достижение» = 100/0 для да/нет (или доля для range).
+    Возвращает [{block: {...}, criteria: [{...}]}], отсортировано по |Δ| блока.
+    """
+    blocks = list(checklist.blocks)
+
+    # Значения критериев по строкам: {row_index: {criterion_id: value}}
+    val_maps: list[dict[int, str]] = []
+    for r in rows:
+        vm: dict[int, str] = {}
+        for it in r["ev"].items:
+            vm[it.criterion_id] = it.value
+        val_maps.append(vm)
+
+    out = []
+    for block in blocks:
+        bid = block.id
+        # Блок-агрегат по block_scores (совместимо с compute_tab2)
+        block_pairs = [
+            (r["block_scores"][bid], r["ev"])
+            for r in rows if r["block_scores"].get(bid) is not None
+        ]
+        block_stat = _corr_stats(block_pairs)
+        block_stat.update({
+            "name": block.display_name or block.name,
+            "weight": block.weight,
+        })
+
+        crit_out = []
+        for crit in block.criteria:
+            pairs = []
+            for i, r in enumerate(rows):
+                a = _crit_achievement(val_maps[i].get(crit.id), crit)
+                if a is not None:
+                    pairs.append((a, r["ev"]))
+            if not pairs:
+                continue
+            cs = _corr_stats(pairs)
+            cs.update({
+                "name": crit.text,
+                "weight": crit.weight,
+            })
+            crit_out.append(cs)
+
+        crit_out.sort(key=lambda x: (x["delta"] is None, -(x["delta"] or 0)))
+        out.append({"block": block_stat, "criteria": crit_out})
+
+    out.sort(key=lambda x: (x["block"]["delta"] is None, -abs(x["block"]["delta"] or 0)))
+    return out
+
+
 # ── Tab 3 — Корреляция по сотрудникам ────────────────────────────────────────
 
 def compute_tab3(rows: list[dict], checklist: Checklist) -> dict:

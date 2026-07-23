@@ -1,0 +1,18 @@
+{# Панель выбора активного чек-листа. Требует: selected_cl, available_cls, filters. #}
+{% if selected_cl and available_cls %}
+{% set qs %}{% for d in filters.departments %}&departments={{ d }}{% endfor %}{% for op in filters.operators %}&operators={{ op }}{% endfor %}{% if filters.stage %}&stage={{ filters.stage }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from.isoformat() }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to.isoformat() }}{% endif %}{% endset %}
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+  <span class="text-muted small">Чек-лист:</span>
+  {% for cl in available_cls %}
+    {% if cl.id == selected_cl.id %}
+      <span class="badge bg-primary">{{ cl.name }}</span>
+    {% else %}
+      <a href="{{ request.url.path }}?checklist_id={{ cl.id }}{{ qs }}"
+         class="badge bg-secondary text-decoration-none">{{ cl.name }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if available_cls|length > 1 %}
+  <span class="text-muted small">— у выбранных сотрудников несколько чек-листов, аналитика строится по одному</span>
+  {% endif %}
+</div>
+{% endif %}

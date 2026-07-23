@@ -16,6 +16,7 @@ from app.analytics import (
     Filters, fetch_evaluations, get_filter_options,
     prep_rows, attach_close_dates,
     compute_kpi, compute_tab1, compute_tab2, compute_tab3,
+    compute_correlation_detailed,
     compute_category_score, compute_score_outcome, compute_closing_speed,
     heat_style, delta_style,
     EmployeeFilters, get_employee_report_options, fetch_evaluations_employee,
@@ -26,20 +27,21 @@ router = APIRouter(prefix="/reports")
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("")
-def reports_index(
-    request: Request,
-    checklist_id: str = "",
-    departments: list[str] = Query(default=[]),
-    operators: list[str] = Query(default=[]),
-    date_from: str = "",
-    date_to: str = "",
-    stage: str = "",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+def _load_insight(
+    db: Session,
+    checklist_id: str,
+    departments: list[str],
+    operators: list[str],
+    date_from: str,
+    date_to: str,
+    stage: str,
 ):
+    """
+    Общая загрузка данных для «инсайт»-отчётов: фильтры, строки, выбор чек-листа,
+    KPI. Возвращает dict с ключами options/filters/kpi/selected_cl/available_cls/
+    rows_for_cl/base_rows.
+    """
     options = get_filter_options(db)
-
     filters = Filters(
         departments=departments,
         operators=operators,
@@ -53,7 +55,6 @@ def reports_index(
     rows = prep_rows(evaluations)
     attach_close_dates(rows, db)
 
-    # Определяем, какие чек-листы присутствуют в данных
     cl_counter = Counter(r["ev"].checklist_id for r in rows if r["ev"].checklist_id)
     available_cls: list[Checklist] = []
     if cl_counter:
@@ -61,110 +62,187 @@ def reports_index(
         cl_map = {
             cl.id: cl
             for cl in db.query(Checklist)
-            .options(joinedload(Checklist.blocks))
+            .options(joinedload(Checklist.blocks).joinedload(Block.criteria))
             .filter(Checklist.id.in_(ids))
             .all()
         }
         available_cls = [cl_map[i] for i in ids if i in cl_map]
 
-    # Выбираем активный чек-лист
     selected_cl = None
-    auto_cl = False
     if filters.checklist_id:
         selected_cl = next((cl for cl in available_cls if cl.id == filters.checklist_id), None)
         if not selected_cl and cl_counter:
-            # запрошенный чек-лист не встречается в данных — берём из БД напрямую
             selected_cl = (
                 db.query(Checklist)
-                .options(joinedload(Checklist.blocks))
+                .options(joinedload(Checklist.blocks).joinedload(Block.criteria))
                 .filter(Checklist.id == filters.checklist_id)
                 .first()
             )
     elif available_cls:
-        selected_cl = available_cls[0]  # самый частый
-        auto_cl = len(available_cls) > 0
+        selected_cl = available_cls[0]
 
-    # Фильтруем строки только по выбранному чек-листу
     rows_for_cl = (
         [r for r in rows if r["ev"].checklist_id == selected_cl.id]
         if selected_cl else []
     )
-
-    kpi = compute_kpi(rows_for_cl)
-
-    tab1 = tab2 = tab3 = None
-    weekly_json = "[]"
-    tab2_json = "[]"
-    cat_score_json = "[]"
-    score_outcome_json = "[]"
-    closing_speed_json = "[]"
-
-    if selected_cl and rows_for_cl:
-        tab1 = compute_tab1(rows_for_cl, selected_cl)
-        tab2 = compute_tab2(rows_for_cl, selected_cl)
-        tab3 = compute_tab3(rows_for_cl, selected_cl)
-        weekly_json = json.dumps(tab1["weekly"])
-        tab2_json = json.dumps(tab2)
-
-    # Эти три отчёта считаем по выбранному чек-листу, иначе по всем строкам
     base_rows = rows_for_cl if rows_for_cl else rows
-    cat_score_data     = compute_category_score(base_rows)
-    score_outcome_data = compute_score_outcome(base_rows)
-    closing_speed_data = compute_closing_speed(base_rows)
-    if cat_score_data:
-        cat_score_json = json.dumps(cat_score_data)
-    if score_outcome_data:
-        score_outcome_json = json.dumps(score_outcome_data)
-    if closing_speed_data:
-        closing_speed_json = json.dumps(closing_speed_data)
 
-    # ── Ключевой инсайт для шапки (серверная сторона) ─────────────────────────
+    return {
+        "options": options,
+        "filters": filters,
+        "kpi": compute_kpi(rows_for_cl),
+        "selected_cl": selected_cl,
+        "available_cls": available_cls,
+        "rows_for_cl": rows_for_cl,
+        "base_rows": base_rows,
+    }
+
+
+def _base_ctx(request: Request, current_user: User, ctx: dict) -> dict:
+    """Общие ключи шаблона для всех инсайт-отчётов."""
+    return {
+        "request": request,
+        "current_user": current_user,
+        "flash": pop_flash(request),
+        "options": ctx["options"],
+        "filters": ctx["filters"],
+        "kpi": ctx["kpi"],
+        "selected_cl": ctx["selected_cl"],
+        "available_cls": ctx["available_cls"],
+        "heat_style": heat_style,
+        "delta_style": delta_style,
+    }
+
+
+@router.get("")
+def reports_score_outcome(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    stage: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ctx = _load_insight(db, checklist_id, departments, operators, date_from, date_to, stage)
+    score_outcome_data = compute_score_outcome(ctx["base_rows"])
+
     top_insight = None
     if score_outcome_data:
-        _MIN = 5
         closed_ranges = [d for d in score_outcome_data
-                         if d.get("won", 0) + d.get("lost", 0) >= _MIN]
+                         if d.get("won", 0) + d.get("lost", 0) >= 5]
         if len(closed_ranges) >= 2:
-            first = closed_ranges[0]
-            last  = closed_ranges[-1]
+            first, last = closed_ranges[0], closed_ranges[-1]
             wr1, wr2 = first.get("win_rate"), last.get("win_rate")
             if wr1 is not None and wr2 is not None and wr1 > 0:
                 ratio = wr2 / wr1
                 top_insight = {
-                    "wr_low":      round(wr1, 1),
-                    "wr_high":     round(wr2, 1),
-                    "ratio":       round(ratio, 1),
-                    "ratio_ok":    ratio >= 1.3,
-                    "label_low":   first["range"],
-                    "label_high":  last["range"],
-                    "total_closed": sum(d.get("won", 0) + d.get("lost", 0)
-                                       for d in score_outcome_data),
-                    "total_all":   sum(d.get("total", 0) for d in score_outcome_data),
+                    "wr_low": round(wr1, 1), "wr_high": round(wr2, 1),
+                    "ratio": round(ratio, 1), "ratio_ok": ratio >= 1.3,
+                    "label_low": first["range"], "label_high": last["range"],
+                    "total_closed": sum(d.get("won", 0) + d.get("lost", 0) for d in score_outcome_data),
+                    "total_all": sum(d.get("total", 0) for d in score_outcome_data),
                 }
 
-    return templates.TemplateResponse("reports/index.html", {
-        "request": request,
-        "current_user": current_user,
-        "flash": pop_flash(request),
-        "options": options,
-        "filters": filters,
-        "stage": filters.stage,
-        "kpi": kpi,
+    tctx = _base_ctx(request, current_user, ctx)
+    tctx.update({
+        "score_outcome": score_outcome_data,
+        "score_outcome_json": json.dumps(score_outcome_data or []),
         "top_insight": top_insight,
-        "selected_cl": selected_cl,
-        "auto_cl": auto_cl,
-        "available_cls": available_cls,
-        "tab1": tab1,
-        "tab2": tab2,
-        "tab3": tab3,
-        "weekly_json": weekly_json,
-        "tab2_json": tab2_json,
-        "cat_score_json": cat_score_json,
-        "score_outcome_json": score_outcome_json,
-        "closing_speed_json": closing_speed_json,
-        "heat_style": heat_style,
-        "delta_style": delta_style,
     })
+    return templates.TemplateResponse("reports/score_outcome.html", tctx)
+
+
+@router.get("/correlation")
+def reports_correlation(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    stage: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ctx = _load_insight(db, checklist_id, departments, operators, date_from, date_to, stage)
+    corr = None
+    if ctx["selected_cl"] and ctx["rows_for_cl"]:
+        corr = compute_correlation_detailed(ctx["rows_for_cl"], ctx["selected_cl"])
+
+    tctx = _base_ctx(request, current_user, ctx)
+    tctx["corr"] = corr
+    return templates.TemplateResponse("reports/correlation.html", tctx)
+
+
+@router.get("/heatmap")
+def reports_heatmap(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    stage: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ctx = _load_insight(db, checklist_id, departments, operators, date_from, date_to, stage)
+    tab1 = None
+    weekly_json = "[]"
+    if ctx["selected_cl"] and ctx["rows_for_cl"]:
+        tab1 = compute_tab1(ctx["rows_for_cl"], ctx["selected_cl"])
+        weekly_json = json.dumps(tab1["weekly"])
+
+    tctx = _base_ctx(request, current_user, ctx)
+    tctx.update({"tab1": tab1, "weekly_json": weekly_json})
+    return templates.TemplateResponse("reports/heatmap.html", tctx)
+
+
+@router.get("/category")
+def reports_category(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    stage: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ctx = _load_insight(db, checklist_id, departments, operators, date_from, date_to, stage)
+    cat_score_data = compute_category_score(ctx["base_rows"])
+    tctx = _base_ctx(request, current_user, ctx)
+    tctx.update({
+        "cat_score": cat_score_data,
+        "cat_score_json": json.dumps(cat_score_data or []),
+    })
+    return templates.TemplateResponse("reports/category.html", tctx)
+
+
+@router.get("/speed")
+def reports_speed(
+    request: Request,
+    checklist_id: str = "",
+    departments: list[str] = Query(default=[]),
+    operators: list[str] = Query(default=[]),
+    date_from: str = "",
+    date_to: str = "",
+    stage: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ctx = _load_insight(db, checklist_id, departments, operators, date_from, date_to, stage)
+    closing_speed_data = compute_closing_speed(ctx["base_rows"])
+    tctx = _base_ctx(request, current_user, ctx)
+    tctx.update({
+        "closing_speed": closing_speed_data,
+        "closing_speed_json": json.dumps(closing_speed_data or []),
+    })
+    return templates.TemplateResponse("reports/speed.html", tctx)
 
 
 @router.get("/employee")

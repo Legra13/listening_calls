@@ -1,0 +1,92 @@
+{% extends "reports/_shell.html" %}
+{% block title %}Что влияет на исход — Отчёты{% endblock %}
+
+{% macro delta_badge(v, suffix='') %}
+  {% if v is none %}<span class="text-muted">—</span>
+  {% elif v > 0 %}<span class="text-success fw-semibold">+{{ v }}{{ suffix }}</span>
+  {% elif v < 0 %}<span class="text-danger fw-semibold">{{ v }}{{ suffix }}</span>
+  {% else %}<span class="text-muted">0{{ suffix }}</span>{% endif %}
+{% endmacro %}
+
+{% macro num(v, suffix='%') %}
+  {% if v is none %}<span class="text-muted">—</span>{% else %}{{ v }}{{ suffix }}{% endif %}
+{% endmacro %}
+
+{% block report_body %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="mb-0"><i class="bi bi-diagram-3 me-2 text-primary"></i>Что влияет на исход</h5>
+    <div class="text-muted small">Связь блоков и отдельных критериев чек-листа с успешностью сделки</div>
+  </div>
+</div>
+
+{% include "reports/_filters.html" %}
+{% include "reports/_cl_bar.html" %}
+
+{% if corr %}
+<div class="alert alert-light border small mb-3">
+  <b>Δ (Won − Lost)</b> — насколько выше средний балл по пункту в успешных сделках, чем в проигранных.
+  <b>Влияние на Win Rate</b> — разница Win Rate между звонками, где пункт выполнен и не выполнен.
+  Чем больше оба показателя — тем сильнее пункт связан с продажей. Клик по блоку раскрывает критерии.
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr class="small">
+          <th style="min-width:280px">Блок / критерий</th>
+          <th class="text-center">Вес</th>
+          <th class="text-center">Средн.<br>Won</th>
+          <th class="text-center">Средн.<br>Lost</th>
+          <th class="text-center">Δ Won−Lost</th>
+          <th class="text-center">WR<br>выполнено</th>
+          <th class="text-center">WR не<br>выполнено</th>
+          <th class="text-center">Влияние<br>на WR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in corr %}
+        {% set b = item.block %}
+        {% set blk_i = loop.index %}
+        <tr class="table-primary" role="button" data-bs-toggle="collapse" data-bs-target=".blkgrp{{ blk_i }}" style="cursor:pointer">
+          <td class="fw-semibold">
+            <i class="bi bi-caret-right-fill me-1" style="font-size:.7rem"></i>{{ b.name }}
+          </td>
+          <td class="text-center">{{ b.weight }}</td>
+          <td class="text-center">{{ num(b.avg_won) }}</td>
+          <td class="text-center">{{ num(b.avg_lost) }}</td>
+          <td class="text-center">{{ delta_badge(b.delta, ' п.п.') }}</td>
+          <td class="text-center">{{ num(b.wr_done) }}</td>
+          <td class="text-center">{{ num(b.wr_not_done) }}</td>
+          <td class="text-center">{{ delta_badge(b.wr_impact, '%') }}</td>
+        </tr>
+        {% for c in item.criteria %}
+        <tr class="collapse blkgrp{{ blk_i }}">
+          <td class="ps-4 text-muted" style="font-size:.85rem">
+            <i class="bi bi-dot"></i>{{ c.name }}
+          </td>
+          <td class="text-center small">{{ c.weight }}</td>
+          <td class="text-center small">{{ num(c.avg_won) }}</td>
+          <td class="text-center small">{{ num(c.avg_lost) }}</td>
+          <td class="text-center small">{{ delta_badge(c.delta, ' п.п.') }}</td>
+          <td class="text-center small">{{ num(c.wr_done) }}</td>
+          <td class="text-center small">{{ num(c.wr_not_done) }}</td>
+          <td class="text-center small">{{ delta_badge(c.wr_impact, '%') }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="text-muted mt-2" style="font-size:.72rem">
+  Блоки отсортированы по силе влияния на исход (|Δ|). Критерии внутри блока — по Δ Won−Lost.
+</div>
+
+{% else %}
+<div class="alert alert-secondary">
+  <i class="bi bi-search me-2"></i>Нет данных по выбранным фильтрам — выберите чек-лист и период.
+</div>
+{% endif %}
+{% endblock %}

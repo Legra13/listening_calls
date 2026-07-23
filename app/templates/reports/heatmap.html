@@ -1,0 +1,81 @@
+{% extends "reports/_shell.html" %}
+{% block title %}Тепловая карта — Отчёты{% endblock %}
+
+{% block report_body %}
+<div class="mb-3">
+  <h5 class="mb-0"><i class="bi bi-grid-3x3 me-2 text-primary"></i>Тепловая карта сотрудников</h5>
+  <div class="text-muted small">Средний балл по блокам для каждого сотрудника и динамика по неделям</div>
+</div>
+
+{% include "reports/_filters.html" %}
+{% include "reports/_cl_bar.html" %}
+{% include "reports/_kpi.html" %}
+
+{% if tab1 and selected_cl %}
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle mb-0 text-center" style="font-size:.82rem">
+      <thead class="table-light">
+        <tr>
+          <th class="text-start" style="min-width:170px">Сотрудник</th>
+          {% for b in tab1.blocks %}<th title="{{ b.display_name or b.name }}">{{ (b.display_name or b.name)[:14] }}</th>{% endfor %}
+          <th>Итог</th><th>✅%</th><th>❌%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in tab1.hm_rows %}
+        <tr>
+          <td class="text-start fw-semibold">{{ r.name }} <span class="text-muted fw-normal">({{ r.count }})</span></td>
+          {% for c in r.cells %}
+          <td style="{{ heat_style(c.pct) }}">{% if c.pct is not none %}{{ c.pct }}{% else %}—{% endif %}</td>
+          {% endfor %}
+          <td class="fw-semibold" style="{{ heat_style(r.total) }}">{% if r.total is not none %}{{ r.total }}{% else %}—{% endif %}</td>
+          <td class="text-success">{{ r.won_pct if r.won_pct is not none else '—' }}</td>
+          <td class="text-danger">{{ r.lost_pct if r.lost_pct is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="table-secondary fw-semibold">
+          <td class="text-start">Команда</td>
+          {% for c in tab1.team_cells %}
+          <td style="{{ heat_style(c.pct) }}">{% if c.pct is not none %}{{ c.pct }}{% else %}—{% endif %}</td>
+          {% endfor %}
+          <td style="{{ heat_style(tab1.team_total) }}">{% if tab1.team_total is not none %}{{ tab1.team_total }}{% else %}—{% endif %}</td>
+          <td class="text-success">{{ tab1.team_won_pct if tab1.team_won_pct is not none else '—' }}</td>
+          <td class="text-danger">{{ tab1.team_lost_pct if tab1.team_lost_pct is not none else '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if tab1.weekly %}
+<div class="card shadow-sm"><div class="card-body">
+  <div class="fw-semibold mb-2" style="font-size:.9rem">Динамика среднего балла по неделям</div>
+  <canvas id="weeklyChart" height="90"></canvas>
+</div></div>
+{% endif %}
+
+{% elif kpi.count == 0 %}
+<div class="alert alert-secondary"><i class="bi bi-search me-2"></i>Нет данных по выбранным фильтрам.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+const weeklyData = {{ weekly_json | safe }};
+const wctx = document.getElementById('weeklyChart');
+if (wctx && weeklyData.length) {
+  new Chart(wctx, {
+    type: 'line',
+    data: { labels: weeklyData.map(d => d.week), datasets: [{
+      label: 'Средний балл', data: weeklyData.map(d => d.avg),
+      borderColor: 'rgb(59,130,246)', backgroundColor: 'rgba(59,130,246,0.1)',
+      fill: true, tension: 0.3, pointRadius: 4 }] },
+    options: { responsive: true, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => `${c.parsed.y}% (${weeklyData[c.dataIndex].count} оценок)` } } } }
+  });
+}
+</script>
+{% endblock %}

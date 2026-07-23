@@ -1,0 +1,39 @@
+{# KPI-карточки. Требует: kpi. #}
+{% if kpi and kpi.count > 0 %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md">
+    <div class="card shadow-sm text-center h-100"><div class="card-body py-3">
+      <div class="fs-3 fw-bold text-primary">{{ kpi.count }}</div>
+      <div class="text-muted small">Оценок</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="card shadow-sm text-center h-100"><div class="card-body py-3">
+      {% if kpi.avg_score is not none %}
+        <div class="fs-3 fw-bold {% if kpi.avg_score >= 60 %}text-success{% elif kpi.avg_score >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ "%.1f"|format(kpi.avg_score) }}%</div>
+      {% else %}<div class="fs-3 fw-bold text-muted">—</div>{% endif %}
+      <div class="text-muted small">Средний балл</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="card shadow-sm text-center h-100"><div class="card-body py-3">
+      <div class="fs-3 fw-bold text-success">{{ kpi.won }}</div>
+      <div class="text-muted small">Успешных {% if kpi.won_pct is not none %}({{ kpi.won_pct }}%){% endif %}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="card shadow-sm text-center h-100"><div class="card-body py-3">
+      <div class="fs-3 fw-bold text-danger">{{ kpi.lost }}</div>
+      <div class="text-muted small">Не продали {% if kpi.lost_pct is not none %}({{ kpi.lost_pct }}%){% endif %}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="card shadow-sm text-center h-100"><div class="card-body py-3">
+      {% if kpi.win_rate is not none %}
+        <div class="fs-3 fw-bold {% if kpi.win_rate >= 50 %}text-success{% elif kpi.win_rate >= 30 %}text-warning{% else %}text-danger{% endif %}">{{ "%.1f"|format(kpi.win_rate) }}%</div>
+      {% else %}<div class="fs-3 fw-bold text-muted">—</div>{% endif %}
+      <div class="text-muted small">Win Rate</div>
+    </div></div>
+  </div>
+</div>
+{% endif %}
