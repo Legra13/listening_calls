@@ -693,6 +693,10 @@ document.addEventListener('DOMContentLoaded', function() {
   setInterval(saveDraft, 30000);
 
   document.getElementById('eval-form').addEventListener('submit', function(e) {
+    // Дозафиксировать текст, введённый в поле комментария, но не добавленный кнопкой «+ Добавить»/Enter
+    document.querySelectorAll('[id^="comment-input-"]').forEach(ta => {
+      if (ta.value.trim()) addOrUpdateComment(parseInt(ta.id.replace('comment-input-', '')));
+    });
     const action = document.activeElement?.value;
     if (action !== 'save_draft' && window._dealHasDuplicate) {
       const phone = (document.getElementById('phone_input')?.value || '').trim();

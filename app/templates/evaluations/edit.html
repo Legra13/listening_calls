@@ -587,6 +587,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
+  document.getElementById('eval-form').addEventListener('submit', function(e) {
+    // Дозафиксировать текст, введённый в поле комментария, но не добавленный кнопкой «+ Добавить»/Enter
+    document.querySelectorAll('[id^="comment-input-"]').forEach(ta => {
+      if (ta.value.trim()) addOrUpdateComment(parseInt(ta.id.replace('comment-input-', '')));
+    });
+  });
+
   updateScorePreview();
   updateProgress();
 });
