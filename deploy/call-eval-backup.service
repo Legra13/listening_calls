@@ -1,0 +1,11 @@
+[Unit]
+Description=CallReview — бэкап базы на Google Диск
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=egerasimchuk
+WorkingDirectory=/home/egerasimchuk/listening_calls
+ExecStart=/home/egerasimchuk/listening_calls/scripts/backup_db.sh
+TimeoutStartSec=30min

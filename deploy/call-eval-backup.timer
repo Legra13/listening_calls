@@ -1,0 +1,11 @@
+[Unit]
+Description=CallReview — ежедневный бэкап базы
+
+[Timer]
+# 00:00 UTC = 03:00 МСК
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

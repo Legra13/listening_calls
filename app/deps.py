@@ -19,6 +19,16 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 
+class NotAdminException(Exception):
+    pass
+
+
+def get_admin_user(user: User = Depends(get_current_user)) -> User:
+    if not user.is_admin:
+        raise NotAdminException()
+    return user
+
+
 def flash(request: Request, message: str, category: str = "success"):
     request.session["flash"] = {"message": message, "category": category}
 

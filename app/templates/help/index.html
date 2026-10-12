@@ -62,6 +62,7 @@ kbd.route {
       <a href="#list"><i class="bi bi-funnel me-1"></i>Список оценок и фильтры</a>
       <a href="#reports"><i class="bi bi-bar-chart-line me-1"></i>Отчёты</a>
       <a href="#calibration"><i class="bi bi-bullseye me-1"></i>Калибровка</a>
+      <a href="#backup"><i class="bi bi-cloud-check me-1"></i>Резервные копии</a>
       <a href="#faq"><i class="bi bi-life-preserver me-1"></i>Частые вопросы</a>
     </nav>
   </div>
@@ -243,6 +244,48 @@ kbd.route {
       <div class="d-flex gap-3 mb-3">
         <div class="step-num">5</div>
         <div><strong>Разберите расхождения.</strong> По каждому несовпадению можно зафиксировать итоговый правильный ответ и пояснение. Когда закончили — закройте сессию.</div>
+      </div>
+    </section>
+
+    <!-- Резервные копии -->
+    <section id="backup" class="help-section mb-5">
+      <h4><i class="bi bi-cloud-check me-2"></i>Резервные копии</h4>
+      <p>Все данные сервиса — оценки, чек-листы, калибровки, пользователи — хранятся в одной базе на сервере.
+         Чтобы они не пропали при поломке сервера, база копируется автоматически, ничего делать не нужно.</p>
+      <ul>
+        <li><strong>Когда:</strong> каждую ночь около 03:00 по Москве.</li>
+        <li><strong>Куда:</strong> в папку <kbd class="route">CallReview-backups</kbd> на Google Диске владельца сервиса
+            (хранятся копии за последние 60 дней) и дополнительно на самом сервере (14 последних копий).</li>
+        <li><strong>Что в копии:</strong> файл вида <code>app-2026-10-12_000312.db.gz</code> — сжатая база целиком на момент копирования.</li>
+      </ul>
+
+      <div class="alert alert-danger small">
+        <i class="bi bi-cloud-slash me-1"></i><strong>Красный баннер «Бэкап: …»</strong> вверху страницы видят только владелец и админы. Он появляется,
+        если ночная копия не выгрузилась на Google Диск или успешной копии не было больше 36 часов. Баннер исчезает сам после следующей удачной копии.
+      </div>
+
+      <p class="mb-2"><strong>Если появился баннер</strong> — сообщите владельцу сервиса. Для разбора на сервере:</p>
+      <ul class="small">
+        <li>запустить копию вручную: <code>sudo systemctl start call-eval-backup.service</code></li>
+        <li>посмотреть журнал ошибок: <code>journalctl -u call-eval-backup.service -n 50</code></li>
+        <li>частая причина — истёк доступ к Google Диску; его нужно заново выдать командой <code>rclone authorize</code> на компьютере с браузером.</li>
+      </ul>
+
+      <p class="mb-2"><strong>Восстановление данных из копии</strong> (делает владелец сервиса на сервере):</p>
+      <div class="d-flex gap-3 mb-2">
+        <div class="step-num">1</div>
+        <div>Скачать нужную копию с Google Диска или взять из <code>data/backups/</code> на сервере.</div>
+      </div>
+      <div class="d-flex gap-3 mb-2">
+        <div class="step-num">2</div>
+        <div>Распаковать: <code>gunzip app-&lt;дата&gt;.db.gz</code>.</div>
+      </div>
+      <div class="d-flex gap-3 mb-2">
+        <div class="step-num">3</div>
+        <div>Остановить сервис (<code>sudo systemctl stop call-eval</code>), заменить файлом базу <code>data/app.db</code>, запустить (<code>sudo systemctl start call-eval</code>).</div>
+      </div>
+      <div class="alert alert-light border small mb-0">
+        <i class="bi bi-info-circle text-primary me-1"></i>Всё, что внесено после момента копии, при восстановлении пропадёт — поэтому копия делается ежедневно.
       </div>
     </section>
 

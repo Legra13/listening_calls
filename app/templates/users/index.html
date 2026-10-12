@@ -16,6 +16,7 @@
         <th>Имя</th>
         <th>Логин / Email</th>
         <th>Дата создания</th>
+        <th>Роль</th>
         <th>Статус</th>
         <th></th>
       </tr>
@@ -38,6 +39,18 @@
         </td>
         <td class="text-muted small">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
         <td>
+          {% if current_user.is_owner and not user.is_owner %}
+          <form action="/users/{{ user.id }}/set-role" method="post">
+            <select name="role" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+              <option value="user" {% if user.role == 'user' %}selected{% endif %}>сотрудник</option>
+              <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>админ</option>
+            </select>
+          </form>
+          {% else %}
+          <span class="badge {% if user.is_admin %}bg-dark{% else %}bg-light text-dark border{% endif %}">{{ role_labels.get(user.role, user.role) }}</span>
+          {% endif %}
+        </td>
+        <td>
           {% if user.is_active %}
             <span class="badge bg-success-subtle text-success">активен</span>
           {% else %}
@@ -45,7 +58,8 @@
           {% endif %}
         </td>
         <td class="text-end">
-          {% if user.id != current_user.id %}
+          {% set can_manage = current_user.is_owner or user.role == 'user' %}
+          {% if user.id != current_user.id and can_manage %}
           <form action="/users/{{ user.id }}/toggle-active" method="post" class="d-inline">
             {% if user.is_active %}
               <button type="submit" class="btn btn-sm btn-outline-secondary" title="Деактивировать">
@@ -58,7 +72,7 @@
             {% endif %}
           </form>
           {% endif %}
-          {% if not user.bitrix_id %}
+          {% if not user.bitrix_id and (can_manage or user.id == current_user.id) %}
           <button class="btn btn-sm btn-outline-secondary"
                   data-bs-toggle="modal"
                   data-bs-target="#pwdModal{{ user.id }}"
@@ -66,7 +80,7 @@
             <i class="bi bi-key"></i>
           </button>
           {% endif %}
-          {% if user.id != current_user.id %}
+          {% if user.id != current_user.id and can_manage %}
           <form action="/users/{{ user.id }}/delete" method="post" class="d-inline"
                 onsubmit="return confirm('Удалить пользователя {{ user.username }}?')">
             <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
@@ -96,13 +110,22 @@
             <input type="text" name="full_name" class="form-control" placeholder="Иванов Иван">
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Логин</label>
-            <input type="text" name="username" class="form-control" required>
+            <label class="form-label small fw-semibold">Логин (рабочий email)</label>
+            <input type="text" name="username" class="form-control" required placeholder="name@entera.pro">
           </div>
           <div class="mb-1">
             <label class="form-label small fw-semibold">Пароль</label>
             <input type="password" name="password" class="form-control" required minlength="6">
           </div>
+          {% if current_user.is_owner %}
+          <div class="mt-3">
+            <label class="form-label small fw-semibold">Роль</label>
+            <select name="role" class="form-select">
+              <option value="user">сотрудник</option>
+              <option value="admin">админ (может добавлять сотрудников)</option>
+            </select>
+          </div>
+          {% endif %}
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-dark btn-sm">Создать</button>

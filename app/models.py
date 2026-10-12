@@ -16,7 +16,17 @@ class User(Base):
     bitrix_id: Mapped[str | None] = mapped_column(String(50), unique=True)
     password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # role: "owner" (выдаёт права админа) | "admin" (управляет пользователями) | "user"
+    role: Mapped[str] = mapped_column(String(20), default="user")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role in ("owner", "admin")
+
+    @property
+    def is_owner(self) -> bool:
+        return self.role == "owner"
 
     evaluations: Mapped[list["Evaluation"]] = relationship(back_populates="evaluator")
     checklists: Mapped[list["Checklist"]] = relationship(back_populates="created_by_user")

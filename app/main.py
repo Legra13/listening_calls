@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from app.config import SECRET_KEY
 from app.database import create_tables
-from app.deps import NotAuthenticatedException
+from app.deps import NotAuthenticatedException, NotAdminException
+from app.backup_status import backup_alert
 from app.routers import api, auth, users, checklists, evaluations, reports, export, calibration, help
 
 logger = logging.getLogger(__name__)
@@ -26,10 +27,19 @@ app.include_router(export.router)
 app.include_router(calibration.router)
 app.include_router(help.router)
 
+# баннер о сломанном бэкапе в base.html — у каждого роутера свой Jinja2Templates
+for _mod in (auth, users, checklists, evaluations, reports, calibration, help):
+    _mod.templates.env.globals["backup_alert"] = backup_alert
+
 
 @app.exception_handler(NotAuthenticatedException)
 async def not_authenticated_handler(request: Request, exc: NotAuthenticatedException):
     return RedirectResponse(url="/login", status_code=302)
+
+
+@app.exception_handler(NotAdminException)
+async def not_admin_handler(request: Request, exc: NotAdminException):
+    return RedirectResponse(url="/", status_code=302)
 
 
 @app.get("/")
@@ -100,6 +110,10 @@ def _run_migrations():
         usr_cols = _cols("users")
         if "full_name" not in usr_cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN full_name VARCHAR(200)"))
+        if "role" not in usr_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
+            # Первый владелец — исходная учётка admin
+            conn.execute(text("UPDATE users SET role = 'owner' WHERE username = 'admin'"))
 
         ev_cols = _cols("evaluations")
         if "status" not in ev_cols:

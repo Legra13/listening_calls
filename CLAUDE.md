@@ -5,7 +5,7 @@
 ## Правила работы с проектом
 
 1. **После каждого изменения кода — обновлять этот файл.** Если изменилась архитектура, добавлен роутер, появилось новое решение — отражать в соответствующем разделе CLAUDE.md.
-2. **Git-коммит происходит автоматически** при завершении сессии (Stop-хук в `.claude/settings.json`). Коммитятся: `app/`, `CLAUDE.md`, `requirements.txt`, `scripts/`, `thoughts/`.
+2. **Git-коммит происходит автоматически** при завершении сессии (Stop-хук в `.claude/settings.json`). Коммитятся: `app/`, `CLAUDE.md`, `requirements.txt`, `scripts/`, `thoughts/`, `deploy/`.
 
 ---
 
@@ -160,7 +160,7 @@
 - Форма логин/пароль остаётся как fallback для admin-пользователя
 - Требует приложение в Битрикс24 (тип: Серверное): `https://entera.bitrix24.ru/marketplace/local/add/`
 - Переменные `.env`: `BITRIX24_CLIENT_ID`, `BITRIX24_CLIENT_SECRET`, `BITRIX24_PORTAL=entera.bitrix24.ru`
-- Redirect URI для приложения: `http://188.227.87.11:8550/auth/bitrix24/callback`
+- Redirect URI для приложения: `https://shrekcalls.duckdns.org/auth/bitrix24/callback` (на новом сервере OAuth пока не настроен — в `.env` нет `BITRIX24_*`)
 
 ### Форма оценки — UX-решения
 - Кнопки Да/Нет/Н/П — pill-форма с цветными контурами (зелёный/красный/серый), заливка при выборе
@@ -306,22 +306,41 @@
 - Теперь ячейка целиком заливается по `score_color(match%)` (классы `.match-cell-danger/warning/success` в `{% block styles %}`), % показан крупно (`.match-pct`). Красный/жёлтый/зелёный видны сразу.
 
 ### Встроенная инструкция (`/help`) (10.07.2026)
-- Страница-руководство по работе с сервисом: разделы «С чего начать», «Чек-листы», «Оценка звонка», «Список оценок и фильтры», «Отчёты», «Калибровка», FAQ.
+- Страница-руководство по работе с сервисом: разделы «С чего начать», «Чек-листы», «Оценка звонка», «Список оценок и фильтры», «Отчёты», «Калибровка», «Резервные копии» (добавлен 12.10.2026: расписание, баннер о сбое, восстановление), FAQ.
 - Роутер `app/routers/help.py` (подключён в `main.py`), шаблон `app/templates/help/index.html`, ссылка «Инструкция» в навбаре (`base.html`).
 - Статическая страница без БД — контент правится прямо в шаблоне.
 
+### Роли пользователей (12.10.2026)
+- `User.role`: `owner` | `admin` | `user` (по умолчанию `user`); свойства `is_owner`, `is_admin` в `models.py`. Миграция в `_run_migrations()`: колонка `role` + учётка `admin` становится `owner` (позже переименована в `egerasimchuk`).
+- Раздел «Пользователи» (`/users`) — только для `owner`/`admin` (зависимость `get_admin_user` в `deps.py`; не-админа редиректит на `/` через `NotAdminException`). Ссылка в навбаре скрыта для сотрудников.
+- `admin` создаёт/деактивирует/удаляет/меняет пароль только сотрудникам (`role='user'`) — `_can_manage()` в `users.py`. Выдавать роль `admin` (при создании или через `POST /users/{id}/set-role`) может только `owner`. Роль `owner` через UI не назначается и не снимается.
+- Логин нового пользователя — рабочий email (если в логине есть `@`, он же пишется в `email`).
+- Админ: Наумова Екатерина (`enaumova@entera.pro`).
+
+### Бэкап базы на Google Диск (12.10.2026)
+- **Причина:** старый сервер умер вместе с `data/app.db`, данные пропали. Код на GitHub (репозиторий **публичный** — базу туда класть нельзя).
+- `scripts/backup_db.sh`: `sqlite3 .backup` (консистентный снимок) → `PRAGMA integrity_check` → gzip → `data/backups/app-YYYY-MM-DD_HHMMSS.db.gz` (держим 14 последних) → `rclone copy` в `gdrive:CallReview-backups` → удаление на Диске старше 60 дней. Remote переопределяется `BACKUP_REMOTE=...`.
+- rclone (официальный, v1.75, не apt-пакет — тот 2022 г.); remote `gdrive`, scope `drive.file` (видит только свои файлы). Конфиг: `~/.config/rclone/rclone.conf` пользователя `egerasimchuk` (токен, не в git). Авторизация разово через `rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"` на ПК с браузером (v1.75 выдаёт base64-блоб, внутри поле `token` → вписать в конфиг вручную; `rclone config create ... token` его игнорирует и ждёт браузер). Подключено и проверено 12.10.2026, первая копия на Диске.
+- ⚠️ Используется общий client_id rclone, который Google **отключает в течение 2026** — бэкап на Диск перестанет работать. Нужно завести свой client_id (Google Cloud Console, https://rclone.org/drive/#making-your-own-client-id) и вписать `client_id`/`client_secret` в конфиг.
+- systemd: `call-eval-backup.timer` → `call-eval-backup.service` (oneshot), `OnCalendar=*-*-* 00:00:00` UTC (03:00 МСК), `Persistent=true`, `TimeoutStartSec=30min`. Unit-файлы в `deploy/`. Ручной запуск: `sudo systemctl start call-eval-backup.service`; лог: `journalctl -u call-eval-backup.service`.
+- **Уведомление о сбое (баннер в приложении):** скрипт пишет `data/backups/backup_ok` (UTC-время успешной выгрузки) или `data/backups/backup_error` (этап + код ошибки, через `trap EXIT` и переменную `STEP`). `app/backup_status.py::backup_alert()` → текст, если есть `backup_error` или успеха не было >36 ч (ловит и неработающий таймер). Зарегистрирован как Jinja-global во всех `Jinja2Templates` роутеров (цикл в `main.py` — у каждого роутера свой экземпляр; новый роутер с шаблонами добавлять туда). `base.html` показывает красный алерт только `current_user.is_admin`. Имя копии с секундами (`%H%M%S`) — при двух запусках в одну минуту gzip падал на существующем файле.
+- **Восстановление:** `rclone copy gdrive:CallReview-backups/app-<дата>.db.gz .` → `gunzip` → остановить `call-eval`, положить файл в `data/app.db`, запустить.
+
 ### Что вне MVP
 - Импорт исторических данных из Excel — отложено
-- Роли пользователей (admin / reviewer) — отложено
 
 ---
 
 ## Среда запуска
 
-Приложение запускается на VPS `188.227.87.11`.
+Приложение запускается на VPS `216.57.111.206` (с 04.10.2026; старый `188.227.87.11` недоступен). Сервер общий — на нём есть другие nginx-сайты, трогать только `call-eval`.
 
-**URL:** `http://188.227.87.11:8550`
-- Логин: `admin` / Пароль: `admin123`
+**URL:** `https://shrekcalls.duckdns.org` (основной, с 12.10.2026); запасной `http://216.57.111.206:8550`
+- Домен DuckDNS `shrekcalls` → A-запись вручную на `216.57.111.206` (IP статичный, автообновление не нужно)
+- HTTPS: Let's Encrypt через `certbot --nginx`, автопродление — системный `certbot.timer`; HTTP→HTTPS редирект
+- В `/etc/nginx/sites-available/call-eval` два server-блока: `:8550` (`server_name _`) и `shrekcalls.duckdns.org` (443 + 80→301, правил certbot). Бэкап до правки: `call-eval.bak-20261012`
+- Владелец: логин `egerasimchuk` (бывший `admin`, переименован 12.10.2026; пароль не хранится в репозитории)
+- Python 3.14 → в venv SQLAlchemy 2.0.54 (пин 2.0.36 падает)
 - Название приложения: **CallReview**
 
 **Архитектура:** nginx (порт 8550, открыт в ufw) → uvicorn (127.0.0.1:8551, не доступен снаружи)
@@ -329,7 +348,7 @@
 **systemd:** `sudo systemctl restart call-eval` — перезапуск; `sudo systemctl status call-eval` — статус
 **nginx:** `sudo nginx -s reload` — перезагрузка конфига; конфиг: `/etc/nginx/sites-available/call-eval`
 
-**Разрешённые порты в ufw:** 22, 80, 443, 3000, 3003, 5000, 8501, 8502, 8550
+**Разрешённые порты в ufw:** 22, 80, 443, 8550 (и другие для соседних сайтов)
 
 ---
 
@@ -348,6 +367,8 @@ app/
 scripts/
   create_admin.py  — создание первого пользователя
   seed_tvk.py      — наполнение чек-листа ТВК
+  backup_db.sh     — бэкап базы локально + на Google Диск
+deploy/            — systemd unit-файлы (бэкап-таймер)
 logic_summary.md   — полная структура ТВК, формулы, источники данных Qolio
 ```
 

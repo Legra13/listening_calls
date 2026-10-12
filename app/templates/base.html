@@ -53,12 +53,14 @@
             <i class="bi bi-bullseye me-1"></i>Калибровка
           </a>
         </li>
+        {% if current_user and current_user.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.url.path.startswith('/users') %}active{% endif %}"
              href="/users">
             <i class="bi bi-people me-1"></i>Пользователи
           </a>
         </li>
+        {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.url.path.startswith('/help') %}active{% endif %}"
              href="/help">
@@ -84,6 +86,12 @@
 </nav>
 
 <div class="container-fluid px-4 py-3">
+  {% if current_user and current_user.is_admin %}{% set _backup_alert = backup_alert() %}{% if _backup_alert %}
+    <div class="alert alert-danger mb-3" role="alert">
+      <i class="bi bi-cloud-slash me-2"></i><strong>Бэкап:</strong> {{ _backup_alert }}
+      Проверьте <code>journalctl -u call-eval-backup.service</code>.
+    </div>
+  {% endif %}{% endif %}
   {% if flash %}
     <div class="alert alert-{{ flash.category }} alert-dismissible fade show mb-3" role="alert">
       {% if flash.category == 'success' %}<i class="bi bi-check-circle me-2"></i>
