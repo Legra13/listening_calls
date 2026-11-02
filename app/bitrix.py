@@ -17,6 +17,20 @@ SEMANTIC_TO_STAGE: dict[str, str] = {
     "P": "в работе",
 }
 
+# Служебные стадии: семантика в Битрикс у них «провал» (F), но проигранной
+# сделки за ними нет — это технический мусор. В аналитику такие сделки
+# попадать не должны, иначе они занижают Win Rate.
+# C5:1 «Дубль» — воронка 5 «Продление».
+JUNK_STAGE = "дубль"
+_JUNK_STAGE_IDS: set[str] = {"C5:1"}
+
+
+def _stage_name(stage_id: str | None, semantic: str | None) -> str:
+    """Стадия сделки для отчётов: служебные стадии отделяются от настоящих провалов."""
+    if stage_id and str(stage_id) in _JUNK_STAGE_IDS:
+        return JUNK_STAGE
+    return SEMANTIC_TO_STAGE.get(semantic or "P", "в работе")
+
 _DEALS_TABLE  = "b24-entera-bitrix24-ru-deals"
 _USERS_TABLE  = "b24-entera-bitrix24-ru-users"
 _DEPTS_TABLE  = "b24-entera-bitrix24-ru-departments"
@@ -124,7 +138,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
             with conn.cursor() as cur:
                 cur.execute(
                     f"""
-                    SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID,
+                    SELECT d.ID, d.TITLE, d.STAGE_SEMANTIC_ID, d.STAGE_ID,
                            d.ASSIGNED_BY_ID, d.DATE_CREATE, d.CLOSEDATE,
                            d.{_PRESENTATION_FIELD_RENEWAL},
                            d.{_PRESENTATION_FIELD_GENERAL},
@@ -145,8 +159,7 @@ def get_deal(deal_id: str | int) -> DealInfo | None:
             name_parts = [row.get("NAME") or "", row.get("LAST_NAME") or ""]
             operator_name = " ".join(p for p in name_parts if p).strip() or f"Пользователь #{row['ASSIGNED_BY_ID']}"
 
-            semantic = row.get("STAGE_SEMANTIC_ID") or "P"
-            stage = SEMANTIC_TO_STAGE.get(semantic, "в работе")
+            stage = _stage_name(row.get("STAGE_ID"), row.get("STAGE_SEMANTIC_ID"))
 
             # Определяем отдел: UF_DEPARTMENT — JSON-массив ID, берём первый
             department: str | None = None
@@ -245,14 +258,13 @@ def get_deal_stages_bulk(deal_ids: list[str | int]) -> dict[str, dict]:
             placeholders = ",".join(["%s"] * len(chunk))
             with conn.cursor() as cur:
                 cur.execute(
-                    f"SELECT ID, STAGE_SEMANTIC_ID, CLOSEDATE "
+                    f"SELECT ID, STAGE_SEMANTIC_ID, STAGE_ID, CLOSEDATE "
                     f"FROM `{_DEALS_TABLE}` WHERE ID IN ({placeholders})",
                     tuple(int(x) for x in chunk),
                 )
                 for row in cur.fetchall():
-                    semantic = row.get("STAGE_SEMANTIC_ID") or "P"
                     result[str(row["ID"])] = {
-                        "stage": SEMANTIC_TO_STAGE.get(semantic, "в работе"),
+                        "stage": _stage_name(row.get("STAGE_ID"), row.get("STAGE_SEMANTIC_ID")),
                         "close_date": _to_date(row.get("CLOSEDATE")),
                     }
         return result

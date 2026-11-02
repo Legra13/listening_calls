@@ -74,6 +74,7 @@
               <option value="won"      {% if filters.stage == 'won' %}selected{% endif %}>✅ Успешна</option>
               <option value="lost"     {% if filters.stage == 'lost' %}selected{% endif %}>❌ Не продали</option>
               <option value="progress" {% if filters.stage == 'progress' %}selected{% endif %}>🔄 В работе</option>
+              <option value="duplicate" {% if filters.stage == 'duplicate' %}selected{% endif %}>🗑 Дубли (вне расчёта)</option>
             </select>
           </div>
 

@@ -29,6 +29,9 @@ def _comment_to_text(raw: str | None) -> str | None:
         pass
     return raw or None
 LOST = "не смог продать"
+# Служебная стадия «Дубль» (bitrix.JUNK_STAGE): не успех и не провал —
+# такие сделки исключаются из всех расчётов, иначе занижают Win Rate.
+EXCLUDED = "дубль"
 
 
 # ── Цвет тепловой карты (logic_summary §5) ────────────────────────────────────
@@ -102,12 +105,15 @@ def fetch_evaluations(db: Session, filters: Filters) -> list[Evaluation]:
     if filters.checklist_id:
         q = q.filter(Evaluation.checklist_id == filters.checklist_id)
     _STAGE_MAP = {
-        "won":      "сделка успешна",
-        "lost":     "не смог продать",
-        "progress": "в работе",
+        "won":       "сделка успешна",
+        "lost":      "не смог продать",
+        "progress":  "в работе",
+        "duplicate": EXCLUDED,
     }
     if filters.stage and filters.stage in _STAGE_MAP:
         q = q.filter(Evaluation.stage == _STAGE_MAP[filters.stage])
+    else:
+        q = q.filter((Evaluation.stage != EXCLUDED) | (Evaluation.stage.is_(None)))
     q = q.filter(Evaluation.status == "published")
     return q.all()
 
@@ -586,6 +592,8 @@ def fetch_evaluations_employee(db: Session, filters: EmployeeFilters) -> list[Ev
         q = q.filter(Evaluation.evaluator_id == filters.evaluator_id)
     if filters.stage:
         q = q.filter(Evaluation.stage == filters.stage)
+    else:
+        q = q.filter((Evaluation.stage != EXCLUDED) | (Evaluation.stage.is_(None)))
     if filters.client_category:
         q = q.filter(Evaluation.client_category.in_(filters.client_category))
     q = q.filter(Evaluation.status == "published")

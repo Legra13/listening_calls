@@ -19,6 +19,7 @@ DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "
 con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
 
 WON, LOST, WIP = "сделка успешна", "не смог продать", "в работе"
+EXCLUDED = "дубль"   # служебная стадия Битрикс C5:1 — в расчёт не входит
 
 # --- helpers ---------------------------------------------------------------
 def mean(xs): return sum(xs)/len(xs) if xs else None
@@ -112,7 +113,8 @@ for r in con.execute("SELECT * FROM criteria ORDER BY block_id, order_index"):
     d = dict(r); crits[r["block_id"]].append(d); crit_by_id[r["id"]] = d
 
 evs = [dict(r) for r in con.execute(
-    "SELECT * FROM evaluations WHERE status='published' ORDER BY id")]
+    "SELECT * FROM evaluations WHERE status='published' AND (stage IS NULL OR stage != ?) ORDER BY id",
+    (EXCLUDED,))]
 items = defaultdict(dict)
 for r in con.execute("SELECT evaluation_id, criterion_id, value FROM evaluation_items"):
     items[r["evaluation_id"]][r["criterion_id"]] = r["value"]
