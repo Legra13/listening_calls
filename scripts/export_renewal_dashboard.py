@@ -7,6 +7,10 @@ DB = '/home/egerasimchuk/listening_calls/data/app.db'
 OUT = sys.argv[1] if len(sys.argv) > 1 else '/tmp/renewal.json'
 WON, LOST, PROG, JUNK = 'сделка успешна', 'не смог продать', 'в работе', 'дубль'
 MONTHS = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']
+# Сделка может стать успешной быстро, а провальной — только когда подписка кончилась.
+# Поэтому у свежих звонков провалы ещё не наступили, и Win Rate по ним завышен.
+# «Вызревшие» = звонки, у которых исход уже успел определиться.
+MATURE_BEFORE = '2026-08-01'
 MLAB = {'2026-05': 'май', '2026-06': 'июнь', '2026-07': 'июль',
         '2026-08': 'авг', '2026-09': 'сент', '2026-10': 'окт'}
 
@@ -170,6 +174,7 @@ for e in evs:
         skipped['нет ответов'] += 1; continue
     ROWS.append(dict(id=e['id'], cl=e['checklist_id'], deal=e['deal_id'], op=e['operator_name'],
                      dept=e['department'], stage=e['stage'], month=m, cat=e['client_category'],
+                     date=(e['eval_date'] or '')[:10],
                      total=round(wn / wd, 1), blocks=bs, crits=cach))
 
 SHORT = {'Отдел продления 1': 'ОП1', 'Отдел продления 2': 'ОП2', 'Отдел продления 3': 'ОП3'}
@@ -281,6 +286,19 @@ for op in sorted({r['op'] for r in ROWS}):
                      wr=rnd(nw / (nw + nl) * 100) if (nw + nl) else None))
 emps.sort(key=lambda e: (e['deptShort'], -e['n']))
 
+cohort = []
+for m in MONTHS:
+    sub = [r for r in ROWS if r['month'] == m]
+    nw = sum(1 for r in sub if r['stage'] == WON)
+    nl = sum(1 for r in sub if r['stage'] == LOST)
+    cohort.append(dict(month=m, n=len(sub), won=nw, lost=nl,
+                       prog=sum(1 for r in sub if r['stage'] == PROG),
+                       wr=rnd(nw / (nw + nl) * 100) if (nw + nl) else None,
+                       mature=m < MATURE_BEFORE[:7]))
+
+MATURE = [r for r in ROWS if r['date'] < MATURE_BEFORE]
+SCOPES_M = [('all', MATURE)] + [(SHORT[d], [r for r in MATURE if r['dept'] == d]) for d in DEPTS]
+
 payload = dict(
     generated='2026-11-06', months=MONTHS, mlab=[MLAB[m] for m in MONTHS],
     departments=[dict(name=d, short=SHORT[d]) for d in DEPTS],
@@ -291,6 +309,8 @@ payload = dict(
             for bi in range(10)],
     dyn={name: dyn(rows) for name, rows in SCOPES},
     corr={name: corr(rows) for name, rows in SCOPES},
+    corrMature={name: corr(rows) for name, rows in SCOPES_M},
+    cohort=cohort, matureBefore=MATURE_BEFORE,
     employees=emps,
     meta=dict(nEval=len(ROWS), nDeals=len({r['deal'] for r in ROWS if r['deal']}),
               nEmp=len(emps), skipped=dict(skipped),
@@ -302,6 +322,7 @@ with open(OUT, 'w', encoding='utf-8') as f:
     json.dump(payload, f, ensure_ascii=False, separators=(',', ':'))
 print('rows:', len(ROWS), 'skipped:', dict(skipped), 'employees:', len(emps))
 print('all:', {k: payload['corr']['all'][k] for k in ('n', 'nClosed', 'won', 'lost', 'prog', 'wr', 'meanWon', 'meanLost', 'delta', 'p', 'r', 'rp')})
+print('вызревшие:', {k: payload['corrMature']['all'][k] for k in ('n', 'nClosed', 'won', 'lost', 'wr', 'delta', 'p', 'r')})
 print('bins:', [(b['label'], b['n'], b['wr']) for b in payload['corr']['all']['bins']])
 print('dyn all:', [(m, payload['dyn']['all'][m]['n'], payload['dyn']['all'][m]['total']) for m in MONTHS])
 import os; print('size KB:', round(os.path.getsize(OUT) / 1024, 1))
