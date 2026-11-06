@@ -206,6 +206,7 @@ def corr(rows):
     w = [r['total'] for r in closed if r['stage'] == WON]
     l = [r['total'] for r in closed if r['stage'] == LOST]
     res = dict(n=len(rows), nClosed=len(closed), won=len(w), lost=len(l),
+               avg=rnd(mean([r['total'] for r in rows])) if rows else None,
                prog=sum(1 for r in rows if r['stage'] == PROG),
                wr=rnd(len(w) / len(closed) * 100) if closed else None,
                meanWon=rnd(mean(w)), meanLost=rnd(mean(l)),
@@ -300,7 +301,7 @@ MATURE = [r for r in ROWS if r['date'] < MATURE_BEFORE]
 SCOPES_M = [('all', MATURE)] + [(SHORT[d], [r for r in MATURE if r['dept'] == d]) for d in DEPTS]
 
 payload = dict(
-    generated='2026-11-06', months=MONTHS, mlab=[MLAB[m] for m in MONTHS],
+    generated='06.11.2026', months=MONTHS, mlab=[MLAB[m] for m in MONTHS],
     departments=[dict(name=d, short=SHORT[d]) for d in DEPTS],
     scopes=[s for s, _ in SCOPES],
     blocks=[dict(i=bi, name=BLOCK_NAME[bi], weight=BLOCK_W[bi],
