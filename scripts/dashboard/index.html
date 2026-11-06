@@ -1,0 +1,1128 @@
+<meta name="dash-one-writer">
+<style>
+  .rp { font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+  .rp * { box-sizing: border-box; }
+
+  .rp-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); margin-bottom: var(--cds-gap-xl); }
+  .rp-h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .rp-lead { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-body); max-width: 64ch; line-height: 1.5; }
+
+  .rp-main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--cds-gap-md); margin-bottom: var(--cds-gap-xl); }
+  .rp-main-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .rp-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: calc(var(--cds-font-size-title) * 1.5); line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .rp-big-u { font-size: var(--cds-font-size-body); color: var(--color-fg-muted); margin-left: 4px; }
+  .rp-main-t { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+  .rp-main-p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; margin: 0; }
+  .rp-main-p b { color: var(--color-fg); font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+
+  .rp-sec { margin: 0 0 var(--cds-gap-xl); scroll-margin-top: 1rem; }
+  .rp-sec-h { display: flex; flex-direction: column; gap: 3px; margin-bottom: var(--cds-gap-md); }
+  .rp-sec-t { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .rp-sec-n { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 72ch; line-height: 1.5; }
+
+  .rp-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); position: relative; margin-bottom: var(--cds-gap-md); }
+  .rp-card:last-child { margin-bottom: 0; }
+  .rp-card-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--cds-gap-sm); margin-bottom: 4px; }
+  .rp-card-t { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .rp-card-n { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0 0 var(--cds-gap-sm); max-width: 72ch; line-height: 1.5; }
+  .rp-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: var(--cds-gap-md); }
+  .rp-two > .rp-card { margin-bottom: 0; }
+
+  .rp-more { display: inline-flex; align-items: center; gap: 7px; background: transparent; color: var(--color-fg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 6px 12px; font: inherit; font-size: var(--cds-font-size-caption); cursor: pointer; }
+  .rp-more:hover { background: var(--color-bg); }
+  .rp-more::before { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+  .rp-more[aria-expanded="true"]::before { transform: rotate(-135deg) translateY(-2px); }
+  .rp-box { margin-top: var(--cds-gap-md); }
+
+  .rp-chart { width: 100%; min-height: 220px; }
+  .rp-chart svg { display: block; overflow: visible; }
+  .rp-scroll { overflow-x: auto; }
+
+  .rp-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; max-width: 18rem; }
+  .rp-tip-h { color: var(--cds-text-secondary); margin-bottom: 2px; }
+  .rp-tip-r { display: flex; align-items: center; gap: 6px; }
+  .rp-tip-s { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+
+  .rp-grid { display: grid; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; align-items: stretch; }
+  .rp-gh { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: 4px 6px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--color-border-line); }
+  .rp-gh.rp-left { text-align: left; }
+  .rp-name { padding: 6px 8px 6px 0; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--color-border-line); min-width: 0; }
+  .rp-name-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rp-name.rp-wrap .rp-name-t { white-space: normal; overflow: visible; }
+  .rp-cell { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--color-border-line); border-left: 1px solid var(--color-panel); }
+  .rp-row-c .rp-name { padding-left: 1.25rem; color: var(--color-fg-muted); }
+  .rp-row-c .rp-name-t { white-space: normal; font-size: calc(var(--cds-font-size-caption) * 0.95); }
+  .rp-tog { flex: none; width: 1.1rem; height: 1.1rem; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--color-border-line); border-radius: 4px; background: transparent; color: var(--color-fg-muted); cursor: pointer; font-size: 11px; line-height: 1; padding: 0; }
+  .rp-tog:hover { color: var(--color-fg); }
+  .rp-w { color: var(--color-fg-muted); font-size: calc(var(--cds-font-size-caption) * 0.9); flex: none; }
+  .rp-sub-row { grid-column: 1 / -1; padding: 6px 0 10px 1.25rem; border-bottom: 1px solid var(--color-border-line); }
+
+  .rp-bars { display: grid; gap: 2px; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .rp-bar-row { display: grid; grid-template-columns: minmax(10rem, 2fr) minmax(6rem, 1.6fr) 4.5rem; align-items: center; gap: var(--cds-gap-sm); padding: 5px 0; border-bottom: 1px solid var(--color-border-line); }
+  .rp-bar-track { position: relative; height: 1rem; }
+  .rp-bar-zero { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--cds-chart-reference); }
+  .rp-bar-f { position: absolute; top: 2px; height: 0.75rem; border-radius: 3px; }
+  .rp-delta { text-align: right; }
+  .rp-crit-row { display: grid; grid-template-columns: 1fr 4.5rem; gap: var(--cds-gap-sm); align-items: start; padding: 5px 0; border-bottom: 1px solid var(--color-border-line); }
+  .rp-crit-row:last-child { border-bottom: none; }
+  .rp-chip { display: inline-block; font-size: calc(var(--cds-font-size-caption) * 0.85); color: var(--color-fg-muted); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+
+  .rp-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .rp-table th { text-align: right; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .rp-table th:first-child, .rp-table td:first-child { text-align: left; }
+  .rp-table td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .rp-table tr:last-child td { border-bottom: none; }
+
+  .rp-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-sm); }
+  .rp-ctl label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .rp-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-sm); }
+  .rp-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .rp-sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .rp-say { background: var(--color-panel); border: 1px solid var(--color-border-line); border-left: 3px solid var(--cds-chart-reference); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); font-size: var(--cds-font-size-body); line-height: 1.6; }
+  .rp-say p { margin: 0 0 var(--cds-gap-sm); max-width: 72ch; }
+  .rp-say p:last-child { margin-bottom: 0; }
+  .rp-say b { font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+
+  .rp-todo { display: grid; gap: var(--cds-gap-lg); }
+  .rp-todo-i { display: grid; grid-template-columns: 1.6rem 1fr; gap: var(--cds-gap-sm); align-items: start; }
+  .rp-todo-n { font-family: var(--font-anthropic-serif); color: var(--color-fg-muted); line-height: 1.5; }
+  .rp-todo-t { font-weight: var(--cds-font-weight-medium); margin: 0 0 3px; }
+  .rp-todo-d { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 70ch; line-height: 1.55; }
+  .rp-todo-d b { color: var(--color-fg); font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+
+  .rp-notes { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xl); }
+  .rp-notes summary { cursor: pointer; color: var(--color-fg); }
+  .rp-notes dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px var(--cds-gap-md); margin: var(--cds-gap-sm) 0 0; }
+  .rp-notes dt { font-weight: var(--cds-font-weight-medium); color: var(--color-fg); }
+  .rp-notes dd { margin: 0; max-width: 72ch; line-height: 1.5; }
+
+  .dash-skeleton { border-radius: 4px; }
+  [data-dash-source-state="empty"] { color: transparent; }
+  [data-dash-source-state="refreshing"] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+
+  @media (max-width: 640px) {
+    .rp-notes dl { grid-template-columns: 1fr; }
+    .rp-bar-row { grid-template-columns: 1fr 5rem; }
+    .rp-bar-track { grid-column: 1 / -1; }
+  }
+</style>
+
+<div class="rp">
+  <header class="rp-head">
+    <h1 class="rp-h1">Прослушка продлений ТВК</h1>
+    <p class="rp-lead">Май — октябрь 2026, отделы продления. Руководитель слушала звонки менеджеров и оценивала их по чек-листу ТВК: сто баллов, разложенных по десяти блокам разговора. Здесь — что из этого вышло.</p>
+  </header>
+
+  <div class="rp-main">
+    <div class="rp-main-card">
+      <div class="rp-big"><span data-draw="stat" data-source="stats" data-field="Значение" data-where="Выборка=Все звонки&amp;Срез=Все отделы&amp;Показатель=Средний балл" data-unit="score">—</span><span class="rp-big-u">из 100</span></div>
+      <div class="rp-main-t">Средняя оценка звонка</div>
+      <p class="rp-main-p">Прослушано <b data-draw="stat" data-source="stats" data-field="Значение" data-where="Выборка=Все звонки&amp;Срез=Все отделы&amp;Показатель=Оценок" data-unit="num">—</b> звонков за полгода. Оценка росла до августа, а к октябрю вернулась к весеннему уровню.</p>
+    </div>
+    <div class="rp-main-card">
+      <div class="rp-big"><span data-draw="stat" data-source="stats" data-field="Значение" data-where="Выборка=Вызревшие&amp;Срез=Все отделы&amp;Показатель=Win Rate" data-unit="pctshort">—</span></div>
+      <div class="rp-main-t">Клиентов продлевают</div>
+      <p class="rp-main-p">Почти все сделки на продлении закрываются успешно. Поэтому по результату сделки нельзя понять, хорошо ли прошёл звонок: и после слабого разговора клиент обычно остаётся.</p>
+    </div>
+    <div class="rp-main-card">
+      <div class="rp-big"><span data-draw="stat" data-source="impact" data-field="Средний балл" data-where="Выборка=Все звонки&amp;Уровень=Блок&amp;Показатель=ИТОГИ АУДИТА И ПРЕДЛОЖЕНИЕ ПРОДЛЕНИЯ (блоки 5–6 скрипта)" data-unit="score">—</span><span class="rp-big-u">из 100</span></div>
+      <div class="rp-main-t">Самое слабое место</div>
+      <p class="rp-main-p">Блок «Итоги аудита и предложение продления». Он же самый важный в чек-листе — весит <b data-draw="stat" data-source="impact" data-field="Вес" data-where="Выборка=Все звонки&amp;Уровень=Блок&amp;Показатель=ИТОГИ АУДИТА И ПРЕДЛОЖЕНИЕ ПРОДЛЕНИЯ (блоки 5–6 скрипта)" data-unit="num">—</b> баллов из ста.</p>
+    </div>
+  </div>
+
+  <section class="rp-sec" id="dynamics">
+    <div class="rp-sec-h">
+      <h2 class="rp-sec-t">Как менялись оценки</h2>
+      <p class="rp-sec-n">Средняя оценка звонка по месяцам. Чем выше линия, тем точнее менеджеры шли по скрипту.</p>
+    </div>
+
+    <div class="rp-card">
+      <div class="rp-card-h"><h3 class="rp-card-t">Оценка звонка по месяцам</h3></div>
+      <p class="rp-card-n">Жирная линия — все отделы вместе, тонкие — каждый отдел отдельно.</p>
+      <div class="rp-chart" data-draw="trend" data-source="dynamics"></div>
+    </div>
+
+    <div class="rp-card">
+      <div class="rp-card-h">
+        <h3 class="rp-card-t">Из чего складывается оценка</h3>
+        <div class="rp-ctl">
+          <label for="rp-scope">Отдел</label>
+          <select class="dash-select" id="rp-scope" data-draw="scopeSel" data-source="dynamics" aria-label="Отдел"></select>
+        </div>
+      </div>
+      <p class="rp-card-n">Оценка собирается из десяти блоков разговора. Здесь видно, какой блок проседал и в каком месяце. Число рядом с названием — вес блока: сколько он даёт в итоговых ста баллах. Любой блок раскрывается до отдельных пунктов чек-листа.</p>
+      <button class="rp-more" type="button" data-more="rp-blocks-box" aria-expanded="false" aria-controls="rp-blocks-box">
+        <span data-open="Показать блоки по месяцам" data-close="Скрыть блоки">Показать блоки по месяцам</span>
+      </button>
+      <div class="rp-box" id="rp-blocks-box" hidden>
+        <div class="rp-scroll"><div class="rp-grid" data-draw="blocks" data-source="dynamics"></div></div>
+        <div class="rp-legend">
+          <span><i class="rp-sw" style="background: var(--color-bad)"></i>0</span>
+          <span><i class="rp-sw" style="background: var(--color-warn)"></i>50</span>
+          <span><i class="rp-sw" style="background: var(--color-ok)"></i>100 баллов</span>
+          <span>пустая ячейка — в этом месяце пункт не оценивали</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rp-card">
+      <div class="rp-card-h"><h3 class="rp-card-t">Сотрудники</h3></div>
+      <p class="rp-card-n">Средняя оценка каждого менеджера по месяцам. Пустая ячейка значит, что в этом месяце его звонки не слушали. Любого сотрудника можно раскрыть и посмотреть, какие блоки разговора даются ему хуже.</p>
+      <button class="rp-more" type="button" data-more="rp-emp-box" aria-expanded="false" aria-controls="rp-emp-box">
+        <span data-open="Показать сотрудников" data-close="Скрыть сотрудников">Показать сотрудников</span>
+      </button>
+      <div class="rp-box" id="rp-emp-box" hidden>
+        <div class="rp-scroll"><div class="rp-grid" data-draw="empGrid" data-source="employees emp_blocks"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rp-sec" id="weak">
+    <div class="rp-sec-h">
+      <h2 class="rp-sec-t">Что даётся хуже всего</h2>
+      <p class="rp-sec-n">Средняя оценка каждого блока за все шесть месяцев. Чем короче полоса, тем хуже этот кусок разговора проходит у менеджеров.</p>
+    </div>
+
+    <div class="rp-card">
+      <div class="rp-card-h"><h3 class="rp-card-t">Блоки разговора от слабого к сильному</h3></div>
+      <p class="rp-card-n">В скобках — вес блока в итоговой оценке. Смотреть стоит туда, где низкий балл сочетается с большим весом: именно эти блоки тянут оценку вниз.</p>
+      <div class="rp-chart" data-draw="weakBlocks" data-source="impact"></div>
+      <p class="rp-card-n" style="margin: var(--cds-gap-sm) 0 0">Блок «Управление разговором» заполняют редко — судить по нему рано.</p>
+    </div>
+
+    <div class="rp-say">
+      <p>Самый тяжёлый блок чек-листа — «Итоги аудита и предложение продления» — одновременно и самый слабый:
+        <b data-draw="stat" data-source="impact" data-field="Средний балл" data-where="Выборка=Все звонки&amp;Уровень=Блок&amp;Показатель=ИТОГИ АУДИТА И ПРЕДЛОЖЕНИЕ ПРОДЛЕНИЯ (блоки 5–6 скрипта)" data-unit="score">—</b> балла при весе
+        <b data-draw="stat" data-source="impact" data-field="Вес" data-where="Выборка=Все звонки&amp;Уровень=Блок&amp;Показатель=ИТОГИ АУДИТА И ПРЕДЛОЖЕНИЕ ПРОДЛЕНИЯ (блоки 5–6 скрипта)" data-unit="num">—</b>.
+        Внутри него тяжелее всего даётся один конкретный пункт — проговорить клиенту итог аудита конкретными цифрами из калькулятора. Это делают в
+        <b data-draw="stat" data-source="impact" data-field="Доля выполнения" data-where="Выборка=Все звонки&amp;Уровень=Критерий&amp;Показатель=Проговорил итог аудита с конкретными цифрами из калькулятора" data-unit="pct">—</b> звонков.</p>
+    </div>
+  </section>
+
+  <section class="rp-sec" id="outcome">
+    <div class="rp-sec-h">
+      <h2 class="rp-sec-t">Связан ли хороший звонок с продлением</h2>
+      <p class="rp-sec-n">Короткий ответ: по этим данным — нет. Ниже видно, почему так выходит и почему это не повод отказываться от прослушки.</p>
+    </div>
+
+    <div class="rp-two">
+      <div class="rp-card">
+        <div class="rp-card-h"><h3 class="rp-card-t">Доля продливших по оценке звонка</h3></div>
+        <p class="rp-card-n">Если бы качество разговора решало, столбцы росли бы слева направо. Они примерно одной высоты. Пунктир — средний уровень.</p>
+        <div class="rp-chart" data-draw="binsChart" data-source="bins"></div>
+      </div>
+      <div class="rp-card">
+        <div class="rp-card-h"><h3 class="rp-card-t">Оценки продливших и остальных</h3></div>
+        <p class="rp-card-n">Каждая точка — один звонок, по горизонтали его оценка. Облака точек почти совпадают. Вертикальная черта — среднее по группе.</p>
+        <div class="rp-chart" data-draw="dist" data-source="scores"></div>
+      </div>
+    </div>
+
+    <div class="rp-say">
+      <p>Звонки с оценкой ниже пятидесяти заканчиваются продлением в
+        <b data-draw="stat" data-source="bins" data-field="Win Rate" data-where="Выборка=Вызревшие&amp;Срез=Все отделы&amp;Диапазон балла=≤50" data-unit="pct">—</b> случаев.
+        Звонки выше восьмидесяти — в <b data-draw="stat" data-source="bins" data-field="Win Rate" data-where="Выборка=Вызревшие&amp;Срез=Все отделы&amp;Диапазон балла=&gt;80" data-unit="pct">—</b>.
+        Разница есть, но на таком количестве сделок её не отличить от случайного совпадения.</p>
+      <p>Причина простая. Продление — это работа с клиентом, который уже платит, и отказываются единицы. Из
+        <b data-draw="stat" data-source="stats" data-field="Значение" data-where="Выборка=Вызревшие&amp;Срез=Все отделы&amp;Показатель=Оценок" data-unit="num">—</b> звонков, по которым судьба сделки уже известна, не продлили всего
+        <b data-draw="stat" data-source="stats" data-field="Значение" data-where="Выборка=Вызревшие&amp;Срез=Все отделы&amp;Показатель=Провалов" data-unit="num">—</b> клиентов.
+        Чтобы по такому редкому событию увидеть разницу между хорошим и плохим звонком, данных нужно в разы больше.</p>
+      <p>Это не значит, что звонки не важны. Это значит, что «продлил или нет» — слишком грубая линейка, чтобы мерить ею качество разговора.</p>
+    </div>
+
+    <div class="rp-card">
+      <div class="rp-card-h"><h3 class="rp-card-t">Подробности для тех, кому нужны цифры</h3></div>
+      <p class="rp-card-n">Сравнение отделов, разбор по блокам чек-листа и объяснение, почему в расчёт попали не все звонки.</p>
+      <button class="rp-more" type="button" data-more="rp-num-box" aria-expanded="false" aria-controls="rp-num-box">
+        <span data-open="Показать таблицы и цифры" data-close="Скрыть таблицы и цифры">Показать таблицы и цифры</span>
+      </button>
+
+      <div class="rp-box" id="rp-num-box" hidden>
+        <h4 class="rp-card-t">Почему берём не все звонки</h4>
+        <p class="rp-card-n">Успешной сделка становится быстро — клиент оплатил счёт. Неуспешной она становится поздно: когда подписка закончилась, а продления так и не случилось. Поэтому у свежих месяцев отказов ещё нет, и доля продливших у них равна ста процентам не по заслугам, а по возрасту. В расчёт связи с результатом берутся только месяцы, где судьба сделок уже решилась.</p>
+        <div class="rp-scroll">
+          <table class="rp-table" data-source="cohort" data-row-key="Месяц звонка">
+            <thead><tr>
+              <th data-field="Месяц звонка">Месяц звонка</th>
+              <th data-field="Звонков">Звонков</th>
+              <th data-field="Успешных">Продлили</th>
+              <th data-field="Провальных">Не продлили</th>
+              <th data-field="В работе">Ещё решается</th>
+              <th data-field="Win Rate">Продлили, %</th>
+              <th data-field="Вызрела">В расчёте</th>
+            </tr></thead>
+            <tbody data-draw="cohort"></tbody>
+          </table>
+        </div>
+
+        <h4 class="rp-card-t" style="margin-top: var(--cds-gap-lg)">Отделы рядом</h4>
+        <p class="rp-card-n">«Разница» — на сколько баллов звонки продливших клиентов оценены выше. Колонка p показывает, насколько такая разница похожа на случайность: значимой считают разницу при p меньше 0,05. Ни у одного отдела её нет.</p>
+        <div class="rp-scroll">
+          <table class="rp-table" data-source="departments" data-row-key="Срез">
+            <thead><tr>
+              <th data-field="Срез">Отдел</th>
+              <th data-field="Звонков">Звонков</th>
+              <th data-field="Успешных">Продлили</th>
+              <th data-field="Провалов">Не продлили</th>
+              <th data-field="Win Rate">Продлили, %</th>
+              <th data-field="Балл при успехе">Оценка у продливших</th>
+              <th data-field="Балл при провале">Оценка у остальных</th>
+              <th data-field="Разница">Разница</th>
+              <th data-field="p">p</th>
+            </tr></thead>
+            <tbody data-draw="depts"></tbody>
+          </table>
+        </div>
+
+        <h4 class="rp-card-t" style="margin-top: var(--cds-gap-lg)">Блоки разговора и результат сделки</h4>
+        <p class="rp-card-n">Насколько оценка блока расходится у продливших и у остальных. Вправо — блок выполнен лучше там, где клиент продлил. Серым помечены блоки, по которым данных слишком мало. Любой блок раскрывается до отдельных пунктов чек-листа.</p>
+        <div class="rp-bars" data-draw="impactList" data-source="impact"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rp-sec" id="todo">
+    <div class="rp-sec-h">
+      <h2 class="rp-sec-t">Что с этим делать</h2>
+    </div>
+    <div class="rp-card">
+      <div class="rp-todo">
+        <div class="rp-todo-i">
+          <div class="rp-todo-n">1</div>
+          <div>
+            <p class="rp-todo-t">Взяться за итоги аудита и предложение продления</p>
+            <p class="rp-todo-d">Самый весомый блок чек-листа и самый слабый — <b data-draw="stat" data-source="impact" data-field="Средний балл" data-where="Выборка=Все звонки&amp;Уровень=Блок&amp;Показатель=ИТОГИ АУДИТА И ПРЕДЛОЖЕНИЕ ПРОДЛЕНИЯ (блоки 5–6 скрипта)" data-unit="score">—</b> балла. Подтянуть его выгоднее для общей оценки, чем вылизывать все лёгкие блоки разом. Начать стоит с одного пункта: проговаривать клиенту итог аудита конкретными цифрами из калькулятора.</p>
+          </div>
+        </div>
+        <div class="rp-todo-i">
+          <div class="rp-todo-n">2</div>
+          <div>
+            <p class="rp-todo-t">Не мерить качество звонка долей продлений</p>
+            <p class="rp-todo-d">На продлении остаются почти все, и эта цифра перестаёт что-либо различать. Для менеджера она говорит не о его работе, а о том, что клиент и так собирался остаться.</p>
+          </div>
+        </div>
+        <div class="rp-todo-i">
+          <div class="rp-todo-n">3</div>
+          <div>
+            <p class="rp-todo-t">Искать связь там, где её видно</p>
+            <p class="rp-todo-d">Если нужно доказать, что качество звонка влияет на деньги, продления для этого не подходят. Подойдёт отдел продаж, где отказов много, или другие мерки вместо «да/нет» — сумма сделки и срок закрытия. Самый надёжный путь — сравнить группу, с которой разбирают звонки, с группой, с которой не разбирают.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <details class="rp-notes">
+    <summary>Как это считалось</summary>
+    <dl>
+      <dt>Оценка звонка</dt>
+      <dd>Внутри блока складываются веса выполненных пунктов и делятся на веса тех, что вообще оценивали. Итог — среднее по блокам с учётом их весов. Пункт, помеченный «не применимо», в расчёт не идёт.</dd>
+      <dt>Результат сделки</dt>
+      <dd>Берётся текущая стадия сделки в Битрикс24. Продлением считается только стадия «Сделка успешна». «Оплачено» и «Оплата подтверждена» пока числятся как «ещё решается»: успех засчитывается после перевода в финальную стадию.</dd>
+      <dt>Какие звонки в расчёте связи</dt>
+      <dd>Только звонки до 1 августа 2026 — у них судьба сделки уже определилась. Все случаи отказа от продления приходятся именно на них. У звонков августа–октября отказов пока ноль не потому, что звонили лучше, а потому, что подписка у этих клиентов ещё не закончилась. Динамика оценок в начале отчёта показана за все шесть месяцев: она про качество разговора и от возраста сделки не зависит.</dd>
+      <dt>Что исключено</dt>
+      <dd>Сделки со стадией «Дубль» — технический мусор, не успех и не отказ. Черновики оценок и отделы вне продления в отчёт не входят.</dd>
+      <dt>Два чек-листа</dt>
+      <dd>ОП1 и ОП2 оценивают по чек-листу «Продление ТВК», ОП3 — по «Продление ТВК Мыца». Блоки у них одинаковые по названиям и весам, поэтому отделы сравнимы. Отдельные пункты внутри блоков «Открытие звонка» и «Итоги аудита» сформулированы по-разному — в разрезе пунктов каждый отдел виден только по своему чек-листу.</dd>
+      <dt>Чего здесь нет</dt>
+      <dd>Звонки на прослушку отбирали вручную, а не случайно, поэтому переносить выводы на все звонки отдела нельзя. Суммы сделок и сроки закрытия в отчёт не включены.</dd>
+    </dl>
+  </details>
+</div>
+
+<script>
+(() => {
+  const SAMPLE = 'Вызревшие';   // связь с результатом считаем только по вызревшим звонкам
+  const ALL = 'Все звонки';
+  const F1 = d3.format('.1f');
+  const INT = (v) => Number(v).toLocaleString('ru-RU');
+  const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+  const rowsOf = (id) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data : []; };
+  const uniq = (arr) => Array.from(new Set(arr));
+  const dec = (v) => F1(v).replace('.', ',');
+
+  const fmt = (raw, unit) => {
+    const v = num(raw);
+    if (v === null || Number.isNaN(v)) return '—';
+    if (unit === 'num') return INT(v);
+    if (unit === 'pct') return dec(v) + '%';
+    if (unit === 'pctshort') return Math.round(v) + '%';
+    if (unit === 'score') return dec(v);
+    if (unit === 'signed') return (v > 0 ? '+' : v < 0 ? '−' : '') + dec(Math.abs(v));
+    if (unit === 'p') return v < 0.001 ? '< 0,001' : d3.format('.3f')(v).replace('.', ',');
+    if (unit === 'r') return (v < 0 ? '−' : '+') + d3.format('.3f')(Math.abs(v)).replace('.', ',');
+    return String(raw);
+  };
+  const short = (name) => String(name).replace(/\s*\((?:п\.|блок|блоки|ANYDESK)[^)]*\)\s*$/i, '').trim();
+  const nice = (name) => { const t = short(name); return t.charAt(0) + t.slice(1).toLowerCase(); };
+
+  const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const heat = (v) => {
+    if (v === null) return null;
+    const t = Math.max(0, Math.min(100, v)) / 100;
+    const base = t < 0.5
+      ? d3.interpolateRgb(token('--color-bad') || '#d33', token('--color-warn') || '#e8a33d')(t * 2)
+      : d3.interpolateRgb(token('--color-warn') || '#e8a33d', token('--color-ok') || '#2e9e5b')((t - 0.5) * 2);
+    const c = d3.color(base);
+    if (!c) return null;
+    c.opacity = 0.16 + 0.46 * Math.abs(t - 0.5) * 2;
+    return c + '';
+  };
+
+  // ── Кнопки «показать / скрыть» ────────────────────────────────────────────
+  document.querySelectorAll('.rp-more[data-more]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const box = document.getElementById(btn.dataset.more);
+      if (!box) return;
+      const open = box.hidden;
+      box.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.querySelectorAll('span[data-open]').forEach((sp) => {
+        sp.textContent = open ? sp.dataset.close : sp.dataset.open;
+      });
+    });
+  });
+
+  const tipFor = (host) => {
+    const el = document.createElement('div');
+    el.className = 'rp-tip';
+    el.hidden = true;
+    host.appendChild(el);
+    return {
+      show(parts, x, y) {
+        el.replaceChildren(...parts);
+        el.hidden = false;
+        const bw = el.offsetWidth;
+        el.style.left = Math.max(0, Math.min(host.clientWidth - bw, x - bw / 2)) + 'px';
+        el.style.top = Math.max(0, y - el.offsetHeight - 10) + 'px';
+      },
+      hide() { el.hidden = true; },
+    };
+  };
+  const tipLine = (color, label, value) => {
+    const row = document.createElement('div');
+    row.className = 'rp-tip-r';
+    if (color) {
+      const sw = document.createElement('i');
+      sw.className = 'rp-tip-s';
+      sw.style.background = color;
+      row.appendChild(sw);
+    }
+    const name = document.createElement('span');
+    name.textContent = label;
+    row.appendChild(name);
+    if (value !== undefined) {
+      const val = document.createElement('b');
+      val.textContent = value;
+      val.style.marginLeft = 'auto';
+      val.style.paddingLeft = '10px';
+      row.appendChild(val);
+    }
+    return row;
+  };
+  const tipHead = (text) => {
+    const h = document.createElement('div');
+    h.className = 'rp-tip-h';
+    h.textContent = text;
+    return h;
+  };
+
+  const measure = (svg, texts, size) => {
+    const g = svg.append('g').attr('visibility', 'hidden');
+    let w = 0;
+    texts.forEach((t) => {
+      const n = g.append('text').attr('font-size', size).text(t).node();
+      w = Math.max(w, n.getComputedTextLength());
+    });
+    g.remove();
+    return w;
+  };
+  const CAP = 11;
+
+  const empty = (el, msg) => {
+    el.replaceChildren();
+    const p = document.createElement('div');
+    p.style.color = 'var(--color-fg-muted)';
+    p.style.fontSize = 'var(--cds-font-size-caption)';
+    p.style.padding = 'var(--cds-pad-md) 0';
+    p.textContent = msg;
+    el.appendChild(p);
+  };
+  const loading = (el, id) => {
+    const st = dash.data(id).status;
+    if (st === 'ok') return false;
+    el.classList.toggle('dash-skeleton', st === 'loading');
+    if (st === 'loading') { el.replaceChildren(); return true; }
+    empty(el, 'Данные не загрузились');
+    el.classList.remove('dash-skeleton');
+    return true;
+  };
+
+  // ── Значения в тексте и карточках ─────────────────────────────────────────
+  const parseWhere = (s) => {
+    const out = {};
+    String(s || '').split('&').forEach((pair) => {
+      const i = pair.indexOf('=');
+      if (i < 0) return;
+      out[decodeURIComponent(pair.slice(0, i))] = decodeURIComponent(pair.slice(i + 1));
+    });
+    return out;
+  };
+  dash.draw('stat', (el) => {
+    const d = dash.data(el.dataset.source);
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const where = parseWhere(el.dataset.where);
+    const row = (d.data || []).find((r) => Object.keys(where).every((k) => String(r[k]) === where[k]));
+    el.textContent = row ? fmt(row[el.dataset.field], el.dataset.unit) : '—';
+  });
+
+  // ── Линии: оценка по месяцам ──────────────────────────────────────────────
+  dash.draw('trend', (el) => {
+    if (loading(el, 'dynamics')) return;
+    const all = rowsOf('dynamics').filter((r) => r['Уровень'] === 'Итог');
+    if (!all.length) { empty(el, 'Нет данных'); return; }
+    const months = uniq(all.map((r) => r['Месяц']));
+    const scopes = uniq(all.map((r) => r['Срез']));
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+
+    const width = Math.max(300, el.clientWidth);
+    const height = Math.max(260, Math.min(360, width * 0.42));
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const vals = all.map((r) => num(r['Балл'])).filter((v) => v !== null);
+    const lo = Math.floor((d3.min(vals) - 4) / 5) * 5;
+    const hi = Math.ceil((d3.max(vals) + 4) / 5) * 5;
+    const mR = Math.min(140, measure(svg, scopes.map((s) => s + ' 00,0'), CAP) + 12);
+    const mL = measure(svg, d3.range(lo, hi + 1, 5).map(String), CAP) + 10;
+    const m = { top: 12, right: mR, bottom: 26, left: mL };
+
+    const x = d3.scalePoint(months, [m.left, width - m.right]).padding(0.08);
+    const y = d3.scaleLinear([lo, hi], [height - m.bottom, m.top]);
+    const ticks = y.ticks(Math.min(6, Math.max(2, (hi - lo) / 5)));
+
+    svg.append('g').selectAll('line').data(ticks)
+      .join('line').attr('x1', m.left).attr('x2', width - m.right)
+      .attr('y1', (d) => y(d)).attr('y2', (d) => y(d))
+      .attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+    svg.append('g').selectAll('text').data(ticks)
+      .join('text').attr('x', m.left - 6).attr('y', (d) => y(d)).attr('dy', '0.32em')
+      .attr('text-anchor', 'end').attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+      .text((d) => d);
+    svg.append('g').selectAll('text').data(months)
+      .join('text').attr('x', (d) => x(d)).attr('y', height - 8).attr('text-anchor', 'middle')
+      .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)').text((d) => d);
+
+    const line = d3.line().defined((d) => d.v !== null).x((d) => x(d.m)).y((d) => y(d.v));
+    const ends = [];
+    scopes.forEach((s, i) => {
+      const data = months.map((mn) => {
+        const r = all.find((q) => q['Срез'] === s && q['Месяц'] === mn);
+        return { m: mn, v: r ? num(r['Балл']) : null, n: r ? num(r['Оценок']) : null };
+      });
+      const main = i === 0;
+      const color = dash.colors[i % dash.colors.length];
+      svg.append('path').datum(data).attr('fill', 'none').attr('stroke', color)
+        .attr('stroke-width', main ? 2.6 : 1.8)
+        .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+        .attr('opacity', main ? 1 : 0.85).attr('d', line);
+      svg.append('g').selectAll('circle').data(data.filter((d) => d.v !== null))
+        .join('circle').attr('cx', (d) => x(d.m)).attr('cy', (d) => y(d.v)).attr('r', main ? 3 : 2.4)
+        .attr('fill', color);
+      const last = data.filter((d) => d.v !== null).pop();
+      if (last) ends.push({ x: x(last.m) + 8, y: y(last.v), color, text: s + ' ' + dec(last.v) });
+    });
+
+    // Подписи в конце линий расходятся, когда значения близки, иначе налезают.
+    const GAP = CAP + 3;
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i += 1) {
+      if (ends[i].y - ends[i - 1].y < GAP) ends[i].y = ends[i - 1].y + GAP;
+    }
+    const over = ends.length ? ends[ends.length - 1].y - (height - m.bottom) : 0;
+    if (over > 0) ends.forEach((e) => { e.y -= over; });
+    for (let i = ends.length - 2; i >= 0; i -= 1) {
+      if (ends[i + 1].y - ends[i].y < GAP) ends[i].y = ends[i + 1].y - GAP;
+    }
+    ends.forEach((e) => {
+      svg.append('text').attr('x', e.x).attr('y', Math.max(m.top, e.y)).attr('dy', '0.32em')
+        .attr('font-size', CAP).attr('fill', e.color).text(e.text);
+    });
+
+    const tip = tipFor(el);
+    const hover = svg.append('line').attr('y1', m.top).attr('y2', height - m.bottom)
+      .attr('stroke', 'var(--cds-chart-axis)').attr('stroke-width', 1).attr('opacity', 0);
+    svg.append('rect').attr('x', m.left).attr('y', m.top)
+      .attr('width', Math.max(1, width - m.left - m.right)).attr('height', Math.max(1, height - m.top - m.bottom))
+      .attr('fill', 'transparent')
+      .on('mousemove', (ev) => {
+        const [px] = d3.pointer(ev, svg.node());
+        const mn = months.reduce((a, b) => (Math.abs(x(b) - px) < Math.abs(x(a) - px) ? b : a));
+        hover.attr('x1', x(mn)).attr('x2', x(mn)).attr('opacity', 1);
+        const parts = [tipHead(mn)];
+        scopes.forEach((s, i) => {
+          const r = all.find((q) => q['Срез'] === s && q['Месяц'] === mn);
+          const v = r ? num(r['Балл']) : null;
+          parts.push(tipLine(dash.colors[i % dash.colors.length], s,
+            v === null ? '—' : dec(v) + ' · ' + INT(num(r['Оценок'])) + ' зв.'));
+        });
+        const rect = el.getBoundingClientRect();
+        tip.show(parts, ev.clientX - rect.left, ev.clientY - rect.top);
+      })
+      .on('mouseleave', () => { hover.attr('opacity', 0); tip.hide(); });
+  });
+
+  // ── Блоки по месяцам, с раскрытием пунктов ────────────────────────────────
+  let scope = null;
+  const openBlocks = new Set();
+
+  dash.draw('scopeSel', (sel) => {
+    const d = dash.data('dynamics');
+    const list = d.status === 'ok' ? uniq((d.data || []).map((r) => r['Срез'])) : [];
+    sel.replaceChildren(...list.map((s) => new Option(s, s)));
+    if (!list.length) return;
+    if (!list.includes(scope)) scope = list[0];
+    sel.value = scope;
+    sel.onchange = () => { scope = sel.value; openBlocks.clear(); dash.draw('blocks'); };
+  });
+
+  const heatCell = (v, title) => {
+    const c = document.createElement('div');
+    c.className = 'rp-cell';
+    if (v === null) { c.textContent = ''; c.title = title + ': нет ответов'; return c; }
+    c.textContent = dec(v);
+    c.style.background = heat(v);
+    c.title = title;
+    return c;
+  };
+
+  dash.draw('blocks', (el) => {
+    if (loading(el, 'dynamics')) return;
+    const data = rowsOf('dynamics');
+    if (!data.length) { empty(el, 'Нет данных'); return; }
+    const scopes = uniq(data.map((r) => r['Срез']));
+    if (!scopes.includes(scope)) scope = scopes[0];
+    const mine = data.filter((r) => r['Срез'] === scope);
+    const months = uniq(data.map((r) => r['Месяц']));
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    el.style.gridTemplateColumns = `minmax(13rem, 2.2fr) repeat(${months.length}, minmax(3.2rem, 1fr))`;
+    el.style.minWidth = 13 + months.length * 3.4 + 'rem';
+
+    const h0 = document.createElement('div');
+    h0.className = 'rp-gh rp-left';
+    h0.textContent = 'Блок (вес)';
+    el.appendChild(h0);
+    months.forEach((mn) => {
+      const h = document.createElement('div');
+      h.className = 'rp-gh';
+      h.textContent = mn;
+      el.appendChild(h);
+    });
+
+    const totalRow = mine.filter((r) => r['Уровень'] === 'Итог');
+    const nt = document.createElement('div');
+    nt.className = 'rp-name';
+    const sp = document.createElement('span');
+    sp.className = 'rp-name-t';
+    sp.style.fontWeight = 'var(--cds-font-weight-medium)';
+    sp.textContent = 'Оценка звонка';
+    const spn = document.createElement('span');
+    spn.className = 'rp-w';
+    spn.textContent = '100';
+    nt.append(sp, spn);
+    el.appendChild(nt);
+    months.forEach((mn) => {
+      const r = totalRow.find((q) => q['Месяц'] === mn);
+      const c = heatCell(r ? num(r['Балл']) : null,
+        `Оценка звонка · ${mn} · ${r ? INT(num(r['Оценок'])) : 0} звонков`);
+      c.style.fontWeight = 'var(--cds-font-weight-medium)';
+      el.appendChild(c);
+    });
+
+    uniq(mine.filter((r) => r['Уровень'] === 'Блок').map((r) => r['Показатель'])).forEach((bname) => {
+      const brows = mine.filter((r) => r['Уровень'] === 'Блок' && r['Показатель'] === bname);
+      const open = openBlocks.has(bname);
+      const name = document.createElement('div');
+      name.className = 'rp-name';
+      const tog = document.createElement('button');
+      tog.className = 'rp-tog';
+      tog.type = 'button';
+      tog.textContent = open ? '−' : '+';
+      tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+      tog.setAttribute('aria-label', (open ? 'Скрыть' : 'Показать') + ' пункты блока ' + nice(bname));
+      tog.onclick = () => {
+        if (openBlocks.has(bname)) openBlocks.delete(bname); else openBlocks.add(bname);
+        dash.draw('blocks');
+      };
+      const t = document.createElement('span');
+      t.className = 'rp-name-t';
+      t.textContent = nice(bname);
+      t.title = bname;
+      const w = document.createElement('span');
+      w.className = 'rp-w';
+      w.textContent = brows[0] ? brows[0]['Вес'] : '';
+      name.append(tog, t, w);
+      el.appendChild(name);
+      months.forEach((mn) => {
+        const r = brows.find((q) => q['Месяц'] === mn);
+        el.appendChild(heatCell(r ? num(r['Балл']) : null, `${nice(bname)} · ${mn}`));
+      });
+
+      if (!open) return;
+      uniq(mine.filter((r) => r['Уровень'] === 'Критерий' && r['Блок'] === bname).map((r) => r['Показатель']))
+        .forEach((cname) => {
+          const crows = mine.filter((r) => r['Уровень'] === 'Критерий' && r['Блок'] === bname && r['Показатель'] === cname);
+          const cn = document.createElement('div');
+          cn.className = 'rp-name rp-row-c rp-wrap';
+          const ct = document.createElement('span');
+          ct.className = 'rp-name-t';
+          ct.textContent = cname;
+          const cw = document.createElement('span');
+          cw.className = 'rp-w';
+          cw.textContent = crows[0] ? crows[0]['Вес'] : '';
+          cn.append(ct, cw);
+          el.appendChild(cn);
+          months.forEach((mn) => {
+            const r = crows.find((q) => q['Месяц'] === mn);
+            const cell = heatCell(r ? num(r['Балл']) : null,
+              `${cname} · ${mn}${r ? ' · ответов ' + INT(num(r['Оценок'])) : ''}`);
+            cell.classList.add('rp-row-c');
+            el.appendChild(cell);
+          });
+        });
+    });
+  });
+
+  // ── Сотрудники по месяцам ─────────────────────────────────────────────────
+  const openEmps = new Set();
+  dash.draw('empGrid', (el) => {
+    if (loading(el, 'employees')) return;
+    const emps = rowsOf('employees');
+    if (!emps.length) { empty(el, 'Нет данных'); return; }
+    const cols = dash.data('employees').columns || Object.keys(emps[0]);
+    const skip = new Set(['Сотрудник', 'Отдел', 'Оценок', 'Средний балл', 'Успешных', 'Провалов', 'В работе', 'Win Rate']);
+    const months = cols.filter((c) => !skip.has(c));
+    const blocks = rowsOf('emp_blocks');
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    el.style.gridTemplateColumns = `minmax(11rem, 2fr) 3.4rem 3.6rem repeat(${months.length}, minmax(3rem, 1fr))`;
+    el.style.minWidth = 18 + months.length * 3.2 + 'rem';
+
+    [['Сотрудник', 'rp-gh rp-left'], ['Звонков', 'rp-gh'], ['Средняя', 'rp-gh']].forEach(([txt, cls]) => {
+      const h = document.createElement('div');
+      h.className = cls;
+      h.textContent = txt;
+      el.appendChild(h);
+    });
+    months.forEach((mn) => {
+      const h = document.createElement('div');
+      h.className = 'rp-gh';
+      h.textContent = mn;
+      el.appendChild(h);
+    });
+
+    uniq(emps.map((e) => e['Отдел'])).sort().forEach((dep) => {
+      const head = document.createElement('div');
+      head.className = 'rp-gh rp-left';
+      head.style.gridColumn = '1 / -1';
+      head.style.marginTop = '6px';
+      head.textContent = dep;
+      el.appendChild(head);
+
+      emps.filter((e) => e['Отдел'] === dep)
+        .sort((a, b) => (num(b['Средний балл']) || 0) - (num(a['Средний балл']) || 0))
+        .forEach((e) => {
+          const who = e['Сотрудник'];
+          const open = openEmps.has(who);
+          const name = document.createElement('div');
+          name.className = 'rp-name';
+          const tog = document.createElement('button');
+          tog.className = 'rp-tog';
+          tog.type = 'button';
+          tog.textContent = open ? '−' : '+';
+          tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+          tog.setAttribute('aria-label', (open ? 'Скрыть' : 'Показать') + ' блоки: ' + who);
+          tog.onclick = () => {
+            if (openEmps.has(who)) openEmps.delete(who); else openEmps.add(who);
+            dash.draw('empGrid');
+          };
+          const t = document.createElement('span');
+          t.className = 'rp-name-t';
+          t.textContent = who;
+          t.title = who;
+          name.append(tog, t);
+          el.appendChild(name);
+
+          const nCell = document.createElement('div');
+          nCell.className = 'rp-cell';
+          nCell.textContent = INT(num(e['Оценок']));
+          nCell.style.color = 'var(--color-fg-muted)';
+          el.appendChild(nCell);
+          el.appendChild(heatCell(num(e['Средний балл']), `${who} · средняя оценка за полгода`));
+          months.forEach((mn) => el.appendChild(heatCell(num(e[mn]), `${who} · ${mn}`)));
+
+          if (!open) return;
+          const mine = blocks.filter((b) => b['Сотрудник'] === who);
+          const sub = document.createElement('div');
+          sub.className = 'rp-sub-row';
+          if (!mine.length) {
+            sub.textContent = 'Баллы по блокам не загрузились';
+            sub.style.color = 'var(--color-fg-muted)';
+          } else {
+            const inner = document.createElement('div');
+            inner.className = 'rp-grid';
+            inner.style.gridTemplateColumns = 'minmax(12rem, 3fr) 5rem';
+            mine.forEach((b) => {
+              const bn = document.createElement('div');
+              bn.className = 'rp-name rp-row-c rp-wrap';
+              const bt = document.createElement('span');
+              bt.className = 'rp-name-t';
+              bt.textContent = nice(b['Блок']);
+              bt.title = b['Блок'];
+              const bw = document.createElement('span');
+              bw.className = 'rp-w';
+              bw.textContent = b['Вес'];
+              bn.append(bt, bw);
+              inner.appendChild(bn);
+              inner.appendChild(heatCell(num(b['Балл']), `${who} · ${nice(b['Блок'])}`));
+            });
+            sub.appendChild(inner);
+          }
+          el.appendChild(sub);
+        });
+    });
+  });
+
+  // ── Блоки от слабого к сильному ───────────────────────────────────────────
+  dash.draw('weakBlocks', (el) => {
+    if (loading(el, 'impact')) return;
+    const blocks = rowsOf('impact')
+      .filter((r) => r['Выборка'] === ALL && r['Уровень'] === 'Блок' && r['Средний балл'] !== '')
+      .slice().sort((a, b) => num(a['Средний балл']) - num(b['Средний балл']));
+    if (!blocks.length) { empty(el, 'Нет данных'); return; }
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+
+    const width = Math.max(280, el.clientWidth);
+    const rowH = 30;
+    const height = blocks.length * rowH + 34;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const labels = blocks.map((b) => nice(b['Показатель']) + ' (' + b['Вес'] + ')');
+    const mL = Math.min(width * 0.54, measure(svg, labels, CAP) + 10);
+    const m = { top: 6, right: 42, bottom: 26, left: mL };
+    const x = d3.scaleLinear([0, 100], [m.left, width - m.right]);
+    const y = d3.scaleBand(labels, [m.top, height - m.bottom]).padding(0.3);
+
+    svg.append('g').selectAll('line').data(x.ticks(5))
+      .join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d))
+      .attr('y1', m.top).attr('y2', height - m.bottom).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(x.ticks(5))
+      .join('text').attr('x', (d) => x(d)).attr('y', height - 10).attr('text-anchor', 'middle')
+      .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)').text((d) => d);
+
+    blocks.forEach((b, i) => {
+      const v = num(b['Средний балл']);
+      const label = labels[i];
+      const cy = y(label) + y.bandwidth() / 2;
+      const nameEl = svg.append('text').attr('x', m.left - 8).attr('y', cy).attr('dy', '0.32em')
+        .attr('text-anchor', 'end').attr('font-size', CAP).attr('fill', 'var(--color-fg)').text(label);
+      if (nameEl.node().getComputedTextLength() > m.left - 10) nameEl.append('title').text(b['Показатель']);
+      svg.append('rect').attr('x', x(0)).attr('y', y(label))
+        .attr('width', Math.max(1, x(v) - x(0))).attr('height', y.bandwidth())
+        .attr('rx', 3).attr('fill', heat(v));
+      svg.append('text').attr('x', x(v) + 6).attr('y', cy).attr('dy', '0.32em')
+        .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)').text(dec(v));
+    });
+  });
+
+  // ── Доля продливших по диапазонам оценки ──────────────────────────────────
+  dash.draw('binsChart', (el) => {
+    if (loading(el, 'bins')) return;
+    const all = rowsOf('bins').filter((r) => r['Срез'] === 'Все отделы' && r['Выборка'] === SAMPLE);
+    if (!all.length) { empty(el, 'Нет данных'); return; }
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+
+    const width = Math.max(280, el.clientWidth);
+    const height = Math.max(250, Math.min(320, width * 0.62));
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const mL = measure(svg, ['100%'], CAP) + 12;
+    const m = { top: 20, right: 8, bottom: 44, left: mL };
+    const x = d3.scaleBand(all.map((r) => r['Диапазон балла']), [m.left, width - m.right]).padding(0.28);
+    const y = d3.scaleLinear([0, 100], [height - m.bottom, m.top]);
+
+    svg.append('g').selectAll('line').data(y.ticks(5))
+      .join('line').attr('x1', m.left).attr('x2', width - m.right)
+      .attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(y.ticks(5))
+      .join('text').attr('x', m.left - 6).attr('y', (d) => y(d)).attr('dy', '0.32em')
+      .attr('text-anchor', 'end').attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+      .text((d) => d + '%');
+
+    const totW = d3.sum(all, (r) => num(r['Успешных']));
+    const totN = d3.sum(all, (r) => num(r['Закрытых сделок']));
+    const avg = totN ? (totW / totN) * 100 : null;
+    const bw = Math.min(32, x.bandwidth());
+    const tip = tipFor(el);
+
+    all.forEach((r) => {
+      const v = num(r['Win Rate']);
+      const cx = x(r['Диапазон балла']) + x.bandwidth() / 2;
+      if (v !== null) {
+        svg.append('rect').attr('x', cx - bw / 2).attr('y', y(v))
+          .attr('width', bw).attr('height', Math.max(1, y(0) - y(v)))
+          .attr('rx', 3).attr('fill', dash.colors[0])
+          .on('mousemove', (ev) => {
+            const rect = el.getBoundingClientRect();
+            tip.show([tipHead('Оценка ' + r['Диапазон балла']),
+              tipLine(dash.colors[0], 'Продлили', dec(v) + '%'),
+              tipLine(null, 'Сделок', INT(num(r['Закрытых сделок'])) + ', не продлили ' + INT(num(r['Провалов'])))],
+              ev.clientX - rect.left, ev.clientY - rect.top);
+          })
+          .on('mouseleave', () => tip.hide());
+        svg.append('text').attr('x', cx).attr('y', y(v) - 6).attr('text-anchor', 'middle')
+          .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+          .text(INT(num(r['Закрытых сделок'])) + ' сд.');
+      }
+      svg.append('text').attr('x', cx).attr('y', height - 26).attr('text-anchor', 'middle')
+        .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)').text(r['Диапазон балла']);
+    });
+    svg.append('text').attr('x', (m.left + width - m.right) / 2).attr('y', height - 8)
+      .attr('text-anchor', 'middle').attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+      .text('оценка звонка');
+
+    if (avg !== null) {
+      svg.append('line').attr('x1', m.left).attr('x2', width - m.right)
+        .attr('y1', y(avg)).attr('y2', y(avg))
+        .attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1).attr('stroke-dasharray', '4 3');
+      svg.append('text').attr('x', width - m.right).attr('y', y(avg) - 5).attr('text-anchor', 'end')
+        .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+        .text('в среднем ' + dec(avg) + '%');
+    }
+  });
+
+  // ── Оценки продливших и остальных ─────────────────────────────────────────
+  dash.draw('dist', (el) => {
+    if (loading(el, 'scores')) return;
+    const pts = rowsOf('scores').filter((r) => r['Выборка'] === SAMPLE);
+    if (!pts.length) { empty(el, 'Нет данных'); return; }
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+
+    const groups = uniq(pts.map((p) => p['Исход']));
+    const label = (g) => (g === 'Успешна' ? 'Продлили' : 'Не продлили');
+    const width = Math.max(280, el.clientWidth);
+    const height = Math.max(250, Math.min(320, width * 0.62));
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${width} ${height}`);
+    const mL = measure(svg, groups.map((g) => label(g) + ' (000)'), CAP) + 12;
+    const m = { top: 16, right: 14, bottom: 42, left: mL };
+    const x = d3.scaleLinear([0, 100], [m.left, width - m.right]);
+    const band = (height - m.top - m.bottom) / groups.length;
+
+    svg.append('g').selectAll('line').data(x.ticks(5))
+      .join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d))
+      .attr('y1', m.top).attr('y2', height - m.bottom).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(x.ticks(5))
+      .join('text').attr('x', (d) => x(d)).attr('y', height - 24).attr('text-anchor', 'middle')
+      .attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)').text((d) => d);
+    svg.append('text').attr('x', (m.left + width - m.right) / 2).attr('y', height - 8)
+      .attr('text-anchor', 'middle').attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+      .text('оценка звонка');
+
+    const tip = tipFor(el);
+    groups.forEach((g, i) => {
+      const sub = pts.filter((p) => p['Исход'] === g);
+      const cy = m.top + band * (i + 0.5);
+      const color = g === 'Успешна' ? dash.colors[0] : 'var(--cds-chart-status-critical)';
+      svg.append('text').attr('x', m.left - 8).attr('y', cy).attr('dy', '0.32em')
+        .attr('text-anchor', 'end').attr('font-size', CAP).attr('fill', 'var(--color-fg-muted)')
+        .text(label(g) + ' (' + INT(sub.length) + ')');
+      let seed = i * 97 + 13;
+      const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+      sub.forEach((p) => {
+        const v = num(p['Балл']);
+        if (v === null) return;
+        svg.append('circle')
+          .attr('cx', x(v)).attr('cy', cy + (rnd() - 0.5) * Math.min(band * 0.62, 46))
+          .attr('r', 3).attr('fill', color).attr('opacity', 0.5)
+          .on('mousemove', (ev) => {
+            const rect = el.getBoundingClientRect();
+            tip.show([tipHead(p['Отдел']), tipLine(color, label(g), dec(v) + ' балла')],
+              ev.clientX - rect.left, ev.clientY - rect.top);
+          })
+          .on('mouseleave', () => tip.hide());
+      });
+      const mv = d3.mean(sub, (p) => num(p['Балл']));
+      if (mv !== undefined) {
+        svg.append('line').attr('x1', x(mv)).attr('x2', x(mv))
+          .attr('y1', cy - band * 0.42).attr('y2', cy + band * 0.42)
+          .attr('stroke', color).attr('stroke-width', 2.4).attr('stroke-linecap', 'round');
+        svg.append('text').attr('x', x(mv)).attr('y', cy - band * 0.42 - 5).attr('text-anchor', 'middle')
+          .attr('font-size', CAP).attr('fill', color).text(dec(mv));
+      }
+    });
+  });
+
+  // ── Вызревание когорт ─────────────────────────────────────────────────────
+  dash.draw('cohort', (tb) => {
+    const d = dash.data('cohort');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    const fields = Array.from(tb.closest('table').querySelectorAll('thead th')).map((th) => th.dataset.field);
+    (d.data || []).forEach((r) => {
+      const tr = document.createElement('tr');
+      fields.forEach((f) => {
+        const td = document.createElement('td');
+        if (f === 'Месяц звонка' || f === 'Вызрела') td.textContent = r[f];
+        else td.textContent = fmt(r[f], f === 'Win Rate' ? 'pct' : 'num');
+        tr.appendChild(td);
+      });
+      if (r['Вызрела'] !== 'да') tr.style.color = 'var(--color-fg-muted)';
+      tb.appendChild(tr);
+    });
+  });
+
+  // ── Таблица отделов ───────────────────────────────────────────────────────
+  dash.draw('depts', (tb) => {
+    const d = dash.data('departments');
+    tb.replaceChildren();
+    if (d.status !== 'ok') return;
+    const fields = Array.from(tb.closest('table').querySelectorAll('thead th')).map((th) => th.dataset.field);
+    const unit = {
+      'Звонков': 'num', 'Успешных': 'num', 'Провалов': 'num', 'Win Rate': 'pct',
+      'Балл при успехе': 'score', 'Балл при провале': 'score', 'Разница': 'signed', 'p': 'p', 'r': 'r',
+    };
+    (d.data || []).filter((r) => r['Выборка'] === SAMPLE).forEach((r) => {
+      const tr = document.createElement('tr');
+      fields.forEach((f) => {
+        const td = document.createElement('td');
+        td.textContent = f === 'Срез' ? r[f] : fmt(r[f], unit[f]);
+        tr.appendChild(td);
+      });
+      if (r['Срез'] === 'Все отделы') tr.style.fontWeight = 'var(--cds-font-weight-medium)';
+      tb.appendChild(tr);
+    });
+  });
+
+  // ── Блоки разговора и результат сделки ────────────────────────────────────
+  const openImpact = new Set();
+  dash.draw('impactList', (el) => {
+    if (loading(el, 'impact')) return;
+    const data = rowsOf('impact');
+    const blocks = data.filter((r) => r['Выборка'] === SAMPLE && r['Уровень'] === 'Блок').slice().sort((a, b) => {
+      const wa = a['Мало данных'] === 'да' ? 1 : 0;
+      const wb = b['Мало данных'] === 'да' ? 1 : 0;
+      if (wa !== wb) return wa - wb;
+      return Math.abs(num(b['Разница']) || 0) - Math.abs(num(a['Разница']) || 0);
+    });
+    if (!blocks.length) { empty(el, 'Нет данных'); return; }
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    const solid = blocks.filter((r) => r['Мало данных'] !== 'да');
+    const maxD = d3.max(solid.length ? solid : blocks, (r) => Math.abs(num(r['Разница']) || 0)) || 1;
+
+    blocks.forEach((b) => {
+      const name = b['Показатель'];
+      const delta = num(b['Разница']);
+      const weak = b['Мало данных'] === 'да';
+      const open = openImpact.has(name);
+
+      const row = document.createElement('div');
+      row.className = 'rp-bar-row';
+      const label = document.createElement('div');
+      label.className = 'rp-name';
+      label.style.borderBottom = 'none';
+      const tog = document.createElement('button');
+      tog.className = 'rp-tog';
+      tog.type = 'button';
+      tog.textContent = open ? '−' : '+';
+      tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+      tog.setAttribute('aria-label', (open ? 'Скрыть' : 'Показать') + ' пункты блока ' + nice(name));
+      tog.onclick = () => {
+        if (openImpact.has(name)) openImpact.delete(name); else openImpact.add(name);
+        dash.draw('impactList');
+      };
+      const t = document.createElement('span');
+      t.className = 'rp-name-t';
+      t.textContent = nice(name);
+      t.title = name;
+      const w = document.createElement('span');
+      w.className = 'rp-w';
+      w.textContent = 'вес ' + b['Вес'];
+      label.append(tog, t, w);
+      if (weak) {
+        const chip = document.createElement('span');
+        chip.className = 'rp-chip';
+        chip.textContent = 'мало данных';
+        label.appendChild(chip);
+      }
+
+      const track = document.createElement('div');
+      track.className = 'rp-bar-track';
+      const zero = document.createElement('i');
+      zero.className = 'rp-bar-zero';
+      zero.style.left = '50%';
+      track.appendChild(zero);
+      if (delta !== null) {
+        const f = document.createElement('i');
+        f.className = 'rp-bar-f';
+        const halfPct = Math.min(50, (Math.abs(delta) / maxD) * 50);
+        f.style.width = halfPct + '%';
+        f.style.left = delta >= 0 ? '50%' : 50 - halfPct + '%';
+        f.style.background = weak ? 'var(--cds-chart-muted)' : dash.colors[delta >= 0 ? 0 : 1];
+        f.style.opacity = weak ? '0.7' : '1';
+        track.appendChild(f);
+      }
+
+      const val = document.createElement('div');
+      val.className = 'rp-delta';
+      val.textContent = fmt(b['Разница'], 'signed');
+      val.title = 'Средняя оценка блока: у продливших ' + fmt(b['Балл при успехе'], 'score')
+        + ', у остальных ' + fmt(b['Балл при провале'], 'score')
+        + '. Не продливших с ответом по блоку: ' + b['Сделок (провал)'] + '. p = ' + fmt(b['p'], 'p');
+      if (weak) val.style.color = 'var(--color-fg-muted)';
+
+      row.append(label, track, val);
+      el.appendChild(row);
+
+      if (!open) return;
+      const crits = data.filter((r) => r['Выборка'] === SAMPLE && r['Уровень'] === 'Критерий' && r['Блок'] === name);
+      const sub = document.createElement('div');
+      sub.className = 'rp-sub-row';
+      if (!crits.length) {
+        sub.textContent = 'Нет пунктов с ответами';
+        sub.style.color = 'var(--color-fg-muted)';
+      } else {
+        const inner = document.createElement('div');
+        inner.className = 'rp-bars';
+        crits.forEach((c) => {
+          const cr = document.createElement('div');
+          cr.className = 'rp-crit-row';
+          const cl = document.createElement('div');
+          const ct = document.createElement('div');
+          ct.textContent = c['Показатель'];
+          const info = document.createElement('div');
+          info.style.color = 'var(--color-fg-muted)';
+          info.style.marginTop = '2px';
+          info.textContent = 'выполняется в ' + fmt(c['Доля выполнения'], 'pct') + ' звонков · продлили '
+            + fmt(c['Win Rate выполнено'], 'pct') + ' когда выполнен и ' + fmt(c['Win Rate не выполнено'], 'pct') + ' когда нет';
+          cl.append(ct, info);
+          const cv = document.createElement('div');
+          cv.className = 'rp-delta';
+          cv.textContent = fmt(c['Влияние на Win Rate'], 'signed');
+          cv.title = 'Разница долей продливших, п.п. Сделок: пункт выполнен — ' + c['Сделок (успех)']
+            + ', не выполнен — ' + c['Сделок (провал)'] + '. p = ' + fmt(c['p'], 'p');
+          if (c['Мало данных'] === 'да') cv.style.color = 'var(--color-fg-muted)';
+          cr.append(cl, cv);
+          inner.appendChild(cr);
+        });
+        sub.appendChild(inner);
+      }
+      el.appendChild(sub);
+    });
+  });
+})();
+</script>
